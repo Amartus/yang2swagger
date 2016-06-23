@@ -1,6 +1,7 @@
 package com.mrv.yangtools.codegen;
 
 import com.mrv.yangtools.test.utils.ContextUtils;
+import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import org.hamcrest.CoreMatchers;
 import org.junit.BeforeClass;
@@ -12,7 +13,9 @@ import org.slf4j.LoggerFactory;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 
@@ -23,16 +26,11 @@ public class SwaggerGeneratorTestIt {
 
     private static final Logger log = LoggerFactory.getLogger(SwaggerGeneratorTestIt.class);
 
-    private static SchemaContext ctx;
-
-    @BeforeClass
-    public static void  initCtx() throws ReactorException {
-        ctx = ContextUtils.getFromClasspath(p ->  p.getFileName().toString().equals("simplest.yang"));
-    }
-
 
     @org.junit.Test
-    public void testGenerate() throws Exception {
+    public void testGenerateSimpleModule() throws Exception {
+        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
+
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
         Swagger swagger = generator.generate();
 
@@ -55,4 +53,22 @@ public class SwaggerGeneratorTestIt {
         }
 
     }
+
+    @org.junit.Test
+    public void testGenerateReadModule() throws Exception {
+        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("read-only.yang"));
+
+        final Consumer<Path> onlyGetOperationExists = p -> {
+            assertEquals(1, p.getOperations().size());
+            assertNotNull(p.getGet());
+        };
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        Swagger swagger = generator.generate();
+        // for read only operations only one
+        swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("c2")).map(Map.Entry::getValue)
+                .forEach(onlyGetOperationExists);
+    }
+
+
 }

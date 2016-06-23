@@ -124,7 +124,9 @@ public class SwaggerGenerator {
 
         private ModuleGenerator(Module module) {
             this.module = module;
-            pathCtx = new PathSegment("/data", module.getName(), ctx);
+            pathCtx = new PathSegment(ctx)
+                    .withName("/data")
+                    .withModule(module.getName());
 
         }
 
@@ -136,7 +138,12 @@ public class SwaggerGenerator {
 
             if(node instanceof ContainerSchemaNode) {
                 final ContainerSchemaNode cN = (ContainerSchemaNode) node;
-                pathCtx = pathCtx.attach(new PathSegment(cN.getQName().getLocalName(), module.getName(), ctx));
+
+
+                pathCtx = new PathSegment(pathCtx)
+                        .withName(cN.getQName().getLocalName())
+                        .withModule(module.getName())
+                        .asReadOnly(!cN.isConfiguration());
 
                 addPath(cN);
 
@@ -146,9 +153,12 @@ public class SwaggerGenerator {
                 pathCtx = pathCtx.drop();
             } else if(node instanceof ListSchemaNode) {
                 final ListSchemaNode lN = (ListSchemaNode) node;
-                PathSegment child = new PathSegment(lN.getQName().getLocalName(), module.getName(), ctx);
-                child.attachNode(lN);
-                pathCtx = pathCtx.attach(child);
+
+                pathCtx = new PathSegment(pathCtx)
+                        .withName(lN.getQName().getLocalName())
+                        .withModule(module.getName())
+                        .asReadOnly(!lN.isConfiguration())
+                        .withListNode(lN);
 
                 addPath(lN);
                 lN.getChildNodes().forEach(this::generate);
@@ -220,12 +230,16 @@ public class SwaggerGenerator {
             final Path path = new Path();
 
             path.get(getOp(lN));
-            path.put(putOp(lN));
-            path.post(postOp(lN, false));
-            path.delete(deleteOp(lN));
-
-
+            if(!pathCtx.isReadOnly()) {
+                path.put(putOp(lN));
+                path.post(postOp(lN, false));
+                path.delete(deleteOp(lN));
+            }
             target.path(pathCtx.path(), path);
+
+            //yes I know it can be written in previous 'if statement' but at some point it is to be refactored
+            if(pathCtx.isReadOnly()) return;
+
 
             //add list path
             final Path list = new Path();
@@ -238,9 +252,11 @@ public class SwaggerGenerator {
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
             path.get(getOp(cN));
-            path.put(putOp(cN));
-            path.put(postOp(cN, false));
-            path.delete(deleteOp(cN));
+            if(!pathCtx.isReadOnly()) {
+                path.put(putOp(cN));
+                path.post(postOp(cN, false));
+                path.delete(deleteOp(cN));
+            }
             target.path(pathCtx.path(), path);
         }
     }

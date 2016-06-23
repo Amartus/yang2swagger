@@ -17,15 +17,15 @@ import java.util.stream.Collectors;
 class PathSegment {
     private static final Logger log = LoggerFactory.getLogger(PathSegment.class);
 
-    private final String name;
-    private final String moduleName;
+    private String name;
+    private String moduleName;
     private PathSegment parent;
     private Optional<ListSchemaNode> node;
     private TypeConverter converter;
 
     //local parameters
     private List<Parameter> localParams;
-
+    private boolean readOnly;
 
 
     /** only for {@link NullObject} !!! */
@@ -34,19 +34,55 @@ class PathSegment {
         this.moduleName = "";
     }
 
-    PathSegment(String name, String moduleName, SchemaContext ctx) {
-        this.name = name;
-        this.moduleName = moduleName;
-        parent = new NullObject();
-        node = Optional.empty();
-        converter = new TypeConverter(ctx);
+    /**
+     * To create a root segment of path
+     * @param ctx
+     */
+    public PathSegment(SchemaContext ctx) {
+        this(new NullObject());
+        this.converter = new TypeConverter(ctx);
     }
 
-    public PathSegment attach(PathSegment child) {
+    protected PathSegment() {}
 
-        log.debug("Attaching new segment {} to {}", child.name, name);
-        child.parent = this;
-        return child;
+    public PathSegment(PathSegment parent) {
+        Objects.requireNonNull(parent);
+
+        this.parent = parent;
+        this.converter = parent.converter;
+        this.moduleName = parent.moduleName;
+        this.readOnly = parent.readOnly;
+        node = Optional.empty();
+    }
+
+    public PathSegment withName(String name) {
+        log.debug("{} / {}", parent.name, name);
+        this.name = name;
+        return this;
+    }
+
+    public PathSegment withModule(String module) {
+        this.moduleName = module;
+        return this;
+    }
+
+    public PathSegment withListNode(ListSchemaNode node) {
+        this.node = Optional.ofNullable(node);
+        return this;
+    }
+
+    public PathSegment asReadOnly(boolean readOnly) {
+        if(!parent.readOnly) {
+            this.readOnly = readOnly;
+        } else {
+            // https://tools.ietf.org/html/rfc6020#section-7.19.1
+            log.debug("parent {} is read-only ignoring current flag", parent.name);
+        }
+        return this;
+    }
+
+    public boolean isReadOnly() {
+        return readOnly;
     }
 
     public PathSegment drop() {
@@ -137,12 +173,8 @@ class PathSegment {
         return pathString;
     }
 
-    public void attachNode(ListSchemaNode node) {
-        this.node = Optional.ofNullable(node);
-    }
-
     private static class NullObject extends PathSegment{
-        NullObject() {super("dummy");}
+        NullObject() {}
 
         @Override
         public PathSegment drop() {
