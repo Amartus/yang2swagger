@@ -215,7 +215,7 @@ public class SwaggerGenerator {
         protected Operation postOp(DataSchemaNode node, boolean dropLastSegmentParams) {
             final Operation post = dropLastSegmentParams ? listOperation() : defaultOperation();
             final RefModel definition = new RefModel(dataObjectsBuilder.getDefinitionId(node));
-            post.description("Creates" + dataObjectsBuilder.getName(node));
+            post.description("creates " + dataObjectsBuilder.getName(node));
             post.parameter(new BodyParameter()
                     .name("body-param")
                     .schema(definition)

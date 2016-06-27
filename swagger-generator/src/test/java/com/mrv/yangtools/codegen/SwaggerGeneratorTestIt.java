@@ -4,9 +4,7 @@ import com.mrv.yangtools.test.utils.ContextUtils;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import org.hamcrest.CoreMatchers;
-import org.junit.BeforeClass;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
-import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +53,9 @@ public class SwaggerGeneratorTestIt {
     }
 
     @org.junit.Test
-    public void testGenerateReadModule() throws Exception {
+    public void testGenerateReadOnlyModule() throws Exception {
+
+        //having
         SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("read-only.yang"));
 
         final Consumer<Path> onlyGetOperationExists = p -> {
@@ -63,11 +63,27 @@ public class SwaggerGeneratorTestIt {
             assertNotNull(p.getGet());
         };
 
+        //when
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
         Swagger swagger = generator.generate();
-        // for read only operations only one
+
+        //then
+        // for read only operations only one get operation
         swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("c2")).map(Map.Entry::getValue)
                 .forEach(onlyGetOperationExists);
+    }
+
+    @org.junit.Test
+    public void testGenerateGroupingsModule() throws Exception {
+        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
+
+        //when
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        Swagger swagger = generator.generate();
+
+        //then
+        assertEquals(2, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-cc")).count());
+
     }
 
 

@@ -75,7 +75,9 @@ public class DataObjectsBuilder {
             Property prop = null;
 
             if(c instanceof LeafListSchemaNode) {
-                prop = new ArrayProperty();
+                LeafListSchemaNode ll = (LeafListSchemaNode) c;
+
+                prop = new ArrayProperty(getPropertyByType(ll));
             } else  if(c instanceof LeafSchemaNode) {
                 LeafSchemaNode lN = (LeafSchemaNode) c;
                 prop = getPropertyByType(lN);
@@ -94,6 +96,10 @@ public class DataObjectsBuilder {
                 model.property(getPropertyName(c.getQName().getLocalName()), prop);
             }
         });
+    }
+
+    private Property getPropertyByType(LeafListSchemaNode llN) {
+        return converter.convert(llN.getType(), llN);
     }
 
     private Property getPropertyByType(LeafSchemaNode lN) {

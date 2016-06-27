@@ -1,8 +1,8 @@
-module simplest {
+module read-only {
   namespace "http://amartus/ns/yang/simplests";
-  prefix s;
+  prefix ro;
   organization "test-yang";
-  description "simplest test module";
+  description "read-only test module";
 
   revision 2016-06-22 {
       description "Final";
@@ -10,7 +10,7 @@ module simplest {
 
   typedef myint1 {
     type int32 {
-        range 1..4096;
+        range 1..3;
     }
   }
 

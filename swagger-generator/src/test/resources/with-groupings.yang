@@ -1,0 +1,69 @@
+module groupings {
+  namespace "http://amartus/ns/yang/simplests";
+  prefix gr;
+  organization "test-yang";
+  description "groupings test module";
+
+  revision 2016-06-22 {
+      description "Final";
+  }
+
+  grouping g1 {
+    leaf g1-i2 {
+        type int32;
+    }
+  }
+
+  grouping g2 {
+    leaf g2-leaf {
+        type string;
+    }
+    container g2-c {
+
+        grouping g3 {
+            leaf g3-leaf {
+              type string;
+            }
+        }
+
+        leaf g2-c-leaf {
+            type string;
+        }
+        container g2-cc {
+            uses g3;
+            leaf xxx {
+                type string;
+            }
+        }
+    }
+  }
+
+  typedef myint1 {
+    type int32 {
+        range 1..4096;
+    }
+  }
+
+  container grouping-root {
+    grouping g1 {
+      leaf g1-l2 {
+          type string;
+      }
+    }
+    list c1 {
+        leaf id {
+            type myint1;
+        }
+        uses g1;
+        uses g2;
+    }
+
+    container grouping-child {
+        uses g2;
+        leaf-list names {
+            type string;
+        }
+    }
+  }
+
+}
