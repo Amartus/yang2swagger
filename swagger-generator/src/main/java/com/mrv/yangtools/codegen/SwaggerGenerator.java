@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
+import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
 
@@ -24,8 +25,13 @@ public class SwaggerGenerator {
     private final DataObjectsBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
 
+    private Set<Elements> toGenerate;
+
 
     public enum Format { YAML, JSON }
+    public enum Elements {
+        DATA, RCP
+    }
 
     public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
@@ -45,6 +51,7 @@ public class SwaggerGenerator {
             .consumes("application/json")
             .produces("application/json")
             .version("1.0.0-SNAPSHOT")
+            .elements(Elements.DATA, Elements.RCP)
             .format(Format.YAML);
     }
 
@@ -53,6 +60,15 @@ public class SwaggerGenerator {
         return this;
     }
 
+
+    /**
+     * Elements that are taken into account during generation
+     * @return this
+     */
+    public SwaggerGenerator elements(Elements... elements) {
+        toGenerate = new HashSet<>(Arrays.asList(elements));
+        return this;
+    }
 
     public SwaggerGenerator format(Format f) {
         switch(f) {
@@ -124,14 +140,38 @@ public class SwaggerGenerator {
 
         private ModuleGenerator(Module module) {
             this.module = module;
-            pathCtx = new PathSegment(ctx)
-                    .withName("/data")
-                    .withModule(module.getName());
+
 
         }
 
         void generate() {
-            module.getChildNodes().forEach(this::generate);
+            if(toGenerate.contains(Elements.DATA)) {
+                pathCtx = new PathSegment(ctx)
+                        .withName("/data")
+                        .withModule(module.getName());
+                module.getChildNodes().forEach(this::generate);
+            }
+
+            if(toGenerate.contains(Elements.RCP)) {
+                pathCtx = new PathSegment(ctx)
+                        .withName("/operations")
+                        .withModule(module.getName());
+                module.getRpcs().forEach(this::generate);
+            }
+
+        }
+
+        private void generate(RpcDefinition rcp) {
+            pathCtx = new PathSegment(pathCtx)
+                        .withName(rcp.getQName().getLocalName())
+                        .withModule(module.getName());
+
+            ContainerSchemaNode input = rcp.getInput();
+            ContainerSchemaNode output = rcp.getOutput();
+
+            addPath(input, output);
+
+            pathCtx = pathCtx.drop();
         }
 
         private void generate(DataSchemaNode node) {
@@ -185,9 +225,10 @@ public class SwaggerGenerator {
 
         protected Operation getOp(DataSchemaNode node) {
             final Operation get = defaultOperation();
-            final RefModel definition = new RefModel(dataObjectsBuilder.getDefinitionId(node));
             get.description("returns " + dataObjectsBuilder.getName(node));
-            get.response(200, new Response().schema(new RefProperty(definition.getReference())).description(dataObjectsBuilder.getName(node)));
+            get.response(200, new Response()
+                    .schema(new RefProperty(dataObjectsBuilder.getDefinitionId(node)))
+                    .description(dataObjectsBuilder.getName(node)));
             return get;
         }
 
@@ -224,6 +265,38 @@ public class SwaggerGenerator {
             post.response(201, new Response().description("Object created"));
             post.response(409, new Response().description("Object already exists"));
             return post;
+        }
+
+        /**
+         * Add path for rcp
+         * @param input optional rcp input
+         * @param output optional rcp output
+         */
+        private void addPath(ContainerSchemaNode input, ContainerSchemaNode output) {
+
+            Operation post = defaultOperation();
+            if(input != null) {
+                final Model definition = dataObjectsBuilder.build(input);
+                post.parameter(new BodyParameter()
+                        .name("input")
+                        .schema(definition)
+                        .description(input.getDescription())
+                );
+            }
+
+            if(output != null) {
+                String description = output.getDescription();
+                if(description == null) {
+                    description = "Correct response";
+                }
+                post.response(200, new Response()
+                        .schema(new ObjectProperty(dataObjectsBuilder.build(output).getProperties()))
+                        .description(description));
+            }
+
+            post.response(201, new Response().description("No response")); //no output body
+
+            target.path(pathCtx.path(), new Path().post(post));
         }
 
         private void addPath(ListSchemaNode lN) {

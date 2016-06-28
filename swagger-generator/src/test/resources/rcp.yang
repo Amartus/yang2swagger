@@ -1,0 +1,47 @@
+module rock {
+    namespace "http://amartus/ns/yang/simplests";
+    prefix ro;
+    description "read-only test module";
+    organization "test-yang";
+
+    grouping res {
+        container c-res {
+            leaf id {
+                type int32;
+            }
+            leaf status {
+                type string;
+            }
+        }
+    }
+
+    rpc rock-the-house {
+        input {
+            leaf zip-code {
+                type string;
+            }
+            uses res;
+        }
+        output {
+            container response {
+                leaf configrmation {
+                    type string;
+                }
+                uses res;
+            }
+        }
+    }
+
+    rpc hello {
+        description "simple hello method";
+    }
+
+    rpc get-status {
+        description "simple hello method";
+        output {
+           leaf status {
+                type string;
+            }
+        }
+    }
+}

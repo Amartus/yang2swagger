@@ -3,14 +3,19 @@ package com.mrv.yangtools.codegen;
 import io.swagger.models.Model;
 import io.swagger.models.ModelImpl;
 import io.swagger.models.properties.ArrayProperty;
+import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -22,19 +27,32 @@ import static com.mrv.yangtools.common.BindingMapping.getPropertyName;
  */
 public class DataObjectsBuilder {
 
-    public Map<DataSchemaNode, String> names;
+    private static final Logger log = LoggerFactory.getLogger(DataObjectsBuilder.class);
+
+    private Map<DataSchemaNode, String> names;
+    private Set<String> built;
+
     private final TypeConverter converter;
 
     public DataObjectsBuilder(SchemaContext ctx) {
         names = new HashMap<>();
+        built = new HashSet<>();
         converter = new TypeConverter(ctx);
     }
 
     public void processModule(Module module) {
         HashSet<String> cache = new HashSet<>();
 
+        processNode(module, cache);
 
-        DataNodeIterable iter = new DataNodeIterable(module);
+        module.getRpcs().forEach(r -> {
+            processNode(r.getInput(), cache);
+            processNode(r.getOutput(), cache);
+        });
+    }
+
+    private void processNode(DataNodeContainer container, HashSet<String> cache) {
+        DataNodeIterable iter = new DataNodeIterable(container);
         final Stream<DataSchemaNode> targetStream = StreamSupport.stream(iter.spliterator(), false);
 
         targetStream.filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
@@ -44,6 +62,7 @@ public class DataObjectsBuilder {
                 });
     }
 
+
     String getName(DataSchemaNode node) {
         return names.get(node);
     }
@@ -52,50 +71,60 @@ public class DataObjectsBuilder {
         return "#/definitions/"+ names.get(node);
     }
 
-
-    public Model build(ContainerSchemaNode node) {
+    public <T extends DataSchemaNode & DataNodeContainer> Model build(T node) {
         final ModelImpl model = new ModelImpl();
         model.description(desc(node));
-        structure(node, model);
+        model.setProperties(structure(node));
+
+        built.add(getName(node));
 
         return model;
     }
 
-    public Model build(ListSchemaNode node) {
-        final ModelImpl model = new ModelImpl();
-        model.description(desc(node));
-        structure(node, model);
-
-        return model;
+    private <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
+        final boolean useReference = built.contains(getName(node));
+        Property prop;
+        if(useReference) {
+            final String definitionId = getDefinitionId(node);
+            log.debug("reference to {}", definitionId);
+            prop = new RefProperty(definitionId);
+        } else {
+            log.debug("submodel for {}", getName(node));
+            prop = new ObjectProperty(structure(node));
+        }
+        return prop;
     }
 
-    private void structure(DataNodeContainer node, ModelImpl model) {
-        node.getChildNodes().forEach(c -> {
+    private <T extends DataSchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
+        return node.getChildNodes().stream().map(c -> {
+
+            final String propertyName = getPropertyName(c.getQName().getLocalName());
 
             Property prop = null;
 
-            if(c instanceof LeafListSchemaNode) {
-                LeafListSchemaNode ll = (LeafListSchemaNode) c;
 
+
+            if (c instanceof LeafListSchemaNode) {
+                LeafListSchemaNode ll = (LeafListSchemaNode) c;
                 prop = new ArrayProperty(getPropertyByType(ll));
-            } else  if(c instanceof LeafSchemaNode) {
+            } else if (c instanceof LeafSchemaNode) {
                 LeafSchemaNode lN = (LeafSchemaNode) c;
                 prop = getPropertyByType(lN);
-            } else if(c instanceof ContainerSchemaNode) {
-                final String definitionId = getDefinitionId(c);
-                prop = new RefProperty(definitionId);
-            } else if(c instanceof ListSchemaNode) {
-                final String definitionId = getDefinitionId(c);
-                prop = new ArrayProperty().items(new RefProperty(definitionId));
+            } else if (c instanceof ContainerSchemaNode) {
+                prop = refOrStructure((ContainerSchemaNode)c);
+            } else if (c instanceof ListSchemaNode) {
+                prop = new ArrayProperty().items(prop = refOrStructure((ListSchemaNode)c));
             }
 
-            if(prop != null) {
+            if (prop != null) {
                 prop.setReadOnly(!c.isConfiguration());
                 prop.setDescription(desc(c));
 
-                model.property(getPropertyName(c.getQName().getLocalName()), prop);
+
             }
-        });
+
+            return new Pair(propertyName, prop);
+        }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property));
     }
 
     private Property getPropertyByType(LeafListSchemaNode llN) {
@@ -129,5 +158,15 @@ public class DataObjectsBuilder {
             //TODO if still we have a problem add module name !!!
         }
         return name;
+    }
+
+    private static class Pair {
+        final String name;
+        final Property property;
+
+        private Pair(String name, Property property) {
+            this.name = name;
+            this.property = property;
+        }
     }
 }

@@ -70,7 +70,7 @@ public class SchemaBuilder {
                     throw new IllegalStateException(y + " is not a file");
                 }
             }
-            resolveSchemaContext = reactor.buildEffective(new ArrayList<>(yangsStreams));
+            resolveSchemaContext = reactor.buildEffective(new ArrayList<InputStream>(yangsStreams));
             return resolveSchemaContext;
         } finally {
 

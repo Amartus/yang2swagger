@@ -33,5 +33,12 @@
             <artifactId>swagger-core</artifactId>
             <version>${swagger.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-parser</artifactId>
+            <version>1.0.20</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
