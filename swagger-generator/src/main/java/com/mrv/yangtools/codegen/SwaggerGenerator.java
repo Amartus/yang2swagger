@@ -25,6 +25,7 @@ public class SwaggerGenerator {
     private final DataObjectsBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
 
+
     private Set<Elements> toGenerate;
 
 
@@ -296,7 +297,8 @@ public class SwaggerGenerator {
 
             post.response(201, new Response().description("No response")); //no output body
 
-            target.path(pathCtx.path(), new Path().post(post));
+            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            target.path(printer.path(), new Path().post(post));
         }
 
         private void addPath(ListSchemaNode lN) {
@@ -308,7 +310,10 @@ public class SwaggerGenerator {
                 path.post(postOp(lN, false));
                 path.delete(deleteOp(lN));
             }
-            target.path(pathCtx.path(), path);
+            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            target.path(printer.path(), path);
+
+
 
             //yes I know it can be written in previous 'if statement' but at some point it is to be refactored
             if(pathCtx.isReadOnly()) return;
@@ -318,7 +323,8 @@ public class SwaggerGenerator {
             final Path list = new Path();
             list.post(postOp(lN, true));
 
-            target.path(pathCtx.listPath(), list);
+            Restconf13PathPrinter postPrinter = new Restconf13PathPrinter(pathCtx, false, true);
+            target.path(postPrinter.path(), list);
 
         }
 
@@ -330,7 +336,9 @@ public class SwaggerGenerator {
                 path.post(postOp(cN, false));
                 path.delete(deleteOp(cN));
             }
-            target.path(pathCtx.path(), path);
+            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+
+            target.path(printer.path(), path);
         }
     }
 }

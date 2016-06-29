@@ -14,36 +14,29 @@ import java.util.stream.Collectors;
 /**
  * @author bartosz.michalik@amartus.com
  */
-class PathSegment {
+class PathSegment implements Iterable<PathSegment> {
     private static final Logger log = LoggerFactory.getLogger(PathSegment.class);
 
     private String name;
     private String moduleName;
     private PathSegment parent;
-    private Optional<ListSchemaNode> node;
+    private ListSchemaNode node;
     private TypeConverter converter;
 
     //local parameters
     private List<Parameter> localParams;
     private boolean readOnly;
 
-
-    /** only for {@link NullObject} !!! */
-    protected PathSegment(String name) {
-        this.name = name;
-        this.moduleName = "";
-    }
-
     /**
      * To create a root segment of path
-     * @param ctx
+     * @param ctx YANG context
      */
     public PathSegment(SchemaContext ctx) {
-        this(new NullObject());
+        this(NULL);
         this.converter = new TypeConverter(ctx);
     }
 
-    protected PathSegment() {}
+    private PathSegment() {}
 
     public PathSegment(PathSegment parent) {
         Objects.requireNonNull(parent);
@@ -52,7 +45,7 @@ class PathSegment {
         this.converter = parent.converter;
         this.moduleName = parent.moduleName;
         this.readOnly = parent.readOnly;
-        node = Optional.empty();
+        node = null;
     }
 
     public PathSegment withName(String name) {
@@ -67,7 +60,7 @@ class PathSegment {
     }
 
     public PathSegment withListNode(ListSchemaNode node) {
-        this.node = Optional.ofNullable(node);
+        this.node = node;
         return this;
     }
 
@@ -81,6 +74,10 @@ class PathSegment {
         return this;
     }
 
+    public String getName() { return name;}
+    public String getModuleName() { return moduleName;}
+    public Collection<? extends Parameter> getParam() { return localParameters();}
+
     public boolean isReadOnly() {
         return readOnly;
     }
@@ -92,24 +89,17 @@ class PathSegment {
 
     @Override
     public String toString() {
-        return path();
+        return "PathSegment{" +
+                "name='" + name + '\'' +
+                ", moduleName='" + moduleName + '\'' +
+                ", parent=" + parent +
+                ", node=" + node +
+                ", converter=" + converter +
+                ", localParams=" + localParams +
+                ", readOnly=" + readOnly +
+                '}';
     }
 
-    /**
-     * Generate fully parametrized path
-     * @return
-     */
-    public String path() {
-        return parent.path() + segment(true);
-    }
-
-    /**
-     * Generate path that do not include parameters for the last segment
-     * @return
-     */
-    public String listPath() {
-        return parent.path() + segment(false);
-    }
 
     protected List<Parameter> params() {
         final List<Parameter> params = parent.params();
@@ -124,11 +114,11 @@ class PathSegment {
 
     protected Collection<? extends Parameter> localParameters() {
         if(localParams == null) {
-            if(node.isPresent()) {
+            if(node != null) {
                 log.debug("processing parameters from attached node");
                 final Set<String> existingNames = parent.params().stream().map(Parameter::getName).collect(Collectors.toSet());
 
-                localParams = node.get().getKeyDefinition().stream()
+                localParams = node.getKeyDefinition().stream()
                         .map(k -> {
 
                             final String name = existingNames.contains(k.getLocalName()) ?
@@ -138,7 +128,7 @@ class PathSegment {
                             final PathParameter param = new PathParameter()
                                     .name(name);
 
-                            final Optional<LeafSchemaNode> keyNode = node.get().getChildNodes().stream()
+                            final Optional<LeafSchemaNode> keyNode = node.getChildNodes().stream()
                                     .filter(n -> n instanceof LeafSchemaNode)
                                     .filter(n -> n.getQName().equals(k))
                                     .map(n -> ((LeafSchemaNode)n))
@@ -147,7 +137,7 @@ class PathSegment {
                             if(keyNode.isPresent()) {
                                 final LeafSchemaNode kN = keyNode.get();
                                 param
-                                        .description("Id of " + node.get().getQName().getLocalName())
+                                        .description("Id of " + node.getQName().getLocalName())
                                         .property(converter.convert(kN.getType(), kN));
                             }
 
@@ -162,19 +152,27 @@ class PathSegment {
         return localParams;
     }
 
-    protected String segment(boolean includeParams) {
-        String pathString = name;
-        if(includeParams && node.isPresent()) {
-            pathString = pathString + "=" + localParameters().stream()
-                                        .map(s -> "{" + s.getName() + "}")
-                                        .collect(Collectors.joining(","));
-        }
-        pathString = pathString + "/";
-        return pathString;
+    @Override
+    public Iterator<PathSegment> iterator() {
+        return new Iterator<PathSegment>() {
+
+            private PathSegment current = PathSegment.this;
+
+            @Override
+            public boolean hasNext() {
+                return current != NULL;
+            }
+
+            @Override
+            public PathSegment next() {
+                PathSegment r = current;
+                current = current.parent;
+                return r;
+            }
+        };
     }
 
-    private static class NullObject extends PathSegment{
-        NullObject() {}
+    private static PathSegment NULL = new PathSegment() {
 
         @Override
         public PathSegment drop() {
@@ -187,18 +185,8 @@ class PathSegment {
         }
 
         @Override
-        public String path() {
-            return "";
-        }
-
-        @Override
-        public String listPath() {
-            return path();
-        }
-
-        @Override
         protected List<Parameter> listParams() {
             return params();
         }
-    }
+    };
 }
