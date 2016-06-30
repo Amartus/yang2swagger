@@ -16,7 +16,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
@@ -37,7 +36,7 @@ public class DataObjectsBuilder {
     public DataObjectsBuilder(SchemaContext ctx) {
         names = new HashMap<>();
         built = new HashSet<>();
-        converter = new TypeConverter(ctx);
+        converter = new AnnotatingTypeConverter(ctx);
     }
 
     public void processModule(Module module) {
@@ -60,17 +59,10 @@ public class DataObjectsBuilder {
         DataNodeIterable iter = new DataNodeIterable(container);
 
         StreamSupport.stream(iter.spliterator(), false).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+                .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
                     String name = generateName(n, cache);
                     names.put(n, name);
-                });
-
-        StreamSupport.stream(iter.spliterator(), false).filter(n -> n instanceof AugmentationSchema)
-                .forEach(n -> {
-                    if(n.isAugmenting()) {
-                        String name = generateName(n, cache);
-                        names.put(n, name);
-                    }
                 });
     }
 
@@ -123,7 +115,7 @@ public class DataObjectsBuilder {
             } else if (c instanceof ContainerSchemaNode) {
                 prop = refOrStructure((ContainerSchemaNode)c);
             } else if (c instanceof ListSchemaNode) {
-                prop = new ArrayProperty().items(prop = refOrStructure((ListSchemaNode)c));
+                prop = new ArrayProperty().items(refOrStructure((ListSchemaNode)c));
             }
 
             if (prop != null) {
@@ -153,7 +145,6 @@ public class DataObjectsBuilder {
         return  node.getReference() == null ? node.getDescription() :
                 node.getDescription() + " REF:" + node.getReference();
     }
-
 
     private String generateName(DataSchemaNode node, HashSet<String> cache) {
         String name = getClassName(node.getQName());

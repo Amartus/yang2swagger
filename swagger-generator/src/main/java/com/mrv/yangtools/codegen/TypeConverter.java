@@ -26,8 +26,6 @@ public class TypeConverter {
 
     private static final Logger log = LoggerFactory.getLogger(TypeConverter.class);
 
-
-
     public Property convert(TypeDefinition<?> type, SchemaNode parent) {
         TypeDefinition<?> baseType = type.getBaseType();
 

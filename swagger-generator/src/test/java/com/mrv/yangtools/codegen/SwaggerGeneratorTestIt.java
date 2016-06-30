@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.test.utils.ContextUtils;
+import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
+import io.swagger.models.properties.Property;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
@@ -60,14 +62,17 @@ public class SwaggerGeneratorTestIt {
                 "SimpleRoot", "Children1", "Children2"
         )), defNames);
 
+        checkLeafrefAreFollowed("Children2", "parentId", "integer");
+
         assertThat(swagger.getPaths().keySet(), CoreMatchers.hasItem("/data/simple-root/children1={id}/children2={simplest-id}/"));
+    }
 
-        if(log.isDebugEnabled()) {
-            final StringWriter result = new StringWriter();
-            generator.generate(result);
-            log.debug("generated:\n" + result.toString());
-        }
-
+    private void checkLeafrefAreFollowed(String modelName, String propertyName, String type) {
+        Model model = swagger.getDefinitions().get(modelName);
+        Property parentId = model.getProperties().get(propertyName);
+        assertEquals(type, parentId.getType());
+        assertFalse(parentId.getVendorExtensions().isEmpty());
+        assertTrue(parentId.getVendorExtensions().containsKey("x-path"));
     }
 
     @org.junit.Test
@@ -137,15 +142,12 @@ public class SwaggerGeneratorTestIt {
                 "SimpleRoot", "Children1", "Children2", "AddedA", "AddedAChildren1"
         )), defNames);
 
+        checkLeafrefAreFollowed("Children2", "parentId", "integer");
+        checkLeafrefAreFollowed("AddedA", "a1", "string");
+
+
 
         assertThat(swagger.getPaths().keySet(), CoreMatchers.hasItem("/data/simple-root/added-a/children1/"));
-
-        if(log.isDebugEnabled()) {
-            final StringWriter result = new StringWriter();
-            generator.generate(result);
-            log.debug("generated:\n" + result.toString());
-        }
-
     }
 
 }

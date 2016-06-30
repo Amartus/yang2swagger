@@ -19,7 +19,11 @@ module simpleAugmentation {
       when "s:children1/s:id = '1'";
       container added-a {
           config false;
-          leaf a1 { type string; }
+          leaf a1 {
+            type leafref {
+                path "../id";
+            }
+          }
           leaf a2 { type int32; }
           leaf-list a3 { type int64;}
           container children1 {

@@ -30,6 +30,11 @@ module simplest {
                 leaf id {
                     type int32;
                 }
+                leaf parent-id {
+                    type leafref {
+                        path "../../id";
+                    }
+                }
                 key "id";
             }
         key "id";
