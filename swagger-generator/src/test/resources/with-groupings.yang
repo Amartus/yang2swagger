@@ -1,5 +1,5 @@
 module groupings {
-  namespace "http://amartus/ns/yang/simplests";
+  namespace "http://amartus/ns/yang/groupings";
   prefix gr;
   organization "test-yang";
   description "groupings test module";

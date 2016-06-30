@@ -41,24 +41,36 @@ public class DataObjectsBuilder {
     }
 
     public void processModule(Module module) {
-        HashSet<String> cache = new HashSet<>();
-
+        HashSet<String> cache = new HashSet<>(names.values());
+        log.debug("processing data nodes defined in {}", module.getName());
         processNode(module, cache);
 
+        log.debug("processing rcps defined in {}", module.getName());
         module.getRpcs().forEach(r -> {
             processNode(r.getInput(), cache);
             processNode(r.getOutput(), cache);
+        });
+        log.debug("processing augmentations defined in {}", module.getName());
+        module.getAugmentations().forEach(r -> {
+            processNode(r, cache);
         });
     }
 
     private void processNode(DataNodeContainer container, HashSet<String> cache) {
         DataNodeIterable iter = new DataNodeIterable(container);
-        final Stream<DataSchemaNode> targetStream = StreamSupport.stream(iter.spliterator(), false);
 
-        targetStream.filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+        StreamSupport.stream(iter.spliterator(), false).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
                 .forEach(n -> {
                     String name = generateName(n, cache);
                     names.put(n, name);
+                });
+
+        StreamSupport.stream(iter.spliterator(), false).filter(n -> n instanceof AugmentationSchema)
+                .forEach(n -> {
+                    if(n.isAugmenting()) {
+                        String name = generateName(n, cache);
+                        names.put(n, name);
+                    }
                 });
     }
 
@@ -101,8 +113,6 @@ public class DataObjectsBuilder {
             final String propertyName = getPropertyName(c.getQName().getLocalName());
 
             Property prop = null;
-
-
 
             if (c instanceof LeafListSchemaNode) {
                 LeafListSchemaNode ll = (LeafListSchemaNode) c;
@@ -148,10 +158,11 @@ public class DataObjectsBuilder {
     private String generateName(DataSchemaNode node, HashSet<String> cache) {
         String name = getClassName(node.getQName());
         if(cache.contains(name)) {
-            final Iterable<QName> path = node.getPath().getPathTowardsRoot();
+
+            final Iterable<QName> path = node.getPath().getParent().getPathTowardsRoot();
 
             for(QName p : path) {
-                name = name + getClassName(p);
+                name = getClassName(p) + name;
                 if(! cache.contains(name)) break;
             }
 

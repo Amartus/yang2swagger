@@ -124,4 +124,28 @@ public class SwaggerGeneratorTestIt {
         paths.values().stream().forEach(singlePostOperation);
     }
 
+    @org.junit.Test
+    public void testGenerateAugmentation() throws Exception {
+        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().startsWith("simple"));
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        swagger = generator.generate();
+
+        Set<String> defNames = swagger.getDefinitions().keySet();
+
+        assertEquals(new HashSet<>(Arrays.asList(
+                "SimpleRoot", "Children1", "Children2", "AddedA", "AddedAChildren1"
+        )), defNames);
+
+
+        assertThat(swagger.getPaths().keySet(), CoreMatchers.hasItem("/data/simple-root/added-a/children1/"));
+
+        if(log.isDebugEnabled()) {
+            final StringWriter result = new StringWriter();
+            generator.generate(result);
+            log.debug("generated:\n" + result.toString());
+        }
+
+    }
+
 }

@@ -15,6 +15,8 @@ module simplest {
   }
 
   container simple-root {
+    leaf id { type string; }
+
     list children1 {
         leaf id {
             type myint1;

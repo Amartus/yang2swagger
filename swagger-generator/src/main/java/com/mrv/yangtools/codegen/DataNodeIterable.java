@@ -38,18 +38,16 @@ public class DataNodeIterable implements Iterable<DataSchemaNode> {
         }
 
         final Iterable<DataSchemaNode> childNodes = dataNode.getChildNodes();
+
         if (childNodes != null) {
             for (DataSchemaNode childNode : childNodes) {
                 if (childNode.isAugmenting()) {
                     continue;
                 }
                 allChilds.add(childNode);
-                if (childNode instanceof ContainerSchemaNode) {
-                    final ContainerSchemaNode containerNode = (ContainerSchemaNode) childNode;
+                if (childNode instanceof DataNodeContainer) {
+                    final DataNodeContainer containerNode = (DataNodeContainer) childNode;
                     traverse(containerNode);
-                } else if (childNode instanceof ListSchemaNode) {
-                    final ListSchemaNode list = (ListSchemaNode) childNode;
-                    traverse(list);
                 } else if (childNode instanceof ChoiceSchemaNode) {
                     final ChoiceSchemaNode choiceNode = (ChoiceSchemaNode) childNode;
                     final Set<ChoiceCaseNode> cases = choiceNode.getCases();

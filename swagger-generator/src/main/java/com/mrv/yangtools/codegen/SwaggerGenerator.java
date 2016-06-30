@@ -119,12 +119,17 @@ public class SwaggerGenerator {
 
         ArrayList<String> mNames = new ArrayList<>();
 
-        modules.stream().forEach(m -> {
+        modules.stream().
+                forEach(m -> {
             mNames.add(m.getName());
             dataObjectsBuilder.processModule(m);
-            new ModuleGenerator(m).generate();
 
         });
+
+        modules.stream().
+                forEach(m -> {
+                    new ModuleGenerator(m).generate();
+                });
 
         // update info with module names
         String modules = mNames.stream().collect(Collectors.joining(","));
