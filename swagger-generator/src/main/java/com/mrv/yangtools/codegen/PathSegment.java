@@ -137,8 +137,8 @@ class PathSegment implements Iterable<PathSegment> {
                             if(keyNode.isPresent()) {
                                 final LeafSchemaNode kN = keyNode.get();
                                 param
-                                        .description("Id of " + node.getQName().getLocalName())
-                                        .property(converter.convert(kN.getType(), kN));
+                                    .description("Id of " + node.getQName().getLocalName())
+                                    .property(converter.convert(kN.getType(), kN));
                             }
 
                             return param;

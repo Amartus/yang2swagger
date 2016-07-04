@@ -9,6 +9,8 @@ import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
  * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGenerator {
+    private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
     private final SchemaContext ctx;
     private final Set<Module> modules;
     private final Swagger target;
@@ -183,8 +186,8 @@ public class SwaggerGenerator {
         private void generate(DataSchemaNode node) {
 
             if(node instanceof ContainerSchemaNode) {
+                log.info("procesing container statement {}", node.getQName().getLocalName() );
                 final ContainerSchemaNode cN = (ContainerSchemaNode) node;
-
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(cN.getQName().getLocalName())
@@ -198,6 +201,7 @@ public class SwaggerGenerator {
 
                 pathCtx = pathCtx.drop();
             } else if(node instanceof ListSchemaNode) {
+                log.info("processing list statement {}", node.getQName().getLocalName() );
                 final ListSchemaNode lN = (ListSchemaNode) node;
 
                 pathCtx = new PathSegment(pathCtx)
@@ -211,6 +215,11 @@ public class SwaggerGenerator {
                 target.addDefinition(dataObjectsBuilder.getName(lN), dataObjectsBuilder.build(lN));
 
                 pathCtx = pathCtx.drop();
+            } else if (node instanceof ChoiceSchemaNode) {
+                //choice node and cases are invisible from the perspective of generating path
+                log.info("inlining choice statement {}", node.getQName().getLocalName() );
+                ((ChoiceSchemaNode) node).getCases().stream()
+                        .flatMap(_case -> _case.getChildNodes().stream()).forEach(this::generate);
             }
         }
 

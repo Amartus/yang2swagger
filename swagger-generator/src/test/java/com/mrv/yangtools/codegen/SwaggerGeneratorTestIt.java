@@ -150,4 +150,23 @@ public class SwaggerGeneratorTestIt {
         assertThat(swagger.getPaths().keySet(), CoreMatchers.hasItem("/data/simple-root/added-a/children1/"));
     }
 
+    @org.junit.Test
+    public void testGenerateChoice() throws Exception {
+        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        swagger = generator.generate();
+
+        Set<String> defNames = swagger.getDefinitions().keySet();
+
+        assertEquals(new HashSet<>(Arrays.asList(
+                "Data", "Protocol"
+        )), defNames);
+
+        assertEquals(new HashSet<>(Arrays.asList(
+                "/data/protocol/", "/data/protocol/data/"
+        )), swagger.getPaths().keySet());
+
+    }
+
 }
