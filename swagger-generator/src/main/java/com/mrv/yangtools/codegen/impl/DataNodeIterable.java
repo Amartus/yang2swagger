@@ -1,4 +1,4 @@
-package com.mrv.yangtools.codegen;
+package com.mrv.yangtools.codegen.impl;
 
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.function.Consumer;
 
 /**
+ * Iterator that is used to traverse all nodes that will constitute Swagger models.
  * @author bartosz.michalik@amartus.com
  */
 public class DataNodeIterable implements Iterable<DataSchemaNode> {

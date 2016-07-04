@@ -1,5 +1,6 @@
 package com.mrv.yangtools.codegen;
 
+import com.mrv.yangtools.codegen.impl.DataNodeIterable;
 import io.swagger.models.Model;
 import io.swagger.models.ModelImpl;
 import io.swagger.models.properties.*;
@@ -19,9 +20,10 @@ import static com.mrv.yangtools.common.BindingMapping.getClassName;
 import static com.mrv.yangtools.common.BindingMapping.getPropertyName;
 
 /**
+ * Used to convert YANG data nodes to Swagger models
  * @author bartosz.michalik@amartus.com
  */
-public class DataObjectsBuilder {
+public class DataObjectsBuilder implements DataObjectRepo {
 
     private static final Logger log = LoggerFactory.getLogger(DataObjectsBuilder.class);
 
@@ -30,12 +32,19 @@ public class DataObjectsBuilder {
 
     private final TypeConverter converter;
 
+    /**
+     * @param ctx YANG modules context
+     */
     public DataObjectsBuilder(SchemaContext ctx) {
         names = new HashMap<>();
         built = new HashSet<>();
         converter = new AnnotatingTypeConverter(ctx);
     }
 
+    /**
+     * Traverse model to collect all verbs from YANG nodes that will constitute Swagger models
+     * @param module to traverse
+     */
     public void processModule(Module module) {
         HashSet<String> cache = new HashSet<>(names.values());
         log.debug("processing data nodes defined in {}", module.getName());
@@ -52,6 +61,22 @@ public class DataObjectsBuilder {
         });
     }
 
+    /**
+     * Build Swagger model for given Yang data node
+     * @param node for which we want to build model
+     * @param <T> YANG node type
+     * @return Swagger model
+     */
+    public <T extends DataSchemaNode & DataNodeContainer> Model build(T node) {
+        final ModelImpl model = new ModelImpl();
+        model.description(desc(node));
+        model.setProperties(structure(node));
+
+        built.add(getName(node));
+
+        return model;
+    }
+
     private void processNode(DataNodeContainer container, HashSet<String> cache) {
         DataNodeIterable iter = new DataNodeIterable(container);
 
@@ -64,22 +89,22 @@ public class DataObjectsBuilder {
     }
 
 
-    String getName(DataSchemaNode node) {
+    /**
+     * Get name for data node. Prerequisite is to have node's module traversed {@link DataObjectsBuilder#processModule(Module)}.
+     * @param node node
+     * @return name
+     */
+    public String getName(DataSchemaNode node) {
         return names.get(node);
     }
 
-    String getDefinitionId(DataSchemaNode node) {
+    /**
+     * Get definition id for node. Prerequisite is to have node's module traversed {@link DataObjectsBuilder#processModule(Module)}.
+     * @param node node
+     * @return id
+     */
+    public String getDefinitionId(DataSchemaNode node) {
         return "#/definitions/"+ names.get(node);
-    }
-
-    public <T extends DataSchemaNode & DataNodeContainer> Model build(T node) {
-        final ModelImpl model = new ModelImpl();
-        model.description(desc(node));
-        model.setProperties(structure(node));
-
-        built.add(getName(node));
-
-        return model;
     }
 
     private <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
@@ -165,7 +190,7 @@ public class DataObjectsBuilder {
         return property;
     }
 
-    public String desc(DocumentedNode node) {
+    protected static String desc(DocumentedNode node) {
         return  node.getReference() == null ? node.getDescription() :
                 node.getDescription() + " REF:" + node.getReference();
     }

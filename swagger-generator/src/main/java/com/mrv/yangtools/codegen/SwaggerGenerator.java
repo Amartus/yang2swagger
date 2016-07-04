@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.mrv.yangtools.codegen.impl.*;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.ObjectProperty;
@@ -230,13 +231,6 @@ public class SwaggerGenerator {
             return operation;
         }
 
-        private Operation listOperation() {
-            final Operation operation = new Operation();
-            operation.response(400, new Response().description("Internal error"));
-            operation.setParameters(pathCtx.listParams());
-            return operation;
-        }
-
 
         protected Operation getOp(DataSchemaNode node) {
             final Operation get = defaultOperation();
@@ -247,40 +241,6 @@ public class SwaggerGenerator {
             return get;
         }
 
-        protected Operation deleteOp(DataSchemaNode node) {
-            final Operation delete = defaultOperation();
-            delete.description("removes " + dataObjectsBuilder.getName(node));
-            delete.response(204, new Response().description("Object deleted"));
-            return delete;
-        }
-
-        protected Operation putOp(DataSchemaNode node) {
-            final Operation put = defaultOperation();
-            final RefModel definition = new RefModel(dataObjectsBuilder.getDefinitionId(node));
-            put.description("creates or updates " + dataObjectsBuilder.getName(node));
-            put.parameter(new BodyParameter()
-                            .name("body-param")
-                            .schema(definition)
-                            .description(dataObjectsBuilder.getName(node) + " to be added or updated"));
-
-            put.response(201, new Response().description("Object created"));
-            put.response(204, new Response().description("Object modified"));
-            return put;
-        }
-
-        protected Operation postOp(DataSchemaNode node, boolean dropLastSegmentParams) {
-            final Operation post = dropLastSegmentParams ? listOperation() : defaultOperation();
-            final RefModel definition = new RefModel(dataObjectsBuilder.getDefinitionId(node));
-            post.description("creates " + dataObjectsBuilder.getName(node));
-            post.parameter(new BodyParameter()
-                    .name("body-param")
-                    .schema(definition)
-                    .description(dataObjectsBuilder.getName(node) + " to be added to list"));
-
-            post.response(201, new Response().description("Object created"));
-            post.response(409, new Response().description("Object already exists"));
-            return post;
-        }
 
         /**
          * Add path for rcp
@@ -311,20 +271,19 @@ public class SwaggerGenerator {
 
             post.response(201, new Response().description("No response")); //no output body
 
-            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
             target.path(printer.path(), new Path().post(post));
         }
 
         private void addPath(ListSchemaNode lN) {
             final Path path = new Path();
-
-            path.get(getOp(lN));
+            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
             if(!pathCtx.isReadOnly()) {
-                path.put(putOp(lN));
-                path.post(postOp(lN, false));
-                path.delete(deleteOp(lN));
+                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
+                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(lN));
+                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
             }
-            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
             target.path(printer.path(), path);
 
 
@@ -335,22 +294,23 @@ public class SwaggerGenerator {
 
             //add list path
             final Path list = new Path();
-            list.post(postOp(lN, true));
+            list.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, true).execute(lN));
 
-            Restconf13PathPrinter postPrinter = new Restconf13PathPrinter(pathCtx, false, true);
+
+            Restconf14PathPrinter postPrinter = new Restconf14PathPrinter(pathCtx, false, true);
             target.path(postPrinter.path(), list);
 
         }
 
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
-            path.get(getOp(cN));
+            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
             if(!pathCtx.isReadOnly()) {
-                path.put(putOp(cN));
-                path.post(postOp(cN, false));
-                path.delete(deleteOp(cN));
+                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
+                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(cN));
+                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
             }
-            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
 
             target.path(printer.path(), path);
         }

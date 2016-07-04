@@ -8,9 +8,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ * {@link PathPrinter} compliant with https://tools.ietf.org/html/draft-ietf-netconf-restconf-14#section-3.3
  * @author bartosz.michalik@amartus.com
  */
-public class Restconf13PathPrinter extends PathPrinter {
+public class Restconf14PathPrinter extends PathPrinter {
 
     private static final Function<Collection<? extends Parameter>, String> param =
             params -> params.isEmpty() ? "/" :
@@ -18,11 +19,11 @@ public class Restconf13PathPrinter extends PathPrinter {
 
     private final boolean useModuleName;
 
-    public Restconf13PathPrinter(PathSegment path, boolean useModuleName) {
+    public Restconf14PathPrinter(PathSegment path, boolean useModuleName) {
         this(path, useModuleName, false);
     }
 
-    public Restconf13PathPrinter(PathSegment path, boolean useModuleName, boolean dropLastParams) {
+    public Restconf14PathPrinter(PathSegment path, boolean useModuleName, boolean dropLastParams) {
         super(path, param, dropLastParams ? x -> "/" : param);
         this.useModuleName = useModuleName;
     }

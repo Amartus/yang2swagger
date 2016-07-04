@@ -12,9 +12,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Helper class that help to keep track of current location in YANG module data tree.
+ * Segment stores current node related data and can point to its parent that
+ * effectively allows for path computation from current node to root node.
  * @author bartosz.michalik@amartus.com
  */
-class PathSegment implements Iterable<PathSegment> {
+public class PathSegment implements Iterable<PathSegment> {
     private static final Logger log = LoggerFactory.getLogger(PathSegment.class);
 
     private String name;
@@ -101,14 +104,14 @@ class PathSegment implements Iterable<PathSegment> {
     }
 
 
-    protected List<Parameter> params() {
+    public List<Parameter> params() {
         final List<Parameter> params = parent.params();
         params.addAll(localParameters());
 
         return params;
     }
 
-    protected List<Parameter> listParams() {
+    public List<Parameter> listParams() {
         return parent.params();
     }
 
@@ -180,12 +183,12 @@ class PathSegment implements Iterable<PathSegment> {
         }
 
         @Override
-        protected List<Parameter> params() {
+        public List<Parameter> params() {
             return new ArrayList<>();
         }
 
         @Override
-        protected List<Parameter> listParams() {
+        public List<Parameter> listParams() {
             return params();
         }
     };

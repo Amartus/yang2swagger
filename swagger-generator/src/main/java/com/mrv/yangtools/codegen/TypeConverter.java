@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Supports tpye conversion between YANG and swagger
  * @author bartosz.michalik@amartus.com
  */
 public class TypeConverter {
@@ -26,6 +27,12 @@ public class TypeConverter {
 
     private static final Logger log = LoggerFactory.getLogger(TypeConverter.class);
 
+    /**
+     * Convert YANG type to swagger property
+     * @param type YANG
+     * @param parent for scope computation (to support leafrefs
+     * @return property
+     */
     public Property convert(TypeDefinition<?> type, SchemaNode parent) {
         TypeDefinition<?> baseType = type.getBaseType();
 
