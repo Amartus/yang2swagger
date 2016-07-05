@@ -156,6 +156,17 @@ public class SwaggerGeneratorTestIt {
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
         swagger = generator.generate();
+
+        Set<String> defNames = swagger.getDefinitions().keySet();
+
+        assertEquals(new HashSet<>(Arrays.asList(
+                "Data", "Protocol"
+        )), defNames);
+
+        assertEquals(new HashSet<>(Arrays.asList(
+                "/data/protocol/", "/data/protocol/data/"
+        )), swagger.getPaths().keySet());
+
     }
 
 }

@@ -10,7 +10,7 @@ import static org.mockito.Mockito.mock;
 /**
  * @author bartosz.michalik@amartus.com
  */
-public class Restconf13PathPrinterTest {
+public class Restconf14PathPrinterTest {
 
 
     @Test
@@ -24,7 +24,7 @@ public class Restconf13PathPrinterTest {
         PathSegment b = new PathSegment(a).withName("b");
         PathSegment c = new PathSegment(b).withName("c");
 
-        assertEquals("a/b/c/", new Restconf13PathPrinter(c, false).path());
+        assertEquals("a/b/c/", new Restconf14PathPrinter(c, false).path());
     }
 
 
@@ -39,7 +39,7 @@ public class Restconf13PathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c");
 
-        assertEquals("a/b={x},{y}/c/", new Restconf13PathPrinter(c, false).path());
+        assertEquals("a/b={x},{y}/c/", new Restconf14PathPrinter(c, false).path());
     }
 
     @Test
@@ -54,8 +54,8 @@ public class Restconf13PathPrinterTest {
         PathSegment c = new PathSegment(b).withName("c")
                 .withListNode(new MockNodeBuilder("test").param("z").build());
 
-        assertEquals("a/b={x},{y}/c={z}/", new Restconf13PathPrinter(c, false).path());
-        assertEquals("a/b={x},{y}/c/", new Restconf13PathPrinter(c, false, true).path());
+        assertEquals("a/b={x},{y}/c={z}/", new Restconf14PathPrinter(c, false).path());
+        assertEquals("a/b={x},{y}/c/", new Restconf14PathPrinter(c, false, true).path());
     }
 
     @Test
@@ -71,8 +71,8 @@ public class Restconf13PathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c").withModule("mod2");
 
-        assertEquals("mod1:a/mod1:b={x},{y}/mod2:c/", new Restconf13PathPrinter(c, true).path());
-        assertEquals("a/b={x},{y}/c/", new Restconf13PathPrinter(c, false).path());
+        assertEquals("mod1:a/mod1:b={x},{y}/mod2:c/", new Restconf14PathPrinter(c, true).path());
+        assertEquals("a/b={x},{y}/c/", new Restconf14PathPrinter(c, false).path());
     }
 
 }

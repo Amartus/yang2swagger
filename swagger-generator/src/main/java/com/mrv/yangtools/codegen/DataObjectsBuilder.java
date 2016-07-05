@@ -1,11 +1,9 @@
 package com.mrv.yangtools.codegen;
 
+import com.mrv.yangtools.codegen.impl.DataNodeIterable;
 import io.swagger.models.Model;
 import io.swagger.models.ModelImpl;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.ObjectProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.RefProperty;
+import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
@@ -22,9 +20,10 @@ import static com.mrv.yangtools.common.BindingMapping.getClassName;
 import static com.mrv.yangtools.common.BindingMapping.getPropertyName;
 
 /**
+ * Used to convert YANG data nodes to Swagger models
  * @author bartosz.michalik@amartus.com
  */
-public class DataObjectsBuilder {
+public class DataObjectsBuilder implements DataObjectRepo {
 
     private static final Logger log = LoggerFactory.getLogger(DataObjectsBuilder.class);
 
@@ -33,12 +32,19 @@ public class DataObjectsBuilder {
 
     private final TypeConverter converter;
 
+    /**
+     * @param ctx YANG modules context
+     */
     public DataObjectsBuilder(SchemaContext ctx) {
         names = new HashMap<>();
         built = new HashSet<>();
         converter = new AnnotatingTypeConverter(ctx);
     }
 
+    /**
+     * Traverse model to collect all verbs from YANG nodes that will constitute Swagger models
+     * @param module to traverse
+     */
     public void processModule(Module module) {
         HashSet<String> cache = new HashSet<>(names.values());
         log.debug("processing data nodes defined in {}", module.getName());
@@ -55,6 +61,22 @@ public class DataObjectsBuilder {
         });
     }
 
+    /**
+     * Build Swagger model for given Yang data node
+     * @param node for which we want to build model
+     * @param <T> YANG node type
+     * @return Swagger model
+     */
+    public <T extends DataSchemaNode & DataNodeContainer> Model build(T node) {
+        final ModelImpl model = new ModelImpl();
+        model.description(desc(node));
+        model.setProperties(structure(node));
+
+        built.add(getName(node));
+
+        return model;
+    }
+
     private void processNode(DataNodeContainer container, HashSet<String> cache) {
         DataNodeIterable iter = new DataNodeIterable(container);
 
@@ -67,22 +89,22 @@ public class DataObjectsBuilder {
     }
 
 
-    String getName(DataSchemaNode node) {
+    /**
+     * Get name for data node. Prerequisite is to have node's module traversed {@link DataObjectsBuilder#processModule(Module)}.
+     * @param node node
+     * @return name
+     */
+    public String getName(DataSchemaNode node) {
         return names.get(node);
     }
 
-    String getDefinitionId(DataSchemaNode node) {
+    /**
+     * Get definition id for node. Prerequisite is to have node's module traversed {@link DataObjectsBuilder#processModule(Module)}.
+     * @param node node
+     * @return id
+     */
+    public String getDefinitionId(DataSchemaNode node) {
         return "#/definitions/"+ names.get(node);
-    }
-
-    public <T extends DataSchemaNode & DataNodeContainer> Model build(T node) {
-        final ModelImpl model = new ModelImpl();
-        model.description(desc(node));
-        model.setProperties(structure(node));
-
-        built.add(getName(node));
-
-        return model;
     }
 
     private <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
@@ -99,32 +121,61 @@ public class DataObjectsBuilder {
         return prop;
     }
 
+    private Pair prop(DataSchemaNode node) {
+        final String propertyName = getPropertyName(node.getQName().getLocalName());
+
+        Property prop = null;
+
+        if (node instanceof LeafListSchemaNode) {
+            LeafListSchemaNode ll = (LeafListSchemaNode) node;
+            prop = new ArrayProperty(getPropertyByType(ll));
+        } else if (node instanceof LeafSchemaNode) {
+            LeafSchemaNode lN = (LeafSchemaNode) node;
+            prop = getPropertyByType(lN);
+        } else if (node instanceof ContainerSchemaNode) {
+            prop = refOrStructure((ContainerSchemaNode) node);
+        } else if (node instanceof ListSchemaNode) {
+            prop = new ArrayProperty().items(refOrStructure((ListSchemaNode) node));
+        }
+
+        if (prop != null) {
+            prop.setReadOnly(!node.isConfiguration());
+            prop.setDescription(desc(node));
+        }
+
+        return new Pair(propertyName, prop);
+    }
+
     private <T extends DataSchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
-        return node.getChildNodes().stream().map(c -> {
 
-            final String propertyName = getPropertyName(c.getQName().getLocalName());
+        Map<String, Property> properties = node.getChildNodes().stream()
+                .filter(c -> !(c instanceof ChoiceSchemaNode)) // choices handled elsewhere
+                .map(this::prop).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property));
 
-            Property prop = null;
+        Map<String, Property> choiceProperties = node.getChildNodes().stream()
+                .filter(c -> (c instanceof ChoiceSchemaNode)) // handling choices
+                .flatMap(c -> {
+                    ChoiceSchemaNode choice = (ChoiceSchemaNode) c;
+                    return choice.getCases().stream()
+                            .flatMap(_case -> _case.getChildNodes().stream().map(sc -> {
+                                Pair prop = prop(sc);
+                                assignCaseMetadata(prop.property, choice, _case);
+                                return prop;
+                            }));
+                }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property));;
 
-            if (c instanceof LeafListSchemaNode) {
-                LeafListSchemaNode ll = (LeafListSchemaNode) c;
-                prop = new ArrayProperty(getPropertyByType(ll));
-            } else if (c instanceof LeafSchemaNode) {
-                LeafSchemaNode lN = (LeafSchemaNode) c;
-                prop = getPropertyByType(lN);
-            } else if (c instanceof ContainerSchemaNode) {
-                prop = refOrStructure((ContainerSchemaNode)c);
-            } else if (c instanceof ListSchemaNode) {
-                prop = new ArrayProperty().items(refOrStructure((ListSchemaNode)c));
-            }
+        HashMap<String, Property> result = new HashMap<>();
 
-            if (prop != null) {
-                prop.setReadOnly(!c.isConfiguration());
-                prop.setDescription(desc(c));
-            }
+        result.putAll(properties);
+        result.putAll(choiceProperties);
+        return result;
+    }
 
-            return new Pair(propertyName, prop);
-        }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property));
+    private static void assignCaseMetadata(Property property, ChoiceSchemaNode choice, ChoiceCaseNode aCase) {
+        String choiceName = choice.getQName().getLocalName();
+        String caseName = aCase.getQName().getLocalName();
+
+        ((AbstractProperty) property).setVendorExtension("x-choice", choiceName + ":" + caseName);
     }
 
     private Property getPropertyByType(LeafListSchemaNode llN) {
@@ -139,7 +190,7 @@ public class DataObjectsBuilder {
         return property;
     }
 
-    public String desc(DocumentedNode node) {
+    protected static String desc(DocumentedNode node) {
         return  node.getReference() == null ? node.getDescription() :
                 node.getDescription() + " REF:" + node.getReference();
     }

@@ -16,6 +16,11 @@ module choice-example {
                  leaf tcp {
                     type empty;
                  }
+                 container data {
+                    leaf timeout {
+                        type string;
+                    }
+                 }
              }
          }
      }

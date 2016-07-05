@@ -4,11 +4,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.mrv.yangtools.codegen.impl.*;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -16,11 +19,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * YANG to Swagger generator
  * Generates swagger definitions from yang modules. The output format is either YAML or JSon.
  *
  * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGenerator {
+    private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
     private final SchemaContext ctx;
     private final Set<Module> modules;
     private final Swagger target;
@@ -37,9 +42,10 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Initialize generator with overal context and set of modules to generate RESTCONF from
-     * @param ctx
-     * @param modulesToGenerate
+     * Preconfigure generator. By default it will genrate api for Data and RCP with JSon payloads only.
+     * The api will be in YAML format. You might change default setting with config methods of the class
+     * @param ctx context for generation
+     * @param modulesToGenerate modules that will be transformed to swagger API
      */
     public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
@@ -75,7 +81,7 @@ public class SwaggerGenerator {
 
 
     /**
-     * Elements that are taken into account during generation
+     * YANG elements that are taken into account during generation
      * @return this
      */
     public SwaggerGenerator elements(Elements... elements) {
@@ -102,9 +108,9 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Specify host attribute of swagger specification
-     * @param host to be set
-     * @return itself
+     * Set host config for Swagger output
+     * @param host general host to bind Swagger definition
+     * @return this
      */
     public SwaggerGenerator host(String host) {
         target.host(host);
@@ -113,9 +119,9 @@ public class SwaggerGenerator {
 
 
     /**
-     * Root path for swagger description
-     * @param basePath root path ('/restconf' is default)
-     * @return itself
+     * Set base path
+     * @param basePath '/restconf' by default
+     * @return this
      */
     public SwaggerGenerator basePath(String basePath) {
         target.basePath(basePath);
@@ -123,9 +129,9 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Consumes http header definition
-     * @param consumes e.g. application/xml
-     * @return itself
+     * Add consumes type header for all methods
+     * @param consumes type header
+     * @return this
      */
     public SwaggerGenerator consumes(String consumes) {
         Objects.requireNonNull(consumes);
@@ -133,12 +139,22 @@ public class SwaggerGenerator {
         return this;
     }
 
+    /**
+     * Add produces type header for all methods
+     * @param produces type header
+     * @return this
+     */
     public SwaggerGenerator produces(String produces) {
         Objects.requireNonNull(produces);
         target.produces(produces);
         return this;
     }
 
+    /**
+     * Run Swagger generation
+     * @param writer target
+     * @throws IOException
+     */
     public void generate(Writer writer) throws IOException {
         if(writer == null) throw new NullPointerException();
 
@@ -215,8 +231,8 @@ public class SwaggerGenerator {
         private void generate(DataSchemaNode node) {
 
             if(node instanceof ContainerSchemaNode) {
+                log.info("procesing container statement {}", node.getQName().getLocalName() );
                 final ContainerSchemaNode cN = (ContainerSchemaNode) node;
-
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(cN.getQName().getLocalName())
@@ -230,6 +246,7 @@ public class SwaggerGenerator {
 
                 pathCtx = pathCtx.drop();
             } else if(node instanceof ListSchemaNode) {
+                log.info("processing list statement {}", node.getQName().getLocalName() );
                 final ListSchemaNode lN = (ListSchemaNode) node;
 
                 pathCtx = new PathSegment(pathCtx)
@@ -243,6 +260,11 @@ public class SwaggerGenerator {
                 target.addDefinition(dataObjectsBuilder.getName(lN), dataObjectsBuilder.build(lN));
 
                 pathCtx = pathCtx.drop();
+            } else if (node instanceof ChoiceSchemaNode) {
+                //choice node and cases are invisible from the perspective of generating path
+                log.info("inlining choice statement {}", node.getQName().getLocalName() );
+                ((ChoiceSchemaNode) node).getCases().stream()
+                        .flatMap(_case -> _case.getChildNodes().stream()).forEach(this::generate);
             }
         }
 
@@ -250,13 +272,6 @@ public class SwaggerGenerator {
             final Operation operation = new Operation();
             operation.response(400, new Response().description("Internal error"));
             operation.setParameters(pathCtx.params());
-            return operation;
-        }
-
-        private Operation listOperation() {
-            final Operation operation = new Operation();
-            operation.response(400, new Response().description("Internal error"));
-            operation.setParameters(pathCtx.listParams());
             return operation;
         }
 
@@ -270,40 +285,6 @@ public class SwaggerGenerator {
             return get;
         }
 
-        protected Operation deleteOp(DataSchemaNode node) {
-            final Operation delete = defaultOperation();
-            delete.description("removes " + dataObjectsBuilder.getName(node));
-            delete.response(204, new Response().description("Object deleted"));
-            return delete;
-        }
-
-        protected Operation putOp(DataSchemaNode node) {
-            final Operation put = defaultOperation();
-            final RefModel definition = new RefModel(dataObjectsBuilder.getDefinitionId(node));
-            put.description("creates or updates " + dataObjectsBuilder.getName(node));
-            put.parameter(new BodyParameter()
-                            .name("body-param")
-                            .schema(definition)
-                            .description(dataObjectsBuilder.getName(node) + " to be added or updated"));
-
-            put.response(201, new Response().description("Object created"));
-            put.response(204, new Response().description("Object modified"));
-            return put;
-        }
-
-        protected Operation postOp(DataSchemaNode node, boolean dropLastSegmentParams) {
-            final Operation post = dropLastSegmentParams ? listOperation() : defaultOperation();
-            final RefModel definition = new RefModel(dataObjectsBuilder.getDefinitionId(node));
-            post.description("creates " + dataObjectsBuilder.getName(node));
-            post.parameter(new BodyParameter()
-                    .name("body-param")
-                    .schema(definition)
-                    .description(dataObjectsBuilder.getName(node) + " to be added to list"));
-
-            post.response(201, new Response().description("Object created"));
-            post.response(409, new Response().description("Object already exists"));
-            return post;
-        }
 
         /**
          * Add path for rcp
@@ -334,20 +315,19 @@ public class SwaggerGenerator {
 
             post.response(201, new Response().description("No response")); //no output body
 
-            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
             target.path(printer.path(), new Path().post(post));
         }
 
         private void addPath(ListSchemaNode lN) {
             final Path path = new Path();
-
-            path.get(getOp(lN));
+            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
             if(!pathCtx.isReadOnly()) {
-                path.put(putOp(lN));
-                path.post(postOp(lN, false));
-                path.delete(deleteOp(lN));
+                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
+                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(lN));
+                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
             }
-            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
             target.path(printer.path(), path);
 
 
@@ -358,22 +338,23 @@ public class SwaggerGenerator {
 
             //add list path
             final Path list = new Path();
-            list.post(postOp(lN, true));
+            list.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, true).execute(lN));
 
-            Restconf13PathPrinter postPrinter = new Restconf13PathPrinter(pathCtx, false, true);
+
+            Restconf14PathPrinter postPrinter = new Restconf14PathPrinter(pathCtx, false, true);
             target.path(postPrinter.path(), list);
 
         }
 
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
-            path.get(getOp(cN));
+            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
             if(!pathCtx.isReadOnly()) {
-                path.put(putOp(cN));
-                path.post(postOp(cN, false));
-                path.delete(deleteOp(cN));
+                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
+                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(cN));
+                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
             }
-            Restconf13PathPrinter printer = new Restconf13PathPrinter(pathCtx, false);
+            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
 
             target.path(printer.path(), path);
         }
