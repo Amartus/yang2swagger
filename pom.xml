@@ -10,6 +10,7 @@
     <modules>
         <module>swagger-generator</module>
         <module>common</module>
+        <module>swagger-maven-plugin</module>
     </modules>
 
     <packaging>pom</packaging>
@@ -40,6 +41,12 @@
             <dependency>
                 <groupId>org.opendaylight.yangtools</groupId>
                 <artifactId>yang-common</artifactId>
+                <version>${yangtools.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.opendaylight.yangtools</groupId>
+                <artifactId>yang-maven-plugin-spi</artifactId>
                 <version>${yangtools.version}</version>
             </dependency>
 

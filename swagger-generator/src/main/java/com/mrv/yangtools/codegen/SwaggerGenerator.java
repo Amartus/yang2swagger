@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * YANG to Swagger generator
  * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGenerator {
@@ -38,6 +39,12 @@ public class SwaggerGenerator {
         DATA, RCP
     }
 
+    /**
+     * Preconfigure generator. By default it will genrate api for Data and RCP with JSon payloads only.
+     * The api will be in YAML format. You might change default setting with config methods of the class
+     * @param ctx context for generation
+     * @param modulesToGenerate modules that will be transformed to swagger API
+     */
     public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
@@ -60,14 +67,19 @@ public class SwaggerGenerator {
             .format(Format.YAML);
     }
 
-    private SwaggerGenerator version(String version) {
+    /**
+     * Set version of the generated API
+     * @param version
+     * @return
+     */
+    public SwaggerGenerator version(String version) {
         target.getInfo().version(version);
         return this;
     }
 
 
     /**
-     * Elements that are taken into account during generation
+     * YANG elements that are taken into account during generation
      * @return this
      */
     public SwaggerGenerator elements(Elements... elements) {
@@ -88,29 +100,54 @@ public class SwaggerGenerator {
         return this;
     }
 
+    /**
+     * Set host config for Swagger output
+     * @param host general host to bind Swagger definition
+     * @return this
+     */
     public SwaggerGenerator host(String host) {
         target.host(host);
         return this;
     }
 
 
+    /**
+     * Set base path
+     * @param basePath '/restconf' by default
+     * @return this
+     */
     public SwaggerGenerator basePath(String basePath) {
         target.basePath(basePath);
         return this;
     }
 
+    /**
+     * Add consumes type header for all methods
+     * @param consumes type header
+     * @return this
+     */
     public SwaggerGenerator consumes(String consumes) {
         Objects.requireNonNull(consumes);
         target.consumes(consumes);
         return this;
     }
 
+    /**
+     * Add produces type header for all methods
+     * @param produces type header
+     * @return this
+     */
     public SwaggerGenerator produces(String produces) {
         Objects.requireNonNull(produces);
         target.produces(produces);
         return this;
     }
 
+    /**
+     * Run Swagger generation
+     * @param writer target
+     * @throws IOException
+     */
     public void generate(Writer writer) throws IOException {
         if(writer == null) throw new NullPointerException();
 
