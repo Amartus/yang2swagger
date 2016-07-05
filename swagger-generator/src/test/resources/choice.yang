@@ -1,0 +1,22 @@
+module choice-example {
+    namespace "http://amartus/ns/yang/choice-example";
+    prefix ch;
+    description "read-only test module";
+    organization "test-yang";
+
+    container protocol {
+        leaf id { type string; }
+         choice name {
+             case a {
+                 leaf udp {
+                     type empty;
+                 }
+             }
+             case b {
+                 leaf tcp {
+                    type empty;
+                 }
+             }
+         }
+     }
+}

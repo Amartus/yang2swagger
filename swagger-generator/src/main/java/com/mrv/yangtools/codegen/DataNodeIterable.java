@@ -1,6 +1,8 @@
 package com.mrv.yangtools.codegen;
 
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -9,6 +11,8 @@ import java.util.function.Consumer;
  * @author bartosz.michalik@amartus.com
  */
 public class DataNodeIterable implements Iterable<DataSchemaNode> {
+    private static final Logger log = LoggerFactory.getLogger(DataNodeIterable.class);
+
     private List<DataSchemaNode> allChilds;
 
     public DataNodeIterable(final DataNodeContainer container) {
@@ -23,7 +27,7 @@ public class DataNodeIterable implements Iterable<DataSchemaNode> {
 
     @Override
     public void forEach(Consumer<? super DataSchemaNode> action) {
-
+            allChilds.forEach(action);
     }
 
     @Override
@@ -52,6 +56,7 @@ public class DataNodeIterable implements Iterable<DataSchemaNode> {
                     final ChoiceSchemaNode choiceNode = (ChoiceSchemaNode) childNode;
                     final Set<ChoiceCaseNode> cases = choiceNode.getCases();
                     if (cases != null) {
+                        log.debug("processing choice {}", childNode.getQName().getLocalName());
                         for (final ChoiceCaseNode caseNode : cases) {
                             traverse(caseNode);
                         }

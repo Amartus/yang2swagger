@@ -16,6 +16,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Generates swagger definitions from yang modules. The output format is either YAML or JSon.
+ *
  * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGenerator {
@@ -34,6 +36,11 @@ public class SwaggerGenerator {
         DATA, RCP
     }
 
+    /**
+     * Initialize generator with overal context and set of modules to generate RESTCONF from
+     * @param ctx
+     * @param modulesToGenerate
+     */
     public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
@@ -56,6 +63,11 @@ public class SwaggerGenerator {
             .format(Format.YAML);
     }
 
+    /**
+     * Define version for generated swagger
+     * @param version of seager interface
+     * @return itself
+     */
     private SwaggerGenerator version(String version) {
         target.getInfo().version(version);
         return this;
@@ -71,6 +83,11 @@ public class SwaggerGenerator {
         return this;
     }
 
+    /**
+     * Output format
+     * @param f YAML or JSON
+     * @return itself
+     */
     public SwaggerGenerator format(Format f) {
         switch(f) {
             case YAML:
@@ -84,17 +101,32 @@ public class SwaggerGenerator {
         return this;
     }
 
+    /**
+     * Specify host attribute of swagger specification
+     * @param host to be set
+     * @return itself
+     */
     public SwaggerGenerator host(String host) {
         target.host(host);
         return this;
     }
 
 
+    /**
+     * Root path for swagger description
+     * @param basePath root path ('/restconf' is default)
+     * @return itself
+     */
     public SwaggerGenerator basePath(String basePath) {
         target.basePath(basePath);
         return this;
     }
 
+    /**
+     * Consumes http header definition
+     * @param consumes e.g. application/xml
+     * @return itself
+     */
     public SwaggerGenerator consumes(String consumes) {
         Objects.requireNonNull(consumes);
         target.consumes(consumes);

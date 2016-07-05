@@ -121,8 +121,6 @@ public class DataObjectsBuilder {
             if (prop != null) {
                 prop.setReadOnly(!c.isConfiguration());
                 prop.setDescription(desc(c));
-
-
             }
 
             return new Pair(propertyName, prop);
