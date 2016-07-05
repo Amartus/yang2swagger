@@ -1,5 +1,3 @@
-# README #
-
 ### Yang2Swagger generator ###
 
 Project is a YANG to swagger generator tool. The YANG parser is build on top of OpenDaylight (ODL) yang-tools project. 
