@@ -11,6 +11,7 @@
         <module>swagger-generator</module>
         <module>common</module>
         <module>swagger-maven-plugin</module>
+        <module>examples</module>
     </modules>
 
     <packaging>pom</packaging>

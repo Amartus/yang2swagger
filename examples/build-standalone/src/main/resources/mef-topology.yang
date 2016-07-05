@@ -1,0 +1,144 @@
+module mef-topology {
+  namespace "http://metroethernetforum.org/ns/yang/mef-topology";
+  prefix mef-topology;
+
+  import mef-types {
+    prefix mef-types;
+  }
+
+  organization "Metro Ethernet Forum";
+  contact
+    "Web URL: http://metroethernetforum.org/ \\
+     E-mail:  mibs@metroethernetforum.org \\
+     Postal:  Metro Ethernet Forum \\
+              6033 W. Century Boulevard, Suite 1107 \\
+              Los Angeles, CA 90045 \\
+              U.S.A. \\
+     Phone:   +1 310-642-2800 \\
+     Fax:     +1 310-642-2808";
+  description
+    "This module models the NMS level view of the network devices," +
+    " their physical interfaces, and the network topology. When " +
+    "the NMS discovers a network device,it is to pull the device" +
+    " configuration and operational status as expected for an " +
+    "NMS. Once the NMS has a network device's configuration, " +
+    "it creates the /mef-topology/devices/device{} entry and" +
+    " populates the list of physical interfaces. The Peers " +
+    "entries are populated as configuration to reflect physical " +
+    "cabling interconnections.Hints could be detected from " +
+    "LLDP Neighbor information[802.1AB]." +
+     
+     "Reference Overview:
+     A number of base documents have been used to create 
+     the MEF Topology YANG Module. The following are the 
+     abbreviations for the baseline documents:
+     [RFC 6991] refers to IETF RFC 6991 'Common YANG Data Types',
+     2013-07-15  
+     [RFC 6643] refers to IETF RFC 6643 'Translation of Structure
+     of Management Information
+     Version 2 (SMIv2) MIB Modules to YANG Modules', 2011-11-25  
+     [802.1AB] refers to 'Station and Media Access Control
+     Connectivity Discovery', IEEE 802.1AB-2009, September 2009
+     [802.1q] refers to IEEE 802.1Q-2011 'IEEE Standard for Local
+     and metropolitan area networks --Media Access Control (MAC)
+     Bridges and Virtual Bridged Local Area Networks, August 2011
+     [802-2001] refers to 'IEEE Standard for Local and Metropolitan
+     Area Networks: Overview and Architecture', IEEE 802-2001,
+     February 2002
+     [MEF10.3] refers to MEF 10.3 
+     'Ethernet Services Attributes Phase 3', October 2013
+     [MEF6.2] refers to MEF 6.2 
+     'EVC Ethernet Services Defintions Phase 3', August 2014
+     [MEF40] refers to MEF 40 
+     'UNI and EVC Definition of Managed Objects', April 2013
+     [MEF45] refers to MEF 45 'Multi-CEN L2CP', August 2014
+     [MEF7.2] refers to MEF 7.2 
+     'Carrier Ethernet Management Information Model', April 2013
+     [MEF7.3] refers to MEF 7.3 
+     'Carrier Ethernet Management Information Model',
+     Working Draft #1 2015
+     [RFC 2737] refers to IETF RFC 2737 'Entity MIB (Version 2)',
+     December 1999
+     [RFC 2863] refers to IETF RFC 2863 'The Interfaces Group MIB',
+     June 2000
+     [RFC 3419] refers to IETF RFC 3419 
+     'Textual Conventions for Transport Addresses', December 2002
+     [Y.1731] refers to ITU-T Y.1731 
+     'OAM functions and mechanisms for Ethernet based networks',
+     July 2011
+     [Q.840.1] refers to ITU-T Q.840.1 
+     'Requirements and analysis for NMS-EMS management interface
+     of Ethernet over Transport and Metro Ethernet 
+     Network(EoT/MEN)' March 2007";
+
+  revision 2015-05-12 {
+    description
+    	      "Draft Revision 1";
+    reference "EVC Ethernet Services Definitions YANG Modules" +
+    		" (MEF XX), TBD";
+  }
+
+  container mef-topology {
+  	description "TBD";
+    container devices {
+    	description "TBD";
+      list device {
+        key "dev-id";
+        description
+          "TBD.";
+        reference "TBD";
+        container interfaces {
+        	description "TBD";
+          list interface {
+            key "phy";
+            description
+              "TBD.";
+            reference "TBD";
+            container peer {
+            	description "TBD";
+              leaf peer-device {
+                type mef-types:identifier45;
+          	    description "TBD";
+              }
+              leaf peer-phy {
+                type mef-types:identifier45;
+                description
+                  "TBD";
+                reference "TBD";
+              }
+            }
+            leaf phy {
+              type mef-types:identifier45;
+              description
+                "TBD";
+              reference "TBD";
+            }
+            leaf ieee8023-phy {
+              type identityref {
+                base mef-types:ieee-8023-interface-type;
+              }
+              must "(. != 'mef-types:ieee8023-1000BASE-PX-D') and " +
+              		"(. != 'mef-types:ieee8023-1000BASE-PX-U')" 
+              {
+                error-message "The Physical Layer for each " +
+                		"physical link implementing the UNI cannot" +
+                		" be 1000BASE-PX-D and 1000BASE-PX-U.";
+            	description "TBD";
+              }
+              description
+                "The Physical Layer for each physical link " +
+                "implementing the UNI MUST be one of the PHYs " +
+                "listed in IEEE Std 802.3–2012 but excluding " +
+                "1000BASE-PX-D and 1000BASE-PX-U.";
+              reference "[MEF10.3] Section 9.2 [R60]";
+            }
+          }
+        }
+        leaf dev-id {
+          type mef-types:identifier45;
+    	  description "TBD";
+        }
+      }
+    }
+  }
+}

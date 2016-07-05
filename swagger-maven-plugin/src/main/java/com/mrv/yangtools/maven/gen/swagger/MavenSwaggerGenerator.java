@@ -38,6 +38,12 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
     public Collection<File> generateSources(SchemaContext schemaContext, File outputDir, Set<Module> modules) throws IOException {
         final File outputBaseDir = outputDir == null ? getDefaultOutputBaseDir() : outputDir;
 
+        if(! outputBaseDir.exists()) {
+            if(! outputBaseDir.mkdirs()) {
+                throw new IllegalStateException("cannot create " + outputBaseDir);
+            }
+        }
+
         File output = new File(outputBaseDir, "yang.swagger");
 
         try(FileWriter fileWriter = new FileWriter(output)) {

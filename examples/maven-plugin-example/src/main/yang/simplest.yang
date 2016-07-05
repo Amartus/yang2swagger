@@ -1,0 +1,44 @@
+module simplest {
+  namespace "http://amartus/ns/yang/simplests";
+  prefix s;
+  organization "test-yang";
+  description "simplest test module";
+
+  revision 2016-06-22 {
+      description "Final";
+  }
+
+  typedef myint1 {
+    type int32 {
+        range 1..4096;
+    }
+  }
+
+  container simple-root {
+    leaf id { type string; }
+
+    list children1 {
+        leaf id {
+            type myint1;
+        }
+
+        leaf str {
+            type string;
+        }
+
+        list children2 {
+                leaf id {
+                    type int32;
+                }
+                leaf parent-id {
+                    type leafref {
+                        path "../../id";
+                    }
+                }
+                key "id";
+            }
+        key "id";
+    }
+  }
+
+}
