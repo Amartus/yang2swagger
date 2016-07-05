@@ -275,17 +275,6 @@ public class SwaggerGenerator {
             return operation;
         }
 
-
-        protected Operation getOp(DataSchemaNode node) {
-            final Operation get = defaultOperation();
-            get.description("returns " + dataObjectsBuilder.getName(node));
-            get.response(200, new Response()
-                    .schema(new RefProperty(dataObjectsBuilder.getDefinitionId(node)))
-                    .description(dataObjectsBuilder.getName(node)));
-            return get;
-        }
-
-
         /**
          * Add path for rcp
          * @param input optional rcp input
