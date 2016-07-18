@@ -30,8 +30,8 @@ Argument "module ..." is required
 
 For example:
 ```
-java -jar ./swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar \
+java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar \
  -yang-dir examples/build-standalone/src/main/resources \
- -output swagger.yaml
+ -output swagger.yaml \
  mef-services
 ```
