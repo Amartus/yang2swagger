@@ -10,6 +10,7 @@
     <modules>
         <module>swagger-generator</module>
         <module>common</module>
+        <module>cli</module>
         <module>swagger-maven-plugin</module>
         <module>examples</module>
     </modules>
