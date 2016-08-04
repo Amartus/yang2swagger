@@ -35,7 +35,7 @@ module simplest {
                         path "../../id";
                     }
                 }
-                key "id";
+                key "id parent-id";
             }
         key "id";
     }

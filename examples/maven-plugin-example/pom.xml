@@ -10,7 +10,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <swaggerGeneratorPath>target/generated-sources/swagger</swaggerGeneratorPath>
+        <swaggerGeneratorPath>${project.basedir}/target/generated-sources/swagger</swaggerGeneratorPath>
+        <swagger.version>1.5.9</swagger.version>
     </properties>
 
     <artifactId>maven-plugin-example</artifactId>
@@ -30,7 +31,6 @@
                 </dependencies>
                 <executions>
                     <execution>
-                        <id>binding</id>
                         <goals>
                             <goal>generate-sources</goal>
                         </goals>
@@ -46,7 +46,44 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- activate the plugin -->
+            <plugin>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-codegen-maven-plugin</artifactId>
+                <version>2.2.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>${project.groupId}</groupId>
+                        <artifactId>swagger-codegen-jaxrs</artifactId>
+                        <version>${project.version}</version>
+                        <!--<type>jar</type>-->
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <!-- specify the swagger yaml -->
+                            <inputSpec>${swaggerGeneratorPath}/yang.swagger</inputSpec>
+
+                            <!-- target to generate -->
+                            <language>jaxrs-mrv</language>
+
+                            <!-- pass any necessary config options -->
+                            <configOptions>
+                                <dateLibrary>java8</dateLibrary>
+                            </configOptions>
+
+                            <!-- override the default library to jersey2 -->
+                            <library>jersey2</library>
+                            <addCompileSourceRoot>false</addCompileSourceRoot>
+                            <output>target/generated-sources/jaxRS</output>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
 </project>

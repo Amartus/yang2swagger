@@ -5,31 +5,31 @@ import com.mrv.yangtools.common.SchemaBuilder;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
-import org.opendaylight.yangtools.yang.parser.stmt.reactor.CrossSourceStatementReactor;
-import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.YangInferencePipeline;
-import org.opendaylight.yangtools.yang.parser.util.NamedFileInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.file.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * @author bartosz.michalik@amartus.com
  */
-public class Main {
-    private static final Logger log = LoggerFactory.getLogger(Main.class);
-
-    public static void main(String[] args) throws IOException, ReactorException {
+public class GeneratorHelper {
+    private static final Logger log = LoggerFactory.getLogger(GeneratorHelper.class);
+    public static SwaggerGenerator getGenerator(String... module) throws Exception {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
         final SchemaContext ctx = getFromClasspath(p ->  matcher.matches(p.getFileName()));
         log.info("Context parsed {}", ctx);
 
-        final List<String> modules = Arrays.asList("mef-services", "mef-interfaces");
+        final List<String> modules = Arrays.asList(module);
 
         final Set<Module> toGenerate = ctx.getModules().stream().filter(m -> modules.contains(m.getName())).collect(Collectors.toSet());
 
@@ -41,8 +41,7 @@ public class Main {
                 .elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP);
 
 
-        generator.generate(new OutputStreamWriter(System.out));
-
+        return generator;
     }
 
     public static SchemaContext getFromClasspath(Function<Path, Boolean> accept) throws ReactorException {

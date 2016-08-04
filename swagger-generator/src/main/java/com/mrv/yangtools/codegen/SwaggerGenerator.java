@@ -163,7 +163,7 @@ public class SwaggerGenerator {
         mapper.writeValue(writer, target);
     }
 
-    protected Swagger generate() throws IOException {
+    public Swagger generate() throws IOException {
 
         ArrayList<String> mNames = new ArrayList<>();
 

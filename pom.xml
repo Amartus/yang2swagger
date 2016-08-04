@@ -13,6 +13,7 @@
         <module>cli</module>
         <module>swagger-maven-plugin</module>
         <module>examples</module>
+        <module>swagger-codegen-jaxrs</module>
     </modules>
 
     <packaging>pom</packaging>
