@@ -343,6 +343,7 @@ public class SwaggerGenerator {
                 path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(cN));
                 path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
             }
+            //TODO pluggable PathPrinter
             Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
 
             target.path(printer.path(), path);

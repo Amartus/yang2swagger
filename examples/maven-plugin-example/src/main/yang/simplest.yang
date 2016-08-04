@@ -27,16 +27,34 @@ module simplest {
         }
 
         list children2 {
-                leaf id {
-                    type int32;
-                }
-                leaf parent-id {
-                    type leafref {
-                        path "../../id";
-                    }
-                }
-                key "id parent-id";
+            leaf id {
+                type int32;
             }
+            leaf parent-id {
+                type leafref {
+                    path "../../id";
+                }
+            }
+            key "id parent-id";
+        }
+
+        list children3 {
+            config false;
+            leaf id {
+                type int32;
+            }
+            leaf parent-id {
+                type leafref {
+                    path "../../id";
+                }
+            }
+            container desc {
+                leaf owner { type string; }
+                leaf description { type string; }
+            }
+            key "id parent-id";
+        }
+
         key "id";
     }
   }
