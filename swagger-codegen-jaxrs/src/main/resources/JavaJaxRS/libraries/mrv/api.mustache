@@ -20,6 +20,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.*;
 
 @Path("/{{&baseName}}")
@@ -30,6 +31,8 @@ import javax.ws.rs.*;
 {{#operations}}
     public class {{classname}}  {
     private final {{classname}}Service delegate = {{classname}}ServiceFactory.get{{classname}}();
+    @Context
+    UriInfo uriInfo;
 
     {{#operation}}
         @{{httpMethod}}
@@ -48,7 +51,7 @@ import javax.ws.rs.*;
             {{/hasMore}}{{/responses}} })
         public Response {{nickname}}({{#allParams}}{{>queryParams}}{{>pathParams}}{{>headerParams}}{{>bodyParams}}{{>formParams}},{{/allParams}}@Context SecurityContext securityContext)
         throws Exception {
-        return delegate.{{nickname}}({{#allParams}}{{#isFile}}{{paramName}}InputStream, {{paramName}}Detail{{/isFile}}{{^isFile}}{{paramName}}{{/isFile}},{{/allParams}}securityContext);
+        return delegate.{{nickname}}({{#allParams}}{{#isFile}}{{paramName}}InputStream, {{paramName}}Detail{{/isFile}}{{^isFile}}{{paramName}}{{/isFile}},{{/allParams}}securityContext, uriInfo);
         }
     {{/operation}}
     }
