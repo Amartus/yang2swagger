@@ -1,6 +1,7 @@
 package com.mrv.yangtools.example;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
+import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
 import com.mrv.yangutils.codegen.JerseyServerCodegen;
 import io.swagger.codegen.*;
 import io.swagger.models.Swagger;
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 public class CodeGenerator {
     public static void main(String[] args) throws Exception {
         final SwaggerGenerator generator = GeneratorHelper.getGenerator("mef-services", "mef-interfaces");
+        generator.tagGenerator(new SegmentTagGenerator());
         Swagger swagger = generator.generate();
 
         CodegenConfig codegenConfig = new JerseyServerCodegen();

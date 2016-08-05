@@ -31,7 +31,7 @@ public class SwaggerGenerator {
     private final Swagger target;
     private final DataObjectsBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
-
+    private Set<TagGenerator> tagGenerators = new HashSet<>();
 
     private Set<Elements> toGenerate;
 
@@ -74,11 +74,15 @@ public class SwaggerGenerator {
      * @param version of seager interface
      * @return itself
      */
-    private SwaggerGenerator version(String version) {
+    public SwaggerGenerator version(String version) {
         target.getInfo().version(version);
         return this;
     }
 
+    public SwaggerGenerator tagGenerator(TagGenerator generator) {
+        tagGenerators.add(generator);
+        return this;
+    }
 
     /**
      * YANG elements that are taken into account during generation
@@ -310,11 +314,15 @@ public class SwaggerGenerator {
 
         private void addPath(ListSchemaNode lN) {
             final Path path = new Path();
-            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
+
+            List<String> tags = tags(pathCtx);
+
+            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
             if(!pathCtx.isReadOnly()) {
-                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
-                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(lN));
-                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN));
+                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
+
+                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(lN).tags(tags));
+                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
             }
             Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
             target.path(printer.path(), path);
@@ -337,16 +345,25 @@ public class SwaggerGenerator {
 
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
-            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
+            List<String> tags = tags(pathCtx);
+
+            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
             if(!pathCtx.isReadOnly()) {
-                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
-                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(cN));
-                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN));
+                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
+                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(cN).tags(tags));
+                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
             }
             //TODO pluggable PathPrinter
             Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
 
             target.path(printer.path(), path);
         }
+    }
+
+    private List<String> tags(PathSegment pathCtx) {
+        List<String> tags = new ArrayList<>(tagGenerators.stream().flatMap(g -> g.tags(pathCtx).stream())
+                .collect(Collectors.toSet()));
+        Collections.sort(tags);
+        return tags;
     }
 }
