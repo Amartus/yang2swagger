@@ -32,6 +32,6 @@ public class SegmentTagGenerator implements TagGenerator {
 
         String name = names.size() > level ? names.get(level) : names.getLast();
 
-        return new HashSet<>(Arrays.asList(BindingMapping.getClassName(name), segment.getModuleName()));
+        return new HashSet<>(Collections.singletonList(BindingMapping.getClassName(name)));
     }
 }

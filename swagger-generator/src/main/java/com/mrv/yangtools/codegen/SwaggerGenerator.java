@@ -289,6 +289,8 @@ public class SwaggerGenerator {
             final Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
 
             Operation post = defaultOperation();
+
+            post.tag(module.getName());
             if(input != null) {
                 final Model definition = dataObjectsBuilder.build(input);
                 post.parameter(new BodyParameter()
@@ -320,6 +322,7 @@ public class SwaggerGenerator {
             final Path path = new Path();
 
             List<String> tags = tags(pathCtx);
+            tags.add(module.getName());
 
             path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
             if(!pathCtx.isReadOnly()) {
@@ -350,10 +353,7 @@ public class SwaggerGenerator {
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
             List<String> tags = tags(pathCtx);
-            if(tags.isEmpty()) {
-                log.warn("empty tags for {}" + pathCtx);
-                tags.add("default");
-            }
+           tags.add(module.getName());
 
             path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
             if(!pathCtx.isReadOnly()) {
