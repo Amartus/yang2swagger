@@ -1,5 +1,4 @@
 package com.mrv.yangtools.codegen.impl;
-
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.codegen.TagGenerator;
 import com.mrv.yangtools.common.BindingMapping;
@@ -33,6 +32,6 @@ public class SegmentTagGenerator implements TagGenerator {
 
         String name = names.size() > level ? names.get(level) : names.getLast();
 
-        return Collections.singleton(BindingMapping.getClassName(name));
+        return new HashSet<>(Arrays.asList(BindingMapping.getClassName(name), segment.getModuleName()));
     }
 }

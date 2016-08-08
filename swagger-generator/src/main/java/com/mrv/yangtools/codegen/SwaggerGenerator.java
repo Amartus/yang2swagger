@@ -286,11 +286,13 @@ public class SwaggerGenerator {
          */
         private void addPath(ContainerSchemaNode input, ContainerSchemaNode output) {
 
+            final Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
+
             Operation post = defaultOperation();
             if(input != null) {
                 final Model definition = dataObjectsBuilder.build(input);
                 post.parameter(new BodyParameter()
-                        .name("input")
+                        .name(printer.segment() + "Input")
                         .schema(definition)
                         .description(input.getDescription())
                 );
@@ -302,13 +304,15 @@ public class SwaggerGenerator {
                     description = "Correct response";
                 }
                 post.response(200, new Response()
-                        .schema(new ObjectProperty(dataObjectsBuilder.build(output).getProperties()))
+
+                        .schema(new ObjectProperty(dataObjectsBuilder.build(output).getProperties())
+                                .name((printer.segment() + "Output")))
                         .description(description));
             }
 
             post.response(201, new Response().description("No response")); //no output body
 
-            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
+
             target.path(printer.path(), new Path().post(post));
         }
 
@@ -346,6 +350,10 @@ public class SwaggerGenerator {
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
             List<String> tags = tags(pathCtx);
+            if(tags.isEmpty()) {
+                log.warn("empty tags for {}" + pathCtx);
+                tags.add("default");
+            }
 
             path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
             if(!pathCtx.isReadOnly()) {

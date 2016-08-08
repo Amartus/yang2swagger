@@ -2,6 +2,7 @@ package com.mrv.yangtools.maven.gen.swagger;
 
 import com.google.common.base.Preconditions;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
+import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
 import org.apache.maven.project.MavenProject;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
@@ -14,10 +15,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author bartosz.michalik@amartus.com
@@ -46,9 +45,21 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
 
         File output = new File(outputBaseDir, "yang.swagger");
 
+
+        List<String> mimes = Arrays.asList(System.getProperty("generator-mime", "json,xml").split(","));
+        List<SwaggerGenerator.Elements> elements = Arrays.stream(System.getProperty("generator-elements", "DATA,RCP").split(","))
+                .filter(e -> {try{ SwaggerGenerator.Elements.valueOf(e); return true;} catch(IllegalArgumentException ex) {return false;}})
+                .map(SwaggerGenerator.Elements::valueOf).collect(Collectors.toList());
+
+
+
         try(FileWriter fileWriter = new FileWriter(output)) {
-            new SwaggerGenerator(schemaContext, modules)
-                    .generate(fileWriter);
+            SwaggerGenerator generator = new SwaggerGenerator(schemaContext, modules)
+                    .tagGenerator(new SegmentTagGenerator());
+
+            mimes.forEach(m -> { generator.consumes("application/"+ m); generator.produces("application/"+ m);});
+            generator.elements(elements.toArray(new SwaggerGenerator.Elements[elements.size()]));
+            generator.generate(fileWriter);
         };
 
         return Collections.singleton(output);
