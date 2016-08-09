@@ -14,7 +14,8 @@ import java.nio.file.Path;
  */
 public class CodeGenerator {
     public static void main(String[] args) throws Exception {
-        final SwaggerGenerator generator = GeneratorHelper.getGenerator("mef-services", "mef-interfaces");
+//        final SwaggerGenerator generator = GeneratorHelper.getGenerator("mef-services", "mef-interfaces");
+        final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("mef-"));
         generator.tagGenerator(new SegmentTagGenerator());
         Swagger swagger = generator.generate();
 

@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -24,14 +25,17 @@ import java.util.stream.Collectors;
 public class GeneratorHelper {
     private static final Logger log = LoggerFactory.getLogger(GeneratorHelper.class);
     public static SwaggerGenerator getGenerator(String... module) throws Exception {
+        final List<String> modules = Arrays.asList(module);
+        return getGenerator(m-> modules.contains(m.getName()));
+    }
+
+    public static SwaggerGenerator getGenerator(Predicate<Module> toSelect) throws Exception {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
         final SchemaContext ctx = getFromClasspath(p ->  matcher.matches(p.getFileName()));
         log.info("Context parsed {}", ctx);
 
-        final List<String> modules = Arrays.asList(module);
-
-        final Set<Module> toGenerate = ctx.getModules().stream().filter(m -> modules.contains(m.getName())).collect(Collectors.toSet());
+        final Set<Module> toGenerate = ctx.getModules().stream().filter(toSelect::test).collect(Collectors.toSet());
 
         final SwaggerGenerator generator = new SwaggerGenerator(ctx, toGenerate)
                 .format(SwaggerGenerator.Format.YAML)
