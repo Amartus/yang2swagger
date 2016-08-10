@@ -8,7 +8,6 @@ import com.mrv.yangtools.codegen.impl.*;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.ObjectProperty;
-import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -294,7 +293,7 @@ public class SwaggerGenerator {
             if(input != null) {
                 final Model definition = dataObjectsBuilder.build(input);
                 post.parameter(new BodyParameter()
-                        .name(printer.segment() + "Input")
+                        .name(pathCtx.getName() + "Input")
                         .schema(definition)
                         .description(input.getDescription())
                 );

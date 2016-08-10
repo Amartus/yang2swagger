@@ -2,6 +2,7 @@ package com.mrv.yangtools.codegen;
 
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.PathParameter;
+import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.LeafSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Helper class that help to keep track of current location in YANG module data tree.
@@ -124,9 +126,7 @@ public class PathSegment implements Iterable<PathSegment> {
                 localParams = node.getKeyDefinition().stream()
                         .map(k -> {
 
-                            final String name = existingNames.contains(k.getLocalName()) ?
-                                    moduleName + "-"  + k.getLocalName()
-                                    : k.getLocalName();
+                            final String name = generateName(k, existingNames);
 
                             final PathParameter param = new PathParameter()
                                     .name(name);
@@ -153,6 +153,26 @@ public class PathSegment implements Iterable<PathSegment> {
         }
 
         return localParams;
+    }
+
+    protected String generateName(QName paramName, Set<String> existingNames) {
+        String name = paramName.getLocalName();
+        if(! existingNames.contains(name)) return name;
+        name = this.name + "-" + name;
+
+        if(! existingNames.contains(name)) return name;
+
+        name = moduleName + "-" + name;
+
+        if(! existingNames.contains(name)) return name;
+
+        //brute-force
+        final String tmpName = name;
+
+        return IntStream.range(1, 102)
+                .mapToObj(i -> tmpName + i)
+                .filter(n -> !existingNames.contains(n))
+                .findFirst().orElseThrow(IllegalStateException::new);
     }
 
     @Override

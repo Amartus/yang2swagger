@@ -148,9 +148,11 @@ public class DataObjectsBuilder implements DataObjectRepo {
 
     private <T extends DataSchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
 
+        // due to how inheritance is handled in yangtools the localName node collisions might apear
+        // thus we need to apply colision strategy to override with the last attribute available
         Map<String, Property> properties = node.getChildNodes().stream()
                 .filter(c -> !(c instanceof ChoiceSchemaNode)) // choices handled elsewhere
-                .map(this::prop).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property));
+                .map(this::prop).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
 
         Map<String, Property> choiceProperties = node.getChildNodes().stream()
                 .filter(c -> (c instanceof ChoiceSchemaNode)) // handling choices
@@ -162,7 +164,7 @@ public class DataObjectsBuilder implements DataObjectRepo {
                                 assignCaseMetadata(prop.property, choice, _case);
                                 return prop;
                             }));
-                }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property));;
+                }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
 
         HashMap<String, Property> result = new HashMap<>();
 
