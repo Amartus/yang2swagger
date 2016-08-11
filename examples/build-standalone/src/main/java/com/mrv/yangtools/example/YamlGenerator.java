@@ -14,7 +14,9 @@ public class YamlGenerator {
 //        final SwaggerGenerator generator = GeneratorHelper.getGenerator("mef-services", "mef-interfaces");
         final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
         generator.tagGenerator(new SegmentTagGenerator());
-        generator.generate(new OutputStreamWriter(System.out));
+
+        generator.generate(new FileWriter("swagger.yaml"));
+//        generator.generate(new OutputStreamWriter(System.out));
 
     }
 }

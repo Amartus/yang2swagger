@@ -7,7 +7,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.impl.*;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.properties.ObjectProperty;
+import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,7 +156,7 @@ public class SwaggerGenerator {
     /**
      * Run Swagger generation
      * @param writer target
-     * @throws IOException
+     * @throws IOException when problem with writing
      */
     public void generate(Writer writer) throws IOException {
         if(writer == null) throw new NullPointerException();
@@ -170,17 +170,13 @@ public class SwaggerGenerator {
 
         ArrayList<String> mNames = new ArrayList<>();
 
-        modules.stream().
-                forEach(m -> {
+        modules.forEach(m -> {
             mNames.add(m.getName());
             dataObjectsBuilder.processModule(m);
 
         });
 
-        modules.stream().
-                forEach(m -> {
-                    new ModuleGenerator(m).generate();
-                });
+        modules.forEach(m -> new ModuleGenerator(m).generate());
 
         // update info with module names
         String modules = mNames.stream().collect(Collectors.joining(","));
@@ -234,7 +230,7 @@ public class SwaggerGenerator {
         private void generate(DataSchemaNode node) {
 
             if(node instanceof ContainerSchemaNode) {
-                log.info("procesing container statement {}", node.getQName().getLocalName() );
+                log.info("processing container statement {}", node.getQName().getLocalName() );
                 final ContainerSchemaNode cN = (ContainerSchemaNode) node;
 
                 pathCtx = new PathSegment(pathCtx)
@@ -293,7 +289,7 @@ public class SwaggerGenerator {
             if(input != null) {
                 final Model definition = dataObjectsBuilder.build(input);
                 post.parameter(new BodyParameter()
-                        .name(pathCtx.getName() + "Input")
+                        .name(pathCtx.getName() + "-input")
                         .schema(definition)
                         .description(input.getDescription())
                 );
@@ -304,10 +300,11 @@ public class SwaggerGenerator {
                 if(description == null) {
                     description = "Correct response";
                 }
-                post.response(200, new Response()
 
-                        .schema(new ObjectProperty(dataObjectsBuilder.build(output).getProperties())
-                                .name((printer.segment() + "Output")))
+
+                target.addDefinition(dataObjectsBuilder.getName(output), dataObjectsBuilder.build(output));
+                post.response(200, new Response()
+                        .schema(new RefProperty(dataObjectsBuilder.getDefinitionId(output)))
                         .description(description));
             }
 
@@ -326,7 +323,6 @@ public class SwaggerGenerator {
             path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
             if(!pathCtx.isReadOnly()) {
                 path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
-
                 path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(lN).tags(tags));
                 path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
             }
@@ -352,7 +348,7 @@ public class SwaggerGenerator {
         private void addPath(ContainerSchemaNode cN) {
             final Path path = new Path();
             List<String> tags = tags(pathCtx);
-           tags.add(module.getName());
+            tags.add(module.getName());
 
             path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
             if(!pathCtx.isReadOnly()) {

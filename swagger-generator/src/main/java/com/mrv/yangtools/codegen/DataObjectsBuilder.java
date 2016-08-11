@@ -52,8 +52,8 @@ public class DataObjectsBuilder implements DataObjectRepo {
 
         log.debug("processing rcps defined in {}", module.getName());
         module.getRpcs().forEach(r -> {
-            processNode(r.getInput(), cache);
-            processNode(r.getOutput(), cache);
+            processNode(r.getInput(), r.getQName().getLocalName() + "-input",  cache);
+            processNode(r.getOutput(),r.getQName().getLocalName() + "-output", cache);
         });
         log.debug("processing augmentations defined in {}", module.getName());
         module.getAugmentations().forEach(r -> {
@@ -75,6 +75,14 @@ public class DataObjectsBuilder implements DataObjectRepo {
         built.add(getName(node));
 
         return model;
+    }
+
+    private void processNode(ContainerSchemaNode container, String proposedName, HashSet<String> cache) {
+
+        String name = generateName(container, proposedName, cache);
+        names.put(container, name);
+
+        processNode((DataNodeContainer) container, cache);
     }
 
     private void processNode(DataNodeContainer container, HashSet<String> cache) {
@@ -148,8 +156,8 @@ public class DataObjectsBuilder implements DataObjectRepo {
 
     private <T extends DataSchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
 
-        // due to how inheritance is handled in yangtools the localName node collisions might apear
-        // thus we need to apply colision strategy to override with the last attribute available
+        // due to how inheritance is handled in yangtools the localName node collisions might appear
+        // thus we need to apply collision strategy to override with the last attribute available
         Map<String, Property> properties = node.getChildNodes().stream()
                 .filter(c -> !(c instanceof ChoiceSchemaNode)) // choices handled elsewhere
                 .map(this::prop).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
@@ -198,7 +206,12 @@ public class DataObjectsBuilder implements DataObjectRepo {
     }
 
     private String generateName(DataSchemaNode node, HashSet<String> cache) {
-        String name = getClassName(node.getQName());
+        return generateName(node, null, cache);
+    }
+
+    private String generateName(DataSchemaNode node, String proposedName, HashSet<String> cache) {
+
+        String name = proposedName != null ? proposedName : getClassName(node.getQName());
         if(cache.contains(name)) {
 
             final Iterable<QName> path = node.getPath().getParent().getPathTowardsRoot();

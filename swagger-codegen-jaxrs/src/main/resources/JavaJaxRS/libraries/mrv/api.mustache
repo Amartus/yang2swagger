@@ -17,13 +17,11 @@ import java.io.InputStream;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.*;
 
-@Path("/{{&baseName}}")
+@javax.ws.rs.Path("/{{&baseName}}")
 {{#hasConsumes}}@Consumes({ {{#consumes}}"{{{mediaType}}}"{{#hasMore}}, {{/hasMore}}{{/consumes}} }){{/hasConsumes}}
 {{#hasProduces}}@Produces({ {{#produces}}"{{{mediaType}}}"{{#hasMore}}, {{/hasMore}}{{/produces}} }){{/hasProduces}}
 @io.swagger.annotations.Api(description = "the {{baseName}} API")
@@ -31,12 +29,12 @@ import javax.ws.rs.*;
 {{#operations}}
     public class {{classname}}  {
     private final {{classname}}Service delegate = {{classname}}ServiceFactory.get{{classname}}();
-    @Context
-    UriInfo uriInfo;
+    @javax.ws.rs.core.Context
+    javax.ws.rs.core.UriInfo uriInfo;
 
     {{#operation}}
         @{{httpMethod}}
-        {{#subresourceOperation}}@Path("{{&path}}"){{/subresourceOperation}}
+        {{#subresourceOperation}}@javax.ws.rs.Path("{{&path}}"){{/subresourceOperation}}
         {{#hasConsumes}}@Consumes({ {{#consumes}}"{{{mediaType}}}"{{#hasMore}}, {{/hasMore}}{{/consumes}} }){{/hasConsumes}}
         {{#hasProduces}}@Produces({ {{#produces}}"{{{mediaType}}}"{{#hasMore}}, {{/hasMore}}{{/produces}} }){{/hasProduces}}
         @io.swagger.annotations.ApiOperation(value = "{{{summary}}}", notes = "{{{notes}}}", response = {{{returnType}}}.class{{#returnContainer}}, responseContainer = "{{{returnContainer}}}"{{/returnContainer}}{{#hasAuthMethods}}, authorizations = {

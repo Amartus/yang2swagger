@@ -34,6 +34,12 @@ module rock {
 
     rpc hello {
         description "simple hello method";
+        input {
+            leaf str { type string; }
+        }
+        output {
+            uses res;
+        }
     }
 
     rpc get-status {

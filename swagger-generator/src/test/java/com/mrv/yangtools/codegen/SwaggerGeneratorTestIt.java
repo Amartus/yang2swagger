@@ -126,7 +126,7 @@ public class SwaggerGeneratorTestIt {
         Map<String, Path> paths = swagger.getPaths();
         assertEquals(3, paths.keySet().size());
         paths.keySet().forEach(n -> n.startsWith("/operational"));
-        paths.values().stream().forEach(singlePostOperation);
+        paths.values().forEach(singlePostOperation);
     }
 
     @org.junit.Test
