@@ -1,5 +1,6 @@
 package com.mrv.yangtools.codegen;
 
+import com.mrv.yangtools.codegen.impl.TypeConverter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.PathParameter;
 import org.opendaylight.yangtools.yang.common.QName;
@@ -45,7 +46,6 @@ public class PathSegment implements Iterable<PathSegment> {
 
     public PathSegment(PathSegment parent) {
         Objects.requireNonNull(parent);
-
         this.parent = parent;
         this.converter = parent.converter;
         this.moduleName = parent.moduleName;
@@ -54,7 +54,7 @@ public class PathSegment implements Iterable<PathSegment> {
     }
 
     public PathSegment withName(String name) {
-        log.debug("{} / {}", parent.name, name);
+        log.debug("adding {} to {}", name, parent.name);
         this.name = name;
         return this;
     }

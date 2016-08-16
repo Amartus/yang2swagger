@@ -8,7 +8,7 @@ import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import io.swagger.models.properties.Property;
-import org.hamcrest.CoreMatchers;
+
 import org.junit.After;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.slf4j.Logger;
@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
-
+import static org.hamcrest.CoreMatchers.*;
 /**
  * @author bartosz.michalik@amartus.com
  */
@@ -64,7 +64,7 @@ public class SwaggerGeneratorTestIt {
 
         checkLeafrefAreFollowed("Children2", "parentId", "integer");
 
-        assertThat(swagger.getPaths().keySet(), CoreMatchers.hasItem("/data/simple-root/children1={id}/children2={simplest-id}/"));
+        assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}/"));
     }
 
     private void checkLeafrefAreFollowed(String modelName, String propertyName, String type) {
@@ -97,15 +97,34 @@ public class SwaggerGeneratorTestIt {
     }
 
     @org.junit.Test
-    public void testGenerateGroupingsModule() throws Exception {
+    public void testGenerateGroupingsModuleOptimizing() throws Exception {
         SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
 
         //when
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
-        Swagger swagger = generator.generate();
+        generator.strategy(SwaggerGenerator.Strategy.optimizing);
+        swagger = generator.generate();
 
         //then
-        assertEquals(2, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-cc")).count());
+        assertEquals(2, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
+        assertEquals(7, swagger.getDefinitions().keySet().size());
+        assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
+
+    }
+
+    @org.junit.Test
+    public void testGenerateGroupingsModuleUnpacking() throws Exception {
+        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
+
+        //when
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        generator.strategy(SwaggerGenerator.Strategy.unpacking);
+        swagger = generator.generate();
+
+        //then
+        assertEquals(2, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
+        assertEquals(7, swagger.getDefinitions().keySet().size());
+        assertThat(swagger.getDefinitions().keySet(), not(hasItems("G1", "G2", "G3")));
 
     }
 
@@ -147,7 +166,7 @@ public class SwaggerGeneratorTestIt {
 
 
 
-        assertThat(swagger.getPaths().keySet(), CoreMatchers.hasItem("/data/simple-root/added-a/children1/"));
+        assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/added-a/children1/"));
     }
 
     @org.junit.Test

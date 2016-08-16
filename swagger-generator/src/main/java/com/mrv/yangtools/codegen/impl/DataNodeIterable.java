@@ -11,10 +11,10 @@ import java.util.function.Consumer;
  * Iterator that is used to traverse all nodes that will constitute Swagger models.
  * @author bartosz.michalik@amartus.com
  */
-public class DataNodeIterable implements Iterable<DataSchemaNode> {
+public class DataNodeIterable implements Iterable<SchemaNode> {
     private static final Logger log = LoggerFactory.getLogger(DataNodeIterable.class);
 
-    private List<DataSchemaNode> allChildren;
+    private List<SchemaNode> allChildren;
 
     public DataNodeIterable(final DataNodeContainer container) {
         allChildren = new LinkedList<>();
@@ -22,17 +22,17 @@ public class DataNodeIterable implements Iterable<DataSchemaNode> {
     }
 
     @Override
-    public Iterator<DataSchemaNode> iterator() {
+    public Iterator<SchemaNode> iterator() {
         return allChildren.iterator();
     }
 
     @Override
-    public void forEach(Consumer<? super DataSchemaNode> action) {
+    public void forEach(Consumer<? super SchemaNode> action) {
             allChildren.forEach(action);
     }
 
     @Override
-    public Spliterator<DataSchemaNode> spliterator() {
+    public Spliterator<SchemaNode> spliterator() {
         return allChildren.spliterator();
     }
 
@@ -47,6 +47,7 @@ public class DataNodeIterable implements Iterable<DataSchemaNode> {
         if (childNodes != null) {
             for (DataSchemaNode childNode : childNodes) {
                 if (childNode.isAugmenting()) {
+                    log.debug("stopping to process on node {}", childNode.getQName());
                     continue;
                 }
                 allChildren.add(childNode);
@@ -72,9 +73,7 @@ public class DataNodeIterable implements Iterable<DataSchemaNode> {
     private void traverseGroupings(final DataNodeContainer dataNode) {
         final Set<GroupingDefinition> groupings = dataNode.getGroupings();
         if (groupings != null) {
-            for (GroupingDefinition grouping : groupings) {
-                traverse(grouping);
-            }
+            groupings.forEach(n -> { allChildren.add(n); traverse(n); });
         }
     }
 }

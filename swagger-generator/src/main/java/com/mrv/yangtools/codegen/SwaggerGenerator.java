@@ -28,7 +28,7 @@ public class SwaggerGenerator {
     private final SchemaContext ctx;
     private final Set<Module> modules;
     private final Swagger target;
-    private final DataObjectsBuilder dataObjectsBuilder;
+    private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
     private Set<TagGenerator> tagGenerators = new HashSet<>();
 
@@ -39,6 +39,8 @@ public class SwaggerGenerator {
     public enum Elements {
         DATA, RCP
     }
+
+    public enum Strategy {optimizing, unpacking};
 
     /**
      * Preconfigure generator. By default it will genrate api for Data and RCP with JSon payloads only.
@@ -52,7 +54,9 @@ public class SwaggerGenerator {
         this.ctx = ctx;
         this.modules = modulesToGenerate;
         target = new Swagger();
-        dataObjectsBuilder = new DataObjectsBuilder(ctx);
+
+        //assign default startegy
+        strategy(Strategy.optimizing);
 
         //no exposed swagger API
         target.info(new Info());
@@ -80,6 +84,19 @@ public class SwaggerGenerator {
 
     public SwaggerGenerator tagGenerator(TagGenerator generator) {
         tagGenerators.add(generator);
+        return this;
+    }
+
+    public SwaggerGenerator strategy(Strategy strategy) {
+        Objects.requireNonNull(strategy);
+
+        switch (strategy) {
+            case optimizing:
+                this.dataObjectsBuilder = new OptimizingDataObjectBuilder(ctx, target);
+                break;
+            default:
+                this.dataObjectsBuilder = new UnpackingDataObjectsBuilder(ctx, target);
+        }
         return this;
     }
 
@@ -211,7 +228,6 @@ public class SwaggerGenerator {
                         .withModule(module.getName());
                 module.getRpcs().forEach(this::generate);
             }
-
         }
 
         private void generate(RpcDefinition rcp) {
@@ -241,7 +257,7 @@ public class SwaggerGenerator {
                 addPath(cN);
 
                 cN.getChildNodes().forEach(this::generate);
-                target.addDefinition(dataObjectsBuilder.getName(cN), dataObjectsBuilder.build(cN));
+                dataObjectsBuilder.addModel(cN);
 
                 pathCtx = pathCtx.drop();
             } else if(node instanceof ListSchemaNode) {
@@ -256,7 +272,7 @@ public class SwaggerGenerator {
 
                 addPath(lN);
                 lN.getChildNodes().forEach(this::generate);
-                target.addDefinition(dataObjectsBuilder.getName(lN), dataObjectsBuilder.build(lN));
+                dataObjectsBuilder.addModel(lN);
 
                 pathCtx = pathCtx.drop();
             } else if (node instanceof ChoiceSchemaNode) {
@@ -289,7 +305,7 @@ public class SwaggerGenerator {
             if(input != null) {
                 final Model definition = dataObjectsBuilder.build(input);
                 post.parameter(new BodyParameter()
-                        .name(pathCtx.getName() + "-input")
+                        .name(pathCtx.getName() + "Input")
                         .schema(definition)
                         .description(input.getDescription())
                 );
@@ -301,8 +317,7 @@ public class SwaggerGenerator {
                     description = "Correct response";
                 }
 
-
-                target.addDefinition(dataObjectsBuilder.getName(output), dataObjectsBuilder.build(output));
+                dataObjectsBuilder.addModel(output);
                 post.response(200, new Response()
                         .schema(new RefProperty(dataObjectsBuilder.getDefinitionId(output)))
                         .description(description));

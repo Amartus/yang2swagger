@@ -9,7 +9,7 @@ module groupings {
   }
 
   grouping g1 {
-    leaf g1-i2 {
+    leaf idx {
         type int32;
     }
   }
@@ -19,9 +19,8 @@ module groupings {
         type string;
     }
     container g2-c {
-
         grouping g3 {
-            leaf g3-leaf {
+            leaf g3-idx {
               type string;
             }
         }
@@ -29,11 +28,15 @@ module groupings {
         leaf g2-c-leaf {
             type string;
         }
-        container g2-cc {
+        container g2-c-c1 {
             uses g3;
-            leaf xxx {
-                type string;
-            }
+        }
+        container g2-c-c2 {
+            uses g3;
+        }
+        list g2-l1 {
+            key "g3-idx";
+            uses g3;
         }
     }
   }

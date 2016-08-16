@@ -1,4 +1,4 @@
-package com.mrv.yangtools.codegen;
+package com.mrv.yangtools.codegen.impl;
 
 import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
