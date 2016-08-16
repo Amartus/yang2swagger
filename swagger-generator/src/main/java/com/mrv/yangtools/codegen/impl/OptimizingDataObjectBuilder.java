@@ -75,6 +75,11 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
 
+        if(existingModel(node) == null) {
+            log.debug("adding referenced model {} for node {} ", definitionId, node);
+            addModel(node);
+        }
+
         return prop;
     }
 
@@ -87,28 +92,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         Model model = existingModel(node);
         if(model != null) return model;
 
-        model = model(node);
-        if(model != null) return model;
-
-        ComposedModel newModel = new ComposedModel();
-
-        final ModelImpl attributes = new ModelImpl();
-        attributes.description(desc(node));
-        attributes.setProperties(structure(node, x->!x.isAddedByUses(), x->!x.isAddedByUses()));
-
-        newModel.child(attributes);
-
-        node.getUses().forEach(u -> {
-            String groupingIdx = getDefinitionId(groupings.get(u.getGroupingPath()));
-            log.debug("adding grouping {} to composed model", groupingIdx);
-            newModel.child(new RefModel(groupingIdx));
-            if(existingModel(node) == null) {
-                log.debug("adding model {} for grouping", groupingIdx);
-                addModel(groupings.get(u.getGroupingPath()));
-            }
-        });
-
-        return newModel;
+        return model(node);
     }
 
     private <T extends SchemaNode & DataNodeContainer> Model existingModel(T node) {
@@ -124,17 +108,52 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
      * @return model or null in case more than one grouping is used
      */
     private <T extends SchemaNode & DataNodeContainer> Model model(T node) {
+        T tmp = null;
+        T toModel = node;
+        boolean simpleModel = false;
+        do {
+            tmp = toModel;
+            simpleModel = isGrouping(toModel) || (toModel.getUses().isEmpty());
+            toModel = isGrouping(toModel) ? (T) grouping(toModel) : toModel;
+            if(log.isDebugEnabled() && tmp != toModel) {
+                log.debug("substitute {} with {}", tmp.getQName(), toModel.getQName());
+            }
+        } while(tmp != toModel && simpleModel);
 
-        if(node.getUses().size() > 1) return null;
-
-        T toModel = isGrouping(node) ? (T) grouping(node) : node;
-
-        final ModelImpl model = new ModelImpl();
-        model.description(desc(toModel));
-        model.setProperties(structure(toModel));
+        Model model = simpleModel ? simple(toModel) : composed(toModel);
 
         existingModels.put(toModel, model);
 
+        return model;
+    }
+
+    private <T extends SchemaNode & DataNodeContainer> Model composed(T node) {
+        ComposedModel newModel = new ComposedModel();
+
+        final ModelImpl attributes = new ModelImpl();
+        attributes.description(desc(node));
+        attributes.setProperties(structure(node, x->!x.isAddedByUses(), x->!x.isAddedByUses()));
+
+        if(! attributes.getProperties().keySet().isEmpty()) {
+            newModel.child(attributes);
+        }
+        node.getUses().forEach(u -> {
+            String groupingIdx = getDefinitionId(groupings.get(u.getGroupingPath()));
+            log.debug("adding grouping {} to composed model", groupingIdx);
+            newModel.child(new RefModel(groupingIdx));
+            if(existingModel(node) == null) {
+                log.debug("adding model {} for grouping", groupingIdx);
+                addModel(groupings.get(u.getGroupingPath()));
+            }
+        });
+
+        return newModel;
+    }
+
+    private <T extends SchemaNode & DataNodeContainer> Model simple(T toModel) {
+        final ModelImpl model = new ModelImpl();
+        model.description(desc(toModel));
+        model.setProperties(structure(toModel));
         return model;
     }
 }
