@@ -61,6 +61,19 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
     @Override
+    protected String generateName(SchemaNode node, String proposedName, HashSet<String> cache) {
+        if(node instanceof DerivableSchemaNode) {
+
+            com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) node).getOriginal();
+            if(original.isPresent()){
+                log.debug("reusing original definition to get name for {}", node.getQName());
+                return super.generateName(original.get(), proposedName, cache);
+            }
+        }
+        return super.generateName(node, proposedName, cache);
+    }
+
+    @Override
     protected void processNode(DataNodeContainer container, HashSet<String> cache) {
         super.processNode(container, cache);
         DataNodeHelper.stream(container).filter(n -> n instanceof GroupingDefinition)

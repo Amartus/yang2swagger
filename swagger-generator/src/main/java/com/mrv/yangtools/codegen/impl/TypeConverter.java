@@ -50,7 +50,7 @@ public class TypeConverter {
         if(baseType instanceof IntegerTypeDefinition || baseType instanceof UnsignedIntegerTypeDefinition) {
             //TODO [bmi] how to map int8 type ???
             BaseIntegerProperty integer = new IntegerProperty();
-            if (BaseTypes.isInt64(baseType) || BaseTypes.isInt64(baseType)) {
+            if (BaseTypes.isInt64(baseType) || BaseTypes.isUint32(baseType)) {
                 integer = new LongProperty();
             }
             return integer;
@@ -58,8 +58,12 @@ public class TypeConverter {
 
         StringProperty result = new StringProperty();
 
-        if(baseType instanceof EnumTypeDefinition) {
+        if(type instanceof EnumTypeDefinition) {
             result.setEnum(((EnumTypeDefinition) type).getValues()
+                    .stream()
+                    .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
+        } else if(baseType instanceof EnumTypeDefinition) {
+            result.setEnum(((EnumTypeDefinition) baseType).getValues()
                     .stream()
                     .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
         }

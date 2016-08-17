@@ -174,7 +174,6 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         }
 
         if (prop != null) {
-            prop.setReadOnly(!node.isConfiguration());
             prop.setDescription(desc(node));
         }
 
