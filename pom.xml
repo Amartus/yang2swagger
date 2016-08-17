@@ -21,6 +21,7 @@
     <properties>
         <logback.version>1.1.6</logback.version>
         <swagger.version>1.5.9</swagger.version>
+        <swagger.codegen.version>2.2.1</swagger.codegen.version>
         <yangtools.version>1.0.0-SNAPSHOT</yangtools.version>
     </properties>
 

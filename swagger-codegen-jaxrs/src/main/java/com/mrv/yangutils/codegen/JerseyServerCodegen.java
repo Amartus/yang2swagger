@@ -1,12 +1,15 @@
 package com.mrv.yangutils.codegen;
 
-import io.swagger.codegen.CodegenOperation;
+import io.swagger.codegen.*;
 import io.swagger.codegen.languages.JavaJerseyServerCodegen;
-import io.swagger.models.Operation;
+import io.swagger.models.*;
+import io.swagger.models.properties.Property;
+import io.swagger.models.properties.PropertyBuilder;
+import io.swagger.util.Json;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -15,7 +18,10 @@ import java.util.stream.Collectors;
  */
 public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
+    private static final Logger log = LoggerFactory.getLogger(JerseyServerCodegen.class);
+
     public JerseyServerCodegen() {
+        supportsInheritance = true;
         supportedLibraries.put("mrv", "MRV templates");
     }
 
@@ -58,6 +64,26 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
         opList.add(co);
         co.baseName = basePath;
+    }
+
+    @Override
+    public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
+
+        if (!(model instanceof ComposedModel)) {
+            return super.fromModel(name, model, allDefinitions);
+        }
+
+        List<Model> refModels = ((ComposedModel) model).getAllOf().stream().filter(m -> m instanceof RefModel).collect(Collectors.toList());
+
+        if(refModels.size() == 1) {
+            ((ComposedModel) model).setParent(refModels.get(0));
+        } else {
+            log.warn("Unsupported inheritance schema for {} references to {}", name, refModels.stream()
+                    .map(Model::getReference)
+                    .collect(Collectors.joining(",")));
+        }
+
+        return super.fromModel(name, model, allDefinitions);
     }
 
     @Override

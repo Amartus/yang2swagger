@@ -303,10 +303,11 @@ public class SwaggerGenerator {
 
             post.tag(module.getName());
             if(input != null) {
-                final Model definition = dataObjectsBuilder.build(input);
+                dataObjectsBuilder.addModel(input);
+
                 post.parameter(new BodyParameter()
-                        .name(pathCtx.getName() + "Input")
-                        .schema(definition)
+                        .name("body-param")
+                        .schema(new RefModel(dataObjectsBuilder.getDefinitionId(input)))
                         .description(input.getDescription())
                 );
             }
@@ -322,10 +323,7 @@ public class SwaggerGenerator {
                         .schema(new RefProperty(dataObjectsBuilder.getDefinitionId(output)))
                         .description(description));
             }
-
             post.response(201, new Response().description("No response")); //no output body
-
-
             target.path(printer.path(), new Path().post(post));
         }
 
@@ -343,8 +341,6 @@ public class SwaggerGenerator {
             }
             Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
             target.path(printer.path(), path);
-
-
 
             //yes I know it can be written in previous 'if statement' but at some point it is to be refactored
             if(pathCtx.isReadOnly()) return;

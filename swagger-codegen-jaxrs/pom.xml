@@ -15,7 +15,7 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-codegen</artifactId>
-            <version>2.2.0</version>
+            <version>${swagger.codegen.version}</version>
         </dependency>
         <dependency>
             <groupId>com.mrv.yangtools</groupId>

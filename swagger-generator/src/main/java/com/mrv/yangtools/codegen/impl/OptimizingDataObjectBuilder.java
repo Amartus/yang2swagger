@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * The builder strategy is to reuse grouping wherever possible. Thus composite models are to be use
@@ -130,22 +131,33 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private <T extends SchemaNode & DataNodeContainer> Model composed(T node) {
         ComposedModel newModel = new ComposedModel();
 
-        final ModelImpl attributes = new ModelImpl();
-        attributes.description(desc(node));
-        attributes.setProperties(structure(node, x->!x.isAddedByUses(), x->!x.isAddedByUses()));
 
-        if(! attributes.getProperties().keySet().isEmpty()) {
-            newModel.child(attributes);
-        }
-        node.getUses().forEach(u -> {
+        // because of for swagger model order matters we need to add attributes at the end
+        List<RefModel> models = node.getUses().stream().map(u -> {
             String groupingIdx = getDefinitionId(groupings.get(u.getGroupingPath()));
             log.debug("adding grouping {} to composed model", groupingIdx);
-            newModel.child(new RefModel(groupingIdx));
-            if(existingModel(node) == null) {
+            RefModel refModel = new RefModel(groupingIdx);
+
+            if (existingModel(node) == null) {
                 log.debug("adding model {} for grouping", groupingIdx);
                 addModel(groupings.get(u.getGroupingPath()));
             }
-        });
+            return refModel;
+        }).collect(Collectors.toList());
+        if(models.size() > 1) {
+            log.warn("Multiple inheritence for {}", node.getQName());
+        }
+        newModel.setInterfaces(models);
+        if(!models.isEmpty())
+            newModel.child(models.get(0));
+
+        final ModelImpl attributes = new ModelImpl();
+        attributes.description(desc(node));
+        attributes.setProperties(structure(node, x->!x.isAddedByUses(), x->!x.isAddedByUses()));
+        attributes.setDiscriminator("objType");
+        if(! attributes.getProperties().keySet().isEmpty()) {
+            newModel.child(attributes);
+        }
 
         return newModel;
     }
