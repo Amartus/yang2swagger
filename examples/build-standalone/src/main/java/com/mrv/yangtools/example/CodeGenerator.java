@@ -22,6 +22,7 @@ public class CodeGenerator {
 //        final SwaggerGenerator generator = GeneratorHelper.getGenerator("mef-services", "mef-interfaces");
 //        final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("mef-"));
         final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+//        final SwaggerGenerator generator = GeneratorHelper.getGenerator(new File("some directory"),m -> m.getName().startsWith("Tapi"));
         generator.tagGenerator(new SegmentTagGenerator());
         Swagger swagger = generator.generate();
 

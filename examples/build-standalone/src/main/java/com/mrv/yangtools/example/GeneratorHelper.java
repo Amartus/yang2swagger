@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.List;
@@ -18,6 +17,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author bartosz.michalik@amartus.com
@@ -30,9 +30,15 @@ public class GeneratorHelper {
     }
 
     public static SwaggerGenerator getGenerator(Predicate<Module> toSelect) throws Exception {
+        return getGenerator(null, toSelect);
+    }
+
+    public static SwaggerGenerator getGenerator(File dir, Predicate<Module> toSelect) throws Exception {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
-        final SchemaContext ctx = getFromClasspath(p ->  matcher.matches(p.getFileName()));
+        Function<Path, Boolean> acc = p ->  matcher.matches(p.getFileName());
+
+        final SchemaContext ctx = dir == null ? getFromClasspath(acc) : getFromDir(dir.toPath(), acc);
         log.info("Context parsed {}", ctx);
 
         final Set<Module> toGenerate = ctx.getModules().stream().filter(toSelect::test).collect(Collectors.toSet());
@@ -44,16 +50,22 @@ public class GeneratorHelper {
                 .host("localhost:1234")
                 .elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP);
 
-
         return generator;
+    }
+    public static SchemaContext getFromDir(Path dir, Function<Path, Boolean> accept) throws ReactorException {
+        return getCtx(Stream.of(dir), accept);
     }
 
     public static SchemaContext getFromClasspath(Function<Path, Boolean> accept) throws ReactorException {
+        return getCtx(Arrays.asList(System.getProperty("java.class.path", ".").split(File.pathSeparator))
+                .stream().map(s -> Paths.get(s)), accept);
+    }
+
+    public static SchemaContext getCtx(Stream<Path> paths, Function<Path, Boolean> accept) throws ReactorException {
 
         SchemaBuilder builder = new SchemaBuilder().accepts(accept);
 
-        Arrays.asList(System.getProperty("java.class.path", ".").split(File.pathSeparator))
-                .stream().map(s -> Paths.get(s)).filter(p -> Files.isDirectory(p)).forEach((path) -> {
+        paths.filter(p -> Files.isDirectory(p)).forEach((path) -> {
             try {
                 log.info("adding {}", path);
                 builder.add(path);
