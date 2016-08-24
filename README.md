@@ -11,7 +11,7 @@ Contact:
 
 ### How do I get set up? ###
 
-Project is build with standard maven ```maven clean install```. As project depends on ODL components ```settings.xml``` file [configuration might be required](https://wiki.opendaylight.org/view/GettingStarted:Development_Environment_Setup#Edit_your_.7E.2F.m2.2Fsettings.xml). 
+Project is build with standard maven ```maven clean install```. As project depends on ODL components ```settings.xml``` file [configuration might be required](https://wiki.opendaylight.org/view/GettingStarted:Development_Environment_Setup#Edit_your_.7E.2F.m2.2Fsettings.xml) . 
 
 The main component of the project is ```SwaggerGenerator``` which can be run standalone as well as can be configured as maven plugin. Examples of usage can be found in *examples* directory in the project.
 
