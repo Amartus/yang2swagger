@@ -1,9 +1,8 @@
 package com.mrv.yangtools.common;
 
-//
 // Source code recreated from a .class file by IntelliJ IDEA
 // (powered by Fernflower decompiler)
-//
+// File originates from ODL project
 
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
@@ -40,18 +39,10 @@ public final class BindingMapping {
             "this", "throw", "throws", "transient", "true", "try",
             "void", "volatile",
             "while");
-    public static final String DATA_ROOT_SUFFIX = "Data";
-    public static final String RPC_SERVICE_SUFFIX = "Service";
-    public static final String NOTIFICATION_LISTENER_SUFFIX = "Listener";
-    public static final String QNAME_STATIC_FIELD_NAME = "QNAME";
-    public static final String PACKAGE_PREFIX = "org.opendaylight.yang.gen.v1";
-    public static final String AUGMENTATION_FIELD = "augmentation";
     private static final Splitter CAMEL_SPLITTER = Splitter.on(CharMatcher.anyOf(" _.-").precomputed()).omitEmptyStrings().trimResults();
     private static final Pattern COLON_SLASH_SLASH = Pattern.compile("://", 16);
     private static final String QUOTED_DOT = Matcher.quoteReplacement(".");
     private static final Splitter DOT_SPLITTER = Splitter.on('.');
-    public static final String RPC_INPUT_SUFFIX = "Input";
-    public static final String RPC_OUTPUT_SUFFIX = "Output";
     private static final ThreadLocal<SimpleDateFormat> PACKAGE_DATE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
         protected SimpleDateFormat initialValue() {
             return new SimpleDateFormat("yyMMdd");

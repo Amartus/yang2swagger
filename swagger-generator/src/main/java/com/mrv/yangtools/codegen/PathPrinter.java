@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.codegen;
 
 import io.swagger.models.parameters.Parameter;
@@ -7,6 +18,7 @@ import java.util.function.Function;
 
 /**
  * Allows for conversion of {@link PathSegment} to strings describing resources
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public abstract class PathPrinter {
@@ -26,7 +38,7 @@ public abstract class PathPrinter {
     /**
      * Path printer that uses the same param conversion function for all segments
      * @param path segment
-     * @param paramPrinter convert parameter to string for partent segments of 'path'
+     * @param paramPrinter convert parameter to string for parent segments of 'path'
      * @param lastParamPrinter convert parameter to string for 'path'
      */
     public PathPrinter(PathSegment path,
@@ -44,7 +56,7 @@ public abstract class PathPrinter {
      */
     public abstract String segment();
     /**
-     * Convert segment to full path taking into account partent segments
+     * Convert segment to full path taking into account parent segments
      * @return resource string
      */
     public abstract String path();

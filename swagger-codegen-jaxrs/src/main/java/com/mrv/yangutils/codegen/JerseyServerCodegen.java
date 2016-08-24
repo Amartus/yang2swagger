@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangutils.codegen;
 
 import io.swagger.codegen.*;
@@ -14,6 +25,13 @@ import java.util.stream.Collectors;
 
 /**
  * Simple enhancement to JaxRS generator to disable HTML escaping in <code>@Path</code> annotations.
+ * In addition several modifications were applied
+ * <ul>
+ *     <li>changing default throw in API to {@link Exception}</li>
+ *     <li>Adding uri info to resource context</li>
+ *     <li>Grouping DATA namespace JAX-RS resources by YANG module</li>
+ * </ul>
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class JerseyServerCodegen extends JavaJerseyServerCodegen {

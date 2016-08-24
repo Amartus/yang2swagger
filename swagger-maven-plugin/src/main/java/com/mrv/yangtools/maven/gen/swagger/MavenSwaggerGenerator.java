@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.maven.gen.swagger;
 
 import com.google.common.base.Preconditions;
@@ -19,6 +30,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Simple ODL maven plugin integration.
+ * Supported properties that might influence generated Swagger definition:
+ * <ul>
+ *     <li><code>generator-mime</code> - to specify comma-separated mime types (e.g. xml,json)</li>
+ *     <li><code>generator-elements</code> - comma-separated list of {@link com.mrv.yangtools.codegen.SwaggerGenerator.Elements}
+ * </ul>
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAware, MavenProjectAware {
@@ -60,7 +78,7 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
             mimes.forEach(m -> { generator.consumes("application/"+ m); generator.produces("application/"+ m);});
             generator.elements(elements.toArray(new SwaggerGenerator.Elements[elements.size()]));
             generator.generate(fileWriter);
-        };
+        }
 
         return Collections.singleton(output);
     }

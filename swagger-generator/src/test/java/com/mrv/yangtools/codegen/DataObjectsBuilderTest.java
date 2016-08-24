@@ -1,9 +1,20 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.codegen;
 
 import com.mrv.yangtools.codegen.impl.DataNodeHelper;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
-import com.mrv.yangtools.test.utils.ContextUtils;
+import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.Model;
 import io.swagger.models.Swagger;
 import org.junit.BeforeClass;
@@ -18,6 +29,7 @@ import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.ListEffectiveStatementImpl;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -27,6 +39,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.verify;
 /**
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 @RunWith(MockitoJUnitRunner.class)
@@ -39,7 +52,7 @@ public class DataObjectsBuilderTest {
 
     @BeforeClass
     public static void initCtx() throws ReactorException {
-        ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
+        ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
         groupings = ctx.getModules().iterator().next();
     }
 
@@ -63,7 +76,7 @@ public class DataObjectsBuilderTest {
         //when & then
         assertTrue(namesMeetNodes(builder,
                 x -> x.getQName().getLocalName().equals("g2-l1"), new HashSet<>(
-                        Arrays.asList("G2L1")
+                        Collections.singletonList("G2L1")
                 )));
     }
 
@@ -75,7 +88,7 @@ public class DataObjectsBuilderTest {
         //when & then
         assertTrue(namesMeetNodes(builder,
                 x -> x.getQName().getLocalName().equals("g2-l1"), new HashSet<>(
-                        Arrays.asList("G3")
+                        Collections.singletonList("G3")
                 )));
 
     }

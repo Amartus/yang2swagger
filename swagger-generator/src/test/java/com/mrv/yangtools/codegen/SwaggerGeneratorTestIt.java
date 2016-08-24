@@ -1,9 +1,20 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.codegen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.mrv.yangtools.test.utils.ContextUtils;
+import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
@@ -25,6 +36,7 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 /**
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGeneratorTestIt {
@@ -47,7 +59,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateSimpleModule() throws Exception {
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
         swagger = generator.generate();
@@ -79,7 +91,7 @@ public class SwaggerGeneratorTestIt {
     public void testGenerateReadOnlyModule() throws Exception {
 
         //having
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("read-only.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("read-only.yang"));
 
         final Consumer<Path> onlyGetOperationExists = p -> {
             assertEquals(1, p.getOperations().size());
@@ -98,7 +110,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateGroupingsModuleOptimizing() throws Exception {
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
 
         //when
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
@@ -114,7 +126,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateGroupingsModuleUnpacking() throws Exception {
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
 
         //when
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
@@ -130,7 +142,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateRCPModule() throws Exception {
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("rcp.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rcp.yang"));
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -150,7 +162,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateAugmentation() throws Exception {
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().startsWith("simple"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().startsWith("simple"));
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
         swagger = generator.generate();
@@ -171,7 +183,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateChoice() throws Exception {
-        SchemaContext ctx = ContextUtils.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
         swagger = generator.generate();

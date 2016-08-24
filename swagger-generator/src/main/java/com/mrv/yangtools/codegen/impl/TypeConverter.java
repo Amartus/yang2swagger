@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.codegen.impl;
 
 import io.swagger.models.properties.*;
@@ -13,7 +24,8 @@ import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
 
 /**
- * Supports tpye conversion between YANG and swagger
+ * Supports type conversion between YANG and swagger
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class TypeConverter {
@@ -43,8 +55,7 @@ public class TypeConverter {
         }
 
         if(baseType instanceof BooleanTypeDefinition) {
-            final BooleanProperty bool = new BooleanProperty();
-            return bool;
+            return new BooleanProperty();
         }
 
         if(baseType instanceof IntegerTypeDefinition || baseType instanceof UnsignedIntegerTypeDefinition) {

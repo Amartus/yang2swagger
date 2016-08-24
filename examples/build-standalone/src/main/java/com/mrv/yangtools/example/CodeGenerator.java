@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.example;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -15,13 +26,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
+ * Example of code generator chain configured via API
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class CodeGenerator {
     public static void main(String[] args) throws Exception {
-//        final SwaggerGenerator generator = GeneratorHelper.getGenerator("mef-services", "mef-interfaces");
-//        final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("mef-"));
-        final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+        SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+        if(args.length == 1) {
+            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> m.getName().startsWith("Tapi"));
+        }
+//        final SwaggerGenerator generator = GeneratorHelper.getGenerator("Tapi");
 //        final SwaggerGenerator generator = GeneratorHelper.getGenerator(new File("some directory"),m -> m.getName().startsWith("Tapi"));
         generator.tagGenerator(new SegmentTagGenerator());
         Swagger swagger = generator.generate();
@@ -32,13 +47,14 @@ public class CodeGenerator {
 
         Path target = Files.createTempDirectory("generated");
 
-        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.api");
-        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.model");
+        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.example.tapi.api");
+        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.example.tapi.model");
         codegenConfig.setOutputDir(target.toString());
 
+        // write swagerr.yaml to the target
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.writeValue(new FileWriter(new File(target.toFile(), "swagger.yaml")), swagger);
+        mapper.writeValue(new FileWriter(new File(target.toFile(), "tapi.yaml")), swagger);
 
         ClientOptInput opts = new ClientOptInput().opts(clientOpts).swagger(swagger).config(codegenConfig);
         new DefaultGenerator()

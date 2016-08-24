@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.codegen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -20,7 +31,18 @@ import java.util.stream.Collectors;
 /**
  * YANG to Swagger generator
  * Generates swagger definitions from yang modules. The output format is either YAML or JSon.
+ * The generator can generate Swagger path definitions for all data nodes (currently <code>container</code>, <code>list</code>).
+ * Generator swagger modeling concepts:
+ * <ul>
+ *     <li>container, list, leaf, leaf-list, enums</li> - in addtion Swagger tags are build from module verbs (depending on{@link TagGenerator} configured)
+ *     <li>groupings - depending on {@link Strategy} groupings are either inlined or define data models</li>
+ *     <li>leaf-refs - leafrefs paths are mapped to Swagger extensions, leafrefs to attributes with type of the element they refer to</li>
+ *     <li>augmentations</li>
+ *     <li>config flag - for operational data only GET operations are generated</li>
+ * </ul>
  *
+ *
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGenerator {
@@ -37,10 +59,17 @@ public class SwaggerGenerator {
 
     public enum Format { YAML, JSON }
     public enum Elements {
-        DATA, RCP
+        /**
+         * to generate path for data model (containers and lists)
+         */
+        DATA,
+        /**
+         * to generate paths for RPC operations
+         */
+        RCP
     }
 
-    public enum Strategy {optimizing, unpacking};
+    public enum Strategy {optimizing, unpacking}
 
     /**
      * Preconfigure generator. By default it will genrate api for Data and RCP with JSon payloads only.
@@ -82,11 +111,21 @@ public class SwaggerGenerator {
         return this;
     }
 
+    /**
+     * Add tag generator
+     * @param generator
+     * @return this
+     */
     public SwaggerGenerator tagGenerator(TagGenerator generator) {
         tagGenerators.add(generator);
         return this;
     }
 
+    /**
+     * Configure strategy
+     * @param strategy to be used
+     * @return this
+     */
     public SwaggerGenerator strategy(Strategy strategy) {
         Objects.requireNonNull(strategy);
 
@@ -171,19 +210,24 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Run Swagger generation
-     * @param writer target
+     * Run Swagger generation for configured modules. Write result to target. The file format
+     * depends on configured {@link SwaggerGenerator.Format}
+     * @param target writer
      * @throws IOException when problem with writing
      */
-    public void generate(Writer writer) throws IOException {
-        if(writer == null) throw new NullPointerException();
+    public void generate(Writer target) throws IOException {
+        if(target == null) throw new NullPointerException();
 
-        Swagger target = generate();
+        Swagger result = generate();
 
-        mapper.writeValue(writer, target);
+        mapper.writeValue(target, result);
     }
 
-    public Swagger generate() throws IOException {
+    /**
+     * Run Swagger generation for configured modules.
+     * @return Swagger model
+     */
+    public Swagger generate() {
 
         ArrayList<String> mNames = new ArrayList<>();
 

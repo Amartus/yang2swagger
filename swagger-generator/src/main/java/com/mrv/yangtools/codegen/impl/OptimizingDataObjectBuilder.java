@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ *  This program and the accompanying materials are made available under the
+ *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ *  and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ *  Contributors:
+ *      Christopher Murch <cmurch@mrv.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ */
+
 package com.mrv.yangtools.codegen.impl;
 
 import io.swagger.models.*;
@@ -11,7 +22,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The builder strategy is to reuse grouping wherever possible. Thus composite models are to be use
+ * The builder strategy is to reuse grouping wherever possible. Therefore in generated Swagger models, groupings are transformed to models
+ * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
@@ -39,9 +51,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         Set<UsesNode> uses = ((DataNodeContainer) node).getUses();
         assert uses.size() == 1;
         //noinspection SuspiciousMethodCalls
-        GroupingDefinition grouping = groupings.get(uses.iterator().next().getGroupingPath());
 
-       return grouping;
+        return groupings.get(uses.iterator().next().getGroupingPath());
     }
 
     /**
@@ -109,6 +120,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return model(node);
     }
 
+    @SuppressWarnings("unchecked")
     private <T extends SchemaNode & DataNodeContainer> Model existingModel(T node) {
         T toModel = isGrouping(node) ? (T) grouping(node) : node;
         return existingModels.get(toModel);
@@ -121,10 +133,11 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
      * @param <T> type
      * @return model or null in case more than one grouping is used
      */
+    @SuppressWarnings("unchecked")
     private <T extends SchemaNode & DataNodeContainer> Model model(T node) {
-        T tmp = null;
+        T tmp;
         T toModel = node;
-        boolean simpleModel = false;
+        boolean simpleModel;
         do {
             tmp = toModel;
             simpleModel = isGrouping(toModel) || (toModel.getUses().isEmpty());
@@ -158,7 +171,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             return refModel;
         }).collect(Collectors.toList());
         if(models.size() > 1) {
-            log.warn("Multiple inheritence for {}", node.getQName());
+            log.warn("Multiple inheritance for {}", node.getQName());
         }
         newModel.setInterfaces(models);
         if(!models.isEmpty())
