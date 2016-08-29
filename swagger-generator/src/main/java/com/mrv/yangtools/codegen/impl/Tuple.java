@@ -11,34 +11,23 @@
 
 package com.mrv.yangtools.codegen.impl;
 
-import java.util.Map;
-
 /**
  * @author bartosz.michalik@amartus.com
  */
-class Entry<K,V> implements Map.Entry<K,V> {
-    private final K k;
-    private V v;
+class Tuple<A, B> {
+    private final A first;
+    private B second;
 
-    public Entry(K k, V v) {
-        this.k = k;
-        this.v = v;
+    public Tuple(A first, B second) {
+        this.first = first;
+        this.second = second;
     }
 
-    @Override
-    public K getKey() {
-        return k;
+    public A first() {
+        return first;
     }
 
-    @Override
-    public V getValue() {
-        return v;
-    }
-
-    @Override
-    public V setValue(V value) {
-        V t = this.v;
-        this.v = value;
-        return t;
+    public B second() {
+        return second;
     }
 }

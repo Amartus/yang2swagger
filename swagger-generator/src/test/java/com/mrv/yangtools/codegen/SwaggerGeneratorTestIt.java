@@ -75,7 +75,7 @@ public class SwaggerGeneratorTestIt {
                 "SimpleRoot", "Children1", "Children2"
         )), defNames);
 
-        checkLeafrefAreFollowed("Children2", "parentId", "integer");
+        checkLeafrefAreFollowed("Children2", "parent-id", "integer");
 
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}/"));
     }
@@ -123,7 +123,7 @@ public class SwaggerGeneratorTestIt {
         assertEquals(7, swagger.getDefinitions().keySet().size());
         assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
         Model model = swagger.getDefinitions().get("GroupingRoot");
-        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("groupingChild2");
+        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
         assertEquals("G2", groupingChild2.getSimpleRef());
     }
 
@@ -138,10 +138,10 @@ public class SwaggerGeneratorTestIt {
 
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
-        assertEquals(10, swagger.getDefinitions().keySet().size());
+        assertEquals(9, swagger.getDefinitions().keySet().size());
         assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
         Model model = swagger.getDefinitions().get("GroupingRoot");
-        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("groupingChild2");
+        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
         assertEquals("GroupingChild2", groupingChild2.getSimpleRef());
     }
 
@@ -160,7 +160,7 @@ public class SwaggerGeneratorTestIt {
         assertThat(swagger.getDefinitions().keySet(), not(hasItems("G1", "G2", "G3")));
 
         Model model = swagger.getDefinitions().get("GroupingRoot");
-        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("groupingChild2");
+        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
         assertEquals("GroupingChild2", groupingChild2.getSimpleRef());
 
     }
@@ -198,11 +198,8 @@ public class SwaggerGeneratorTestIt {
                 "SimpleRoot", "Children1", "Children2", "AddedA", "AddedAChildren1"
         )), defNames);
 
-        checkLeafrefAreFollowed("Children2", "parentId", "integer");
-        checkLeafrefAreFollowed("AddedA", "a1", "string");
-
-
-
+        checkLeafrefAreFollowed("Children2", "parent-id", "integer");
+        checkLeafrefAreFollowed("AddedA", "simpleAugmentation:a1", "string");
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/added-a/children1/"));
     }
 

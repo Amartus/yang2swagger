@@ -31,6 +31,7 @@ public class DataNodeIterable implements Iterable<SchemaNode> {
     public DataNodeIterable(final DataNodeContainer container) {
         allChildren = new LinkedList<>();
         traverse(container);
+        log.debug("{} elements available", allChildren.size());
     }
 
     @Override

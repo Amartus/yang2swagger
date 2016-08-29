@@ -47,13 +47,13 @@ public class CodeGenerator {
         codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
                 "@some.package.name.Leafref(\"" + v + "\")"
         );
-        codegenConfig.addInterface("GlobalClass");
+//        codegenConfig.addInterface("GlobalClass");
 
         ClientOpts clientOpts = new ClientOpts();
 
         Path target = Files.createTempDirectory("generated");
-        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.api");
-        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.model");
+        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.some.package.api");
+        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.some.package.model");
         codegenConfig.setOutputDir(target.toString());
 
         // write swagerr.yaml to the target

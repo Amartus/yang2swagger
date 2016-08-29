@@ -95,6 +95,6 @@ public class DataObjectsBuilderTest {
 
     protected <T extends SchemaNode & DataNodeContainer> boolean namesMeetNodes(DataObjectRepo builder, Function<T, Boolean> considerNode, Set<String> requiredNames) {
         return ! DataNodeHelper.stream(groupings).map(x -> (T)x).filter(considerNode::apply)
-                .map(node -> builder.getName(node)).filter(m -> !requiredNames.contains(m)).findFirst().isPresent();
+                .map(builder::getName).filter(m -> !requiredNames.contains(m)).findFirst().isPresent();
     }
 }

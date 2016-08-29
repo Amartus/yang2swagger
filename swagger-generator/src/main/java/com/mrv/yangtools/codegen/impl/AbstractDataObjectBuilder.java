@@ -30,7 +30,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
-import static com.mrv.yangtools.common.BindingMapping.getPropertyName;
+import com.mrv.yangtools.common.BindingMapping;
 
 /**
  * @author cmurch@mrv.com
@@ -100,7 +100,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
     protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
 
-        String name = proposedName != null ? proposedName : getClassName(node.getQName());
+        String name = proposedName != null ? getClassName(proposedName) : getClassName(node.getQName());
         if(cache.contains(name)) {
 
             final Iterable<QName> path = node.getPath().getParent().getPathTowardsRoot();
@@ -151,7 +151,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         // thus we need to apply collision strategy to override with the last attribute available
         Map<String, Property> properties = node.getChildNodes().stream()
                 .filter(choiceP.negate().and(acceptNode)) // choices handled elsewhere
-                .map(this::prop).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
+                .map(child -> prop(child)).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
 
         Map<String, Property> choiceProperties = node.getChildNodes().stream()
                 .filter(choiceP.and(acceptChoice)) // handling choices
@@ -173,7 +173,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     protected Pair prop(DataSchemaNode node) {
-        final String propertyName = getPropertyName(node.getQName().getLocalName());
+        final String propertyName = getPropertyName(node);
 
         Property prop = null;
 
@@ -194,6 +194,20 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         }
 
         return new Pair(propertyName, prop);
+    }
+
+    public String getPropertyName(DataSchemaNode node) {
+        //return BindingMapping.getPropertyName(node.getQName().getLocalName());
+        String name = node.getQName().getLocalName();
+        if(node.isAugmenting()) {
+            name = moduleName(node) + ":" + name;
+        }
+        return name;
+    }
+
+    private String moduleName(DataSchemaNode node) {
+        Module module = ctx.findModuleByNamespaceAndRevision(node.getQName().getNamespace(), node.getQName().getRevision());
+        return module.getName();
     }
 
     protected abstract <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node);
