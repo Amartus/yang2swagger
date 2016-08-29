@@ -20,6 +20,7 @@ import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import io.swagger.models.properties.Property;
 
+import io.swagger.models.properties.RefProperty;
 import org.junit.After;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.slf4j.Logger;
@@ -118,10 +119,30 @@ public class SwaggerGeneratorTestIt {
         swagger = generator.generate();
 
         //then
-        assertEquals(2, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
+        assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(7, swagger.getDefinitions().keySet().size());
         assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
+        Model model = swagger.getDefinitions().get("GroupingRoot");
+        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("groupingChild2");
+        assertEquals("G2", groupingChild2.getSimpleRef());
+    }
 
+    @org.junit.Test
+    public void testGenerateAugmentedGroupingsModuleOptimizing() throws Exception {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().endsWith("groupings.yang"));
+
+        //when
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        generator.strategy(SwaggerGenerator.Strategy.optimizing);
+        swagger = generator.generate();
+
+        //then
+        assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
+        assertEquals(10, swagger.getDefinitions().keySet().size());
+        assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
+        Model model = swagger.getDefinitions().get("GroupingRoot");
+        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("groupingChild2");
+        assertEquals("GroupingChild2", groupingChild2.getSimpleRef());
     }
 
     @org.junit.Test
@@ -134,9 +155,13 @@ public class SwaggerGeneratorTestIt {
         swagger = generator.generate();
 
         //then
-        assertEquals(2, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
-        assertEquals(7, swagger.getDefinitions().keySet().size());
+        assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
+        assertEquals(8, swagger.getDefinitions().keySet().size());
         assertThat(swagger.getDefinitions().keySet(), not(hasItems("G1", "G2", "G3")));
+
+        Model model = swagger.getDefinitions().get("GroupingRoot");
+        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("groupingChild2");
+        assertEquals("GroupingChild2", groupingChild2.getSimpleRef());
 
     }
 

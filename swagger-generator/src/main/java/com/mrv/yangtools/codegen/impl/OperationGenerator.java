@@ -15,14 +15,16 @@ import com.mrv.yangtools.codegen.DataObjectRepo;
 import com.mrv.yangtools.codegen.PathSegment;
 import io.swagger.models.Operation;
 import io.swagger.models.Response;
+import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
 import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 
 /**
  * Simple command that generates operation
  * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
-public abstract class OperationGenerator {
+public abstract class OperationGenerator<T extends SchemaNode & DataNodeContainer> {
 
     protected final PathSegment path;
     private final DataObjectRepo repo;
@@ -43,11 +45,11 @@ public abstract class OperationGenerator {
         return defaultOperation();
     }
 
-    protected String getDefinitionId(DataSchemaNode node) {
+    protected String getDefinitionId(T node) {
         return repo.getDefinitionId(node);
     }
 
-    protected String getName(DataSchemaNode node) {
+    protected String getName(T node) {
         return repo.getName(node);
     }
 

@@ -14,6 +14,7 @@ package com.mrv.yangtools.codegen.impl;
 import io.swagger.models.*;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
+import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,25 +31,32 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private static final Logger log = LoggerFactory.getLogger(OptimizingDataObjectBuilder.class);
 
     private HashMap<SchemaPath, GroupingDefinition> groupings;
+    private HashMap<QName, String> groupingNames;
+
     private Map<SchemaNode, Model> existingModels;
+    private final GroupingHierarchyHandler groupingHierarchyHandler;
+    private Map<Object, Set<UsesNode>> usesCache;
 
     public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger) {
         super(ctx, swagger);
         groupings = new HashMap<>();
         existingModels = new HashMap<>();
+        usesCache = new HashMap<>();
+        groupingNames = new HashMap<>();
+        groupingHierarchyHandler = new GroupingHierarchyHandler(ctx);
     }
 
 
     @Override
-    public String getName(SchemaNode node) {
+    public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
         if(isGrouping(node)) {
             return names.get(grouping(node));
         }
         return names.get(node);
     }
 
-    private GroupingDefinition grouping(SchemaNode node) {
-        Set<UsesNode> uses = ((DataNodeContainer) node).getUses();
+    private <T extends SchemaNode & DataNodeContainer> GroupingDefinition grouping(T node) {
+        Set<UsesNode> uses = uses(node);
         assert uses.size() == 1;
         //noinspection SuspiciousMethodCalls
 
@@ -57,12 +65,13 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     /**
      * Is node that has no attributes only single grouping
-     * @param node
-     * @return
+     * @param node to check
+     * @return <code>true</code> if node is using single grouping and has no attributes
      */
-    private boolean isGrouping(SchemaNode node) {
+    @SuppressWarnings("unchecked")
+    private  <T extends SchemaNode & DataNodeContainer> boolean isGrouping(SchemaNode node) {
         if(node instanceof DataNodeContainer) {
-            Set<UsesNode> uses = ((DataNodeContainer) node).getUses();
+            Set<UsesNode> uses = uses((T) node);
             if(uses.size() == 1) {
                 return ((DataNodeContainer) node).getChildNodes().stream()
                         .filter(n -> !n.isAddedByUses()).count() == 0;
@@ -72,7 +81,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
     @Override
-    protected String generateName(SchemaNode node, String proposedName, HashSet<String> cache) {
+    protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
         if(node instanceof DerivableSchemaNode) {
 
             com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) node).getOriginal();
@@ -85,11 +94,22 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
     @Override
-    protected void processNode(DataNodeContainer container, HashSet<String> cache) {
+    protected void processNode(DataNodeContainer container, Set<String> cache) {
         super.processNode(container, cache);
         DataNodeHelper.stream(container).filter(n -> n instanceof GroupingDefinition)
                 .forEach(n -> {
-                    names.put(n, generateName(n, null, cache));
+                    String gName = groupingNames.get(n.getQName());
+                    if(gName == null) {
+                        gName = generateName(n, null, cache);
+                        if(names.values().contains(gName)) {
+                            //TODO better strategy to handle grouping names
+                            gName = "G" + gName;
+                        }
+                    } else {
+                        log.debug("reusing name {} for QName {}", gName, n.getQName());
+                    }
+                    names.put(n, gName);
+                    groupingNames.put(n.getQName(), gName);
                     groupings.put(n.getPath(), (GroupingDefinition) n);
                 });
     }
@@ -113,7 +133,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     public <T extends SchemaNode & DataNodeContainer> Model build(T node) {
-
         Model model = existingModel(node);
         if(model != null) return model;
 
@@ -140,7 +159,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         boolean simpleModel;
         do {
             tmp = toModel;
-            simpleModel = isGrouping(toModel) || (toModel.getUses().isEmpty());
+            simpleModel = isGrouping(toModel) || uses(toModel).isEmpty();
             toModel = isGrouping(toModel) ? (T) grouping(toModel) : toModel;
             if(log.isDebugEnabled() && tmp != toModel) {
                 log.debug("substitute {} with {}", tmp.getQName(), toModel.getQName());
@@ -154,12 +173,43 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return model;
     }
 
+    private <T extends SchemaNode & DataNodeContainer> Set<UsesNode> uses(T toModel) {
+        if(usesCache.containsKey(toModel)) {
+            return usesCache.get(toModel);
+        }
+        final Set<UsesNode> uses = new HashSet<>(toModel.getUses());
+
+        if(toModel instanceof AugmentationTarget) {
+            ((AugmentationTarget) toModel).getAvailableAugmentations().stream()
+                .filter(a -> !a.getUses().isEmpty()).forEach(a-> uses.addAll(a.getUses()));
+        }
+
+        Set<UsesNode> result = uses;
+
+        if(result.size() > 1) {
+            result = optimizeInheritance(uses);
+        }
+        usesCache.put(toModel, result);
+        return result;
+    }
+
+    private Set<UsesNode> optimizeInheritance(Set<UsesNode> result) {
+        return result.stream().filter(r -> {
+            QName rName = r.getGroupingPath().getLastComponent();
+
+            return ! result.stream().filter(o -> ! o.equals(r))
+                    .map(o -> groupingHierarchyHandler.isParent(rName, o.getGroupingPath().getLastComponent()))
+                    .filter(hasParent -> hasParent)
+                    .findFirst().orElse(false);
+        }).collect(Collectors.toSet());
+    }
+
     private <T extends SchemaNode & DataNodeContainer> Model composed(T node) {
         ComposedModel newModel = new ComposedModel();
 
 
         // because of for swagger model order matters we need to add attributes at the end
-        List<RefModel> models = node.getUses().stream().map(u -> {
+        List<RefModel> models = uses(node).stream().map(u -> {
             String groupingIdx = getDefinitionId(groupings.get(u.getGroupingPath()));
             log.debug("adding grouping {} to composed model", groupingIdx);
             RefModel refModel = new RefModel(groupingIdx);
@@ -170,6 +220,9 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             }
             return refModel;
         }).collect(Collectors.toList());
+
+        models = optimizeInheritance(models);
+
         if(models.size() > 1) {
             log.warn("Multiple inheritance for {}", node.getQName());
         }
@@ -181,11 +234,107 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         attributes.description(desc(node));
         attributes.setProperties(structure(node, x->!x.isAddedByUses(), x->!x.isAddedByUses()));
         attributes.setDiscriminator("objType");
-        if(! attributes.getProperties().keySet().isEmpty()) {
+        boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
+        if(! noAttributes) {
             newModel.child(attributes);
         }
 
+        if(models.size() == 1 && noAttributes) {
+            log.warn("should not happen to have such object for node {}", node);
+        }
+
         return newModel;
+    }
+
+    private List<RefModel> optimizeInheritance(List<RefModel> models) {
+        if(models.size() < 2) return models;
+        Map<RefModel, Set<String>> inheritance = models.stream()
+                .map(m -> new RefModelEntry(m, inheritanceId(m)))
+                .collect(Collectors.toMap(RefModelEntry::getKey, RefModelEntry::getValue, (v1, v2) -> {v1.addAll(v2); return v1;}));
+
+        //duplicates
+        HashSet<String> nameCache = new HashSet<>();
+        List<RefModel> resultingModels = models.stream().filter(m -> {
+            String sn = m.getSimpleRef();
+            boolean result = !nameCache.contains(sn);
+            if (!result && log.isDebugEnabled()) {
+                log.debug("duplicated models with name {}", sn);
+            }
+            nameCache.add(sn);
+            return result;
+        })
+                // inheritance structure
+                .filter(model -> {
+                    Set<String> mine = inheritance.get(model);
+
+                    // we leave only these models for which there is none more specific
+                    // so if exist at least one more specific we can remove model
+                    boolean existsMoreSpecific = inheritance.entrySet().stream()
+                            .filter(e -> !e.getKey().equals(model))
+                            .map(e -> moreSpecific(e.getValue(), mine))
+                            .filter(eMoreSpecific -> eMoreSpecific).findFirst().orElse(false);
+
+                    if (existsMoreSpecific && log.isDebugEnabled()) {
+                        log.debug("more specific models found than {}", model.getSimpleRef());
+                    }
+                    return !existsMoreSpecific;
+                }).collect(Collectors.toList());
+
+        if(resultingModels.size() != models.size()) {
+            log.debug("optimization succeeded from {} to {}", models.size(), resultingModels.size());
+        }
+        return resultingModels;
+    }
+
+    /**
+     * All of 'mine' strings are more specific than 'yours'.
+     * In  other words for each of 'yours' exists at least one 'mine' which is more specific
+     * @param mine mine ids
+     * @param yours you
+     * @return <code>true</code> if more specific
+     */
+    protected static boolean moreSpecific(Set<String> mine, Set<String> yours) {
+        return yours.stream()
+                .map(yString -> mine.stream()
+                        .map(mString -> mString.contains(yString))
+                        //exist in mine at least one string that contain yString [1]
+                        .filter(contains -> contains).findFirst().orElse(false)
+                )
+                //does not exist any your string that is incompatible with (1)
+                .filter(x -> !x).findFirst().orElse(true);
+    }
+
+    private Set<String> inheritanceId(RefModel m) {
+
+        String id = m.getSimpleRef();
+
+        Model model = swagger.getDefinitions().get(id);
+        if(model instanceof ModelImpl) return Collections.singleton(id);
+
+        if(model instanceof RefModel) {
+            return inheritanceId((RefModel) model)
+                    .stream().map(s -> id + s)
+                    .collect(Collectors.toSet());
+        }
+
+
+        if(model instanceof ComposedModel) {
+            return ((ComposedModel) model).getAllOf().stream()
+                    .filter(c -> c instanceof RefModel)
+                    .flatMap(c -> inheritanceId((RefModel)c)
+                            .stream().map(s -> id + s)
+                    ).collect(Collectors.toSet());
+        }
+
+        throw new IllegalArgumentException("model type not supported for " + id);
+    }
+
+
+
+    private static class RefModelEntry extends Entry<RefModel, Set<String>> {
+        private RefModelEntry(RefModel model, Set<String> keys) {
+            super(model, keys);
+        }
     }
 
     private <T extends SchemaNode & DataNodeContainer> Model simple(T toModel) {
@@ -194,4 +343,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         model.setProperties(structure(toModel));
         return model;
     }
+
+
 }

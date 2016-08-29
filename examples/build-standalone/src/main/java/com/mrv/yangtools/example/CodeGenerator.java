@@ -32,23 +32,28 @@ import java.nio.file.Path;
  */
 public class CodeGenerator {
     public static void main(String[] args) throws Exception {
-        SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+        SwaggerGenerator generator;
         if(args.length == 1) {
             generator = GeneratorHelper.getGenerator(new File(args[0]),m -> m.getName().startsWith("Tapi"));
+        } else {
+            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
         }
 //        final SwaggerGenerator generator = GeneratorHelper.getGenerator("Tapi");
 //        final SwaggerGenerator generator = GeneratorHelper.getGenerator(new File("some directory"),m -> m.getName().startsWith("Tapi"));
         generator.tagGenerator(new SegmentTagGenerator());
         Swagger swagger = generator.generate();
 
-        CodegenConfig codegenConfig = new JerseyServerCodegen();
+        JerseyServerCodegen codegenConfig = new JerseyServerCodegen();
+        codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
+                "@some.package.name.Leafref(\"" + v + "\")"
+        );
+        codegenConfig.addInterface("GlobalClass");
 
         ClientOpts clientOpts = new ClientOpts();
 
         Path target = Files.createTempDirectory("generated");
-
-        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.example.tapi.api");
-        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.example.tapi.model");
+        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.api");
+        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.model");
         codegenConfig.setOutputDir(target.toString());
 
         // write swagerr.yaml to the target

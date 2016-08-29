@@ -1,4 +1,4 @@
-module groupings {
+module with-groupings {
   namespace "http://amartus/ns/yang/groupings";
   prefix gr;
   organization "test-yang";
@@ -61,11 +61,14 @@ module groupings {
         uses g2;
     }
 
-    container grouping-child {
+    container grouping-child1 {
         uses g2;
         leaf-list names {
             type string;
         }
+    }
+    container grouping-child2 {
+        uses g2;
     }
   }
 

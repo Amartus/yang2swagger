@@ -29,11 +29,11 @@ public interface DataObjectRepo {
      * @param node node
      * @return id
      */
-    String getDefinitionId(SchemaNode node);
+    <T extends SchemaNode & DataNodeContainer> String getDefinitionId(T node);
     /**
      * Get name for data node. Prerequisite is to have node's module traversed {@link UnpackingDataObjectsBuilder#processModule(Module)}.
      * @param node node
      * @return name
      */
-    String getName(SchemaNode node);
+    <T extends SchemaNode & DataNodeContainer> String getName(T node);
 }

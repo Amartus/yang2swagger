@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,7 @@ import static com.mrv.yangtools.common.BindingMapping.getPropertyName;
 public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected final Swagger swagger;
     protected final TypeConverter converter;
+    protected final SchemaContext ctx;
     protected Map<SchemaNode, String> names;
     private Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
 
@@ -45,6 +47,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         names = new HashMap<>();
         converter = new AnnotatingTypeConverter(ctx);
         this.swagger = swagger;
+        this.ctx = ctx;
     }
 
     /**
@@ -52,7 +55,8 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
      * @param node node
      * @return id
      */
-    public String getDefinitionId(SchemaNode node) {
+    @Override
+    public <T extends SchemaNode & DataNodeContainer> String getDefinitionId(T node) {
         return "#/definitions/"+ getName(node);
     }
 
@@ -77,7 +81,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         });
     }
 
-    protected  void processNode(ContainerSchemaNode container, String proposedName, HashSet<String> cache) {
+    protected  void processNode(ContainerSchemaNode container, String proposedName, Set<String> cache) {
 
         String name = generateName(container, proposedName, cache);
         names.put(container, name);
@@ -85,7 +89,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         processNode(container, cache);
     }
 
-    protected void processNode(DataNodeContainer container, HashSet<String> cache) {
+    protected void processNode(DataNodeContainer container, Set<String> cache) {
         DataNodeHelper.stream(container).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
                 .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
@@ -94,7 +98,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                 });
     }
 
-    protected String generateName(SchemaNode node, String proposedName, HashSet<String> cache) {
+    protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
 
         String name = proposedName != null ? proposedName : getClassName(node.getQName());
         if(cache.contains(name)) {
@@ -209,7 +213,16 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     @Override
     public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
         Model model = build(node);
-        swagger.addDefinition(getName(node), model);
+
+        String modelName = getName(node);
+        if(swagger.getDefinitions() != null && swagger.getDefinitions().containsKey(modelName)) {
+            if(swagger.getDefinitions().get(modelName) == model) {
+                return;
+            }
+            log.warn("Overriding model {} with node {}", modelName, node.getQName());
+        }
+
+        swagger.addDefinition(modelName, model);
     }
 
     protected String desc(DocumentedNode node) {

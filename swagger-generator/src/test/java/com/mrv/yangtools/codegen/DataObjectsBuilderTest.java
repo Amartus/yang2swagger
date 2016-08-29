@@ -22,13 +22,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.ListEffectiveStatementImpl;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -93,8 +93,8 @@ public class DataObjectsBuilderTest {
 
     }
 
-    protected boolean namesMeetNodes(DataObjectRepo builder, Function<SchemaNode, Boolean> considerNode, Set<String> requiredNames) {
-        return ! DataNodeHelper.stream(groupings).filter(considerNode::apply)
-                .map(builder::getName).filter(m -> !requiredNames.contains(m)).findFirst().isPresent();
+    protected <T extends SchemaNode & DataNodeContainer> boolean namesMeetNodes(DataObjectRepo builder, Function<T, Boolean> considerNode, Set<String> requiredNames) {
+        return ! DataNodeHelper.stream(groupings).map(x -> (T)x).filter(considerNode::apply)
+                .map(node -> builder.getName(node)).filter(m -> !requiredNames.contains(m)).findFirst().isPresent();
     }
 }

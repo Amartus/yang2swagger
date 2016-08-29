@@ -22,7 +22,8 @@ public class {{classname}}ServiceImpl extends {{classname}}Service {
     @Override
     public Response {{nickname}}({{#allParams}}{{>serviceQueryParams}}{{>servicePathParams}}{{>serviceHeaderParams}}{{>serviceBodyParams}}{{>serviceFormParams}}, {{/allParams}}SecurityContext securityContext, javax.ws.rs.core.UriInfo uriInfo) throws Exception {
         // do some magic!
-        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+        // but for now
+        throw new IllegalAccessException("Not implemented");
     }
     {{/operation}}
 }

@@ -1,0 +1,25 @@
+module augmenting-groupings {
+    namespace "http://amartus/ns/yang/augmenting-groupings";
+    prefix agr;
+    import with-groupings {
+    prefix gr;
+    }
+    organization "test-yang";
+    description "augmenting groupings test module";
+
+
+    augment "/gr:grouping-root/gr:grouping-child2" {
+        uses foo;
+    }
+
+    augment "/gr:grouping-root/gr:grouping-child1" {
+      uses foo;
+      leaf augmenting-leaf { type int32; }
+    }
+
+    grouping foo {
+        container bar {
+            leaf bar-l {type string;}
+        }
+    }
+}

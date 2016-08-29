@@ -15,12 +15,11 @@ import io.swagger.codegen.*;
 import io.swagger.codegen.languages.JavaJerseyServerCodegen;
 import io.swagger.models.*;
 import io.swagger.models.properties.Property;
-import io.swagger.models.properties.PropertyBuilder;
-import io.swagger.util.Json;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -37,10 +36,35 @@ import java.util.stream.Collectors;
 public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
     private static final Logger log = LoggerFactory.getLogger(JerseyServerCodegen.class);
+    private HashMap<String, Set<GeneratorRecord>> annotationGenerators = new HashMap<>();
+    private Set<String> toInterfaces = new HashSet<>();
 
     public JerseyServerCodegen() {
         supportsInheritance = true;
         supportedLibraries.put("mrv", "MRV templates");
+    }
+
+    /**
+     * Add annotation
+     * @param templateKey key in the template to hook-up the generator result
+     * @param vendorExtensionName name of the vendorExtension to hook-up
+     * @param generator function to generate the resulting text of annotation
+     */
+    public void addAnnotation(String templateKey, String vendorExtensionName, Function<String, String> generator) {
+        Set<GeneratorRecord> generators = annotationGenerators.get(vendorExtensionName);
+        if(generators == null) {
+            generators = new HashSet<>();
+            annotationGenerators.put(vendorExtensionName, generators);
+        }
+        generators.add(new GeneratorRecord(templateKey, generator));
+    }
+
+    /**
+     * Add class name which will not be considered as parent class (TODO in the future code for interface will be generated)
+     * @param name class-name
+     */
+    public void addInterface(String name) {
+        toInterfaces.add(name);
     }
 
     @Override
@@ -91,17 +115,119 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
             return super.fromModel(name, model, allDefinitions);
         }
 
-        List<Model> refModels = ((ComposedModel) model).getAllOf().stream().filter(m -> m instanceof RefModel).collect(Collectors.toList());
+        List<RefModel> refModels = ((ComposedModel) model).getAllOf().stream()
+                .filter(m -> m instanceof RefModel)
+                .map(x -> (RefModel)x)
+                .collect(Collectors.toList());
+
+        final List<RefModel> interfaces = refModels.stream().filter(m -> toInterfaces.contains(m.getSimpleRef())).collect(Collectors.toList());
+        refModels = refModels.stream().filter(r -> ! interfaces.contains(r)).collect(Collectors.toList());
+
 
         if(refModels.size() == 1) {
             ((ComposedModel) model).setParent(refModels.get(0));
+            ((ComposedModel) model).setInterfaces(interfaces);
+        } else if(refModels.isEmpty()) {
+            log.info("No parent class for {}", name);
         } else {
             log.warn("Unsupported inheritance schema for {} references to {}", name, refModels.stream()
                     .map(Model::getReference)
                     .collect(Collectors.joining(",")));
         }
 
-        return super.fromModel(name, model, allDefinitions);
+        CodegenModel codegenModel = super.fromModel(name, model, allDefinitions);
+        multiInheirtanceSupport(codegenModel, (ComposedModel) model, allDefinitions);
+        return codegenModel;
+    }
+
+    private void multiInheirtanceSupport(CodegenModel codegenModel, ComposedModel model, Map<String, Model> allDefinitions) {
+        List<CodegenProperty> vars = new ArrayList<>(codegenModel.allVars);
+        Set<String> mandatory = new HashSet<>(codegenModel.allMandatory);
+
+        final Set<String> properties = getParentProperties(model.getParent(),allDefinitions);
+
+        //rewrite for #hasMore
+        vars = vars.stream().filter(p -> ! properties.contains(p.name)).map(p -> {
+            CodegenProperty n = p.clone();
+            n.hasMore = true;
+            return n;
+        }).collect(Collectors.toList());
+        if(!vars.isEmpty()) vars.get(vars.size() -1).hasMore = false;
+
+        mandatory = mandatory.stream().filter(m -> ! properties.contains(m)).collect(Collectors.toSet());
+        codegenModel.vars = vars;
+        codegenModel.mandatory = mandatory;
+    }
+
+    private Set<String> getParentProperties(Model parent, Map<String, Model> allDefinitions) {
+        if(parent == null) return Collections.emptySet();
+        if(parent instanceof ModelImpl) return parent.getProperties().keySet();
+        if(parent instanceof RefModel) {
+            String ref = ((RefModel) parent).getSimpleRef();
+            Model model = allDefinitions.get(ref);
+            if(model == null) log.warn("no model found for $ref {}", ref);
+            return getParentProperties(model, allDefinitions);
+        }
+        if(parent instanceof ComposedModel) {
+            Set<String> result = new HashSet<>();
+
+            ((ComposedModel) parent).getAllOf().stream().map(m -> getParentProperties(m, allDefinitions))
+                    .forEach(result::addAll);
+            return result;
+        }
+        throw new IllegalStateException("Exception type of model " + parent.getClass());
+    }
+
+
+    @Override
+    public CodegenProperty fromProperty(String name, Property p) {
+        CodegenProperty property = super.fromProperty(name, p);
+
+        //add annotations for vendor extensions
+        Map<String, String> extensions = p.getVendorExtensions().entrySet().stream()
+                .filter(entry -> annotationGenerators.containsKey(entry.getKey()))
+                .flatMap(entry -> {
+                    Set<GeneratorRecord> generatorRecords = annotationGenerators.get(entry.getKey());
+                    return generatorRecords.stream()
+                            .map(x -> new SimpleEntry<>(x.getKey(), x.getValue().apply((String) entry.getValue())));
+                }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        property.vendorExtensions.putAll(extensions);
+        return property;
+    }
+
+    private class SimpleEntry<K, V> implements Map.Entry<K, V> {
+
+        private K key;
+        private V value;
+
+        public SimpleEntry(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public K getKey() {
+            return key;
+        }
+
+        @Override
+        public V getValue() {
+            return value;
+        }
+
+        @Override
+        public V setValue(V value) {
+            V t = this.value;
+            this.value = value;
+            return t;
+        }
+    }
+
+    private class GeneratorRecord extends SimpleEntry<String, Function<String,String>> {
+        public GeneratorRecord(String key, Function<String, String> transformer) {
+            super(key, transformer);
+        }
     }
 
     @Override

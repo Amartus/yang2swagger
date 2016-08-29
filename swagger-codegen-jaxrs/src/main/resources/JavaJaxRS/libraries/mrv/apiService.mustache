@@ -19,6 +19,12 @@ import javax.ws.rs.core.SecurityContext;
 {{#operations}}
 public abstract class {{classname}}Service {
     {{#operation}}
+    /**
+      *   For path {{#subresourceOperation}}@javax.ws.rs.Path("{{&path}}"){{/subresourceOperation}}
+      *   {{#allParams}}
+      *   @param {{paramName}}{{/allParams}}
+      *   {{#returnType}}@return in case of success {@link {{{returnType}}} }{{/returnType}}
+      */
     public abstract Response {{nickname}}({{#allParams}}{{>serviceQueryParams}}{{>servicePathParams}}{{>serviceHeaderParams}}{{>serviceBodyParams}}{{>serviceFormParams}},{{/allParams}}SecurityContext securityContext, javax.ws.rs.core.UriInfo uriInfo) throws Exception;
     {{/operation}}
 }
