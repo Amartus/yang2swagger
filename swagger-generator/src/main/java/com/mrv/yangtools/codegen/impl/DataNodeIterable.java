@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public class DataNodeIterable implements Iterable<SchemaNode> {
     private static final Logger log = LoggerFactory.getLogger(DataNodeIterable.class);
 
-    private List<SchemaNode> allChildren;
+    private final List<SchemaNode> allChildren;
 
     public DataNodeIterable(final DataNodeContainer container) {
         allChildren = new LinkedList<>();

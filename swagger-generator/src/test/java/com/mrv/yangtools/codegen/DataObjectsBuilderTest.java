@@ -35,7 +35,6 @@ import java.util.function.Function;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 /**
  * @author cmurch@mrv.com
@@ -92,6 +91,7 @@ public class DataObjectsBuilderTest {
 
     }
 
+    @SuppressWarnings("unchecked")
     protected <T extends SchemaNode & DataNodeContainer> boolean namesMeetNodes(DataObjectRepo builder, Function<T, Boolean> considerNode, Set<String> requiredNames) {
         return ! DataNodeHelper.stream(groupings).map(x -> (T)x).filter(considerNode::apply)
                 .map(builder::getName).filter(m -> !requiredNames.contains(m)).findFirst().isPresent();

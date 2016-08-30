@@ -36,14 +36,15 @@ import static com.mrv.yangtools.common.BindingMapping.getClassName;
  */
 public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
+    private static final Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
+
     protected static final String DEF_PREFIX = "#/definitions/";
     protected final Swagger swagger;
     protected final TypeConverter converter;
     protected final SchemaContext ctx;
     private final ModuleUtils moduleUtils;
-    protected Map<SchemaNode, String> names;
-    private Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
-    private HashMap<QName, String> generatedEnums;
+    protected final Map<SchemaNode, String> names;
+    private final HashMap<QName, String> generatedEnums;
 
     public AbstractDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
         names = new HashMap<>();
@@ -81,9 +82,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             processNode(r.getOutput(),r.getQName().getLocalName() + "-output", cache);
         });
         log.debug("processing augmentations defined in {}", module.getName());
-        module.getAugmentations().forEach(r -> {
-            processNode(r, cache);
-        });
+        module.getAugmentations().forEach(r -> processNode(r, cache));
     }
 
     protected  void processNode(ContainerSchemaNode container, String proposedName, Set<String> cache) {
@@ -156,7 +155,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         // thus we need to apply collision strategy to override with the last attribute available
         Map<String, Property> properties = node.getChildNodes().stream()
                 .filter(choiceP.negate().and(acceptNode)) // choices handled elsewhere
-                .map(child -> prop(child)).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
+                .map(this::prop).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
 
         Map<String, Property> choiceProperties = node.getChildNodes().stream()
                 .filter(choiceP.and(acceptChoice)) // handling choices

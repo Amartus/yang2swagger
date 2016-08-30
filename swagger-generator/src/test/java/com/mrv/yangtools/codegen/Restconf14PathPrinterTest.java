@@ -24,12 +24,6 @@ import static org.mockito.Mockito.mock;
  */
 public class Restconf14PathPrinterTest {
 
-
-    @Test
-    public void segment() throws Exception {
-
-    }
-
     @Test
     public void simplePath() throws Exception {
         PathSegment a = new PathSegment(mock(SchemaContext.class)).withName("a");

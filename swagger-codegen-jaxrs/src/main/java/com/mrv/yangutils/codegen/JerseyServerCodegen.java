@@ -136,11 +136,11 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         }
 
         CodegenModel codegenModel = super.fromModel(name, model, allDefinitions);
-        multiInheirtanceSupport(codegenModel, (ComposedModel) model, allDefinitions);
+        multiInheritanceSupport(codegenModel, (ComposedModel) model, allDefinitions);
         return codegenModel;
     }
 
-    private void multiInheirtanceSupport(CodegenModel codegenModel, ComposedModel model, Map<String, Model> allDefinitions) {
+    private void multiInheritanceSupport(CodegenModel codegenModel, ComposedModel model, Map<String, Model> allDefinitions) {
         List<CodegenProperty> vars = new ArrayList<>(codegenModel.allVars);
         Set<String> mandatory = new HashSet<>(codegenModel.allMandatory);
 

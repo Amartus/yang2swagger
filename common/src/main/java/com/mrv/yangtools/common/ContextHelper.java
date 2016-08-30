@@ -48,11 +48,10 @@ public class ContextHelper {
      * Get context for yang from classpath
      * @param accept accept function to be passed to {@link SchemaBuilder}}
      * @return YANG context in case of parsing errors
-     * @throws ReactorException
+     * @throws ReactorException in case of problem with YANG modules parsing
      */
     public static SchemaContext getFromClasspath(Function<Path, Boolean> accept) throws ReactorException {
-        return getCtx(Arrays.asList(System.getProperty("java.class.path", ".").split(File.pathSeparator))
-                .stream().map(s -> Paths.get(s)), accept);
+        return getCtx(Arrays.stream(System.getProperty("java.class.path", ".").split(File.pathSeparator)).map(s -> Paths.get(s)), accept);
     }
 
     /**

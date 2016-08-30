@@ -16,7 +16,7 @@ Project is build with standard maven ```maven clean install```. As project depen
 The main component of the project is ```SwaggerGenerator``` which can be run standalone as well as can be configured as maven plugin. Examples of usage can be found in *examples* directory in the project.
 
 The generated yaml.swagger file might be used in swagger editor or standalone code generator. 
-As [mustache](https://mustache.github.io/) templates used in original jersey code generator apply HTML escaping to ```@Path``` paramenters 
+As [mustache](https://mustache.github.io/) templates used in original jersey code generator apply HTML escaping to ```@Path``` parameters 
 we have prepared our own version of the code generator. You might run it standalone or integrate into your maven module.
 
 ### Command-line Execution ###

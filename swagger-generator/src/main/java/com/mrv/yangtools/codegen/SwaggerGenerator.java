@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * The generator can generate Swagger path definitions for all data nodes (currently <code>container</code>, <code>list</code>).
  * Generator swagger modeling concepts:
  * <ul>
- *     <li>container, list, leaf, leaf-list, enums</li> - in addtion Swagger tags are build from module verbs (depending on{@link TagGenerator} configured)
+ *     <li>container, list, leaf, leaf-list, enums</li> - in addition Swagger tags are build from module verbs (depending on{@link TagGenerator} configured)
  *     <li>groupings - depending on {@link Strategy} groupings are either inlined or define data models</li>
  *     <li>leaf-refs - leafrefs paths are mapped to Swagger extensions, leafrefs to attributes with type of the element they refer to</li>
  *     <li>augmentations</li>
@@ -87,7 +87,7 @@ public class SwaggerGenerator {
         converter = new AnnotatingTypeConverter(ctx);
 
 
-        //assign default startegy
+        //assign default strategy
         strategy(Strategy.optimizing);
 
         //no exposed swagger API
@@ -106,7 +106,7 @@ public class SwaggerGenerator {
 
     /**
      * Define version for generated swagger
-     * @param version of seager interface
+     * @param version of swagger interface
      * @return itself
      */
     public SwaggerGenerator version(String version) {
@@ -116,7 +116,7 @@ public class SwaggerGenerator {
 
     /**
      * Add tag generator
-     * @param generator
+     * @param generator to be added
      * @return this
      */
     public SwaggerGenerator tagGenerator(TagGenerator generator) {

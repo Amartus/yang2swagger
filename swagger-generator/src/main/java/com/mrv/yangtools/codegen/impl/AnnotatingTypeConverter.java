@@ -11,7 +11,6 @@
 
 package com.mrv.yangtools.codegen.impl;
 
-import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.properties.AbstractProperty;
 import io.swagger.models.properties.Property;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;

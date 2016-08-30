@@ -40,8 +40,8 @@ public interface DataObjectBuilder extends DataObjectRepo {
 
     /**
      * Typically to build model and store it internally (i.e. in {@link Swagger} models definition
-     * @param node
-     * @param <T>
+     * @param node to build model for and add to swagger definitions
+     * @param <T> type
      */
     <T extends SchemaNode & DataNodeContainer> void addModel(T node);
 
