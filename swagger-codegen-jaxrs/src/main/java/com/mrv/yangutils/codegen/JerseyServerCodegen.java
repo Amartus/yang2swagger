@@ -147,7 +147,7 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         final Set<String> properties = getParentProperties(model.getParent(),allDefinitions);
 
         //rewrite for #hasMore
-        vars = vars.stream().filter(p -> ! properties.contains(p.name)).map(p -> {
+        vars = vars.stream().filter(p -> ! properties.contains(p.baseName)).map(p -> {
             CodegenProperty n = p.clone();
             n.hasMore = true;
             return n;
