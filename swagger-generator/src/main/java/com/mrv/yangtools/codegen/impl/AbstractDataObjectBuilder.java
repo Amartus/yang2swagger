@@ -13,41 +13,46 @@ package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.Model;
+import io.swagger.models.ModelImpl;
 import io.swagger.models.Swagger;
 import io.swagger.models.properties.AbstractProperty;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
-import com.mrv.yangtools.common.BindingMapping;
 
 /**
  * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
 public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
+
+    protected static final String DEF_PREFIX = "#/definitions/";
     protected final Swagger swagger;
     protected final TypeConverter converter;
     protected final SchemaContext ctx;
+    private final ModuleUtils moduleUtils;
     protected Map<SchemaNode, String> names;
     private Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
+    private HashMap<QName, String> generatedEnums;
 
-    public AbstractDataObjectBuilder(SchemaContext ctx, Swagger swagger) {
+    public AbstractDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
         names = new HashMap<>();
-        converter = new AnnotatingTypeConverter(ctx);
+        this.converter = converter;
+        converter.setDataObjectBuilder(this);
         this.swagger = swagger;
         this.ctx = ctx;
+        this.moduleUtils = new ModuleUtils(ctx);
+        generatedEnums = new HashMap<>();
     }
 
     /**
@@ -57,7 +62,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
      */
     @Override
     public <T extends SchemaNode & DataNodeContainer> String getDefinitionId(T node) {
-        return "#/definitions/"+ getName(node);
+        return DEF_PREFIX + getName(node);
     }
 
     /**
@@ -237,6 +242,42 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         }
 
         swagger.addDefinition(modelName, model);
+    }
+
+    @Override
+    public String addModel(EnumTypeDefinition enumType) {
+        QName qName = enumType.getQName();
+
+        if(! generatedEnums.containsKey(qName)) {
+            log.debug("generating enum model for {}", enumType.getQName());
+            String name = getName(qName);
+            ModelImpl enumModel = build(enumType);
+            swagger.addDefinition(name, enumModel);
+            generatedEnums.put(qName, DEF_PREFIX + name);
+        } else {
+            log.debug("reusing enum model for {}", enumType.getQName());
+        }
+        return generatedEnums.get(qName);
+    }
+
+    protected ModelImpl build(EnumTypeDefinition enumType) {
+        ModelImpl model = new ModelImpl();
+        model._enum(enumType.getValues().stream()
+                .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
+        model.setType(ModelImpl.OBJECT);
+        return model;
+    }
+
+    protected String getName(QName qname) {
+        String name = getClassName(qname);
+        if (generatedEnums.values().contains(name)) {
+            name = moduleUtils.toModuleName(qname) + name;
+        }
+        while(generatedEnums.values().contains(name)) {
+            log.warn("Name {} already defined for enum. generating random postfix");
+            name = name + new Random().nextInt();
+        }
+        return name;
     }
 
     protected String desc(DocumentedNode node) {

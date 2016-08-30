@@ -36,8 +36,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private final GroupingHierarchyHandler groupingHierarchyHandler;
     private Map<Object, Set<UsesNode>> usesCache;
 
-    public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger) {
-        super(ctx, swagger);
+    public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
+        super(ctx, swagger, converter);
         groupings = new HashMap<>();
         existingModels = new HashMap<>();
         usesCache = new HashMap<>();

@@ -55,6 +55,7 @@ public class SwaggerGenerator {
     private Set<TagGenerator> tagGenerators = new HashSet<>();
 
     private Set<Elements> toGenerate;
+    private final AnnotatingTypeConverter converter;
 
 
     public enum Format { YAML, JSON }
@@ -83,6 +84,8 @@ public class SwaggerGenerator {
         this.ctx = ctx;
         this.modules = modulesToGenerate;
         target = new Swagger();
+        converter = new AnnotatingTypeConverter(ctx);
+
 
         //assign default startegy
         strategy(Strategy.optimizing);
@@ -131,10 +134,10 @@ public class SwaggerGenerator {
 
         switch (strategy) {
             case optimizing:
-                this.dataObjectsBuilder = new OptimizingDataObjectBuilder(ctx, target);
+                this.dataObjectsBuilder = new OptimizingDataObjectBuilder(ctx, target, converter);
                 break;
             default:
-                this.dataObjectsBuilder = new UnpackingDataObjectsBuilder(ctx, target);
+                this.dataObjectsBuilder = new UnpackingDataObjectsBuilder(ctx, target, converter);
         }
         return this;
     }

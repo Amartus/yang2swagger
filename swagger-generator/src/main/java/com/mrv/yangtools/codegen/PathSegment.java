@@ -51,7 +51,12 @@ public class PathSegment implements Iterable<PathSegment> {
      */
     public PathSegment(SchemaContext ctx) {
         this(NULL);
-        this.converter = new TypeConverter(ctx);
+        this.converter = new TypeConverter(ctx) {
+            @Override
+            protected boolean enumToModel() {
+                return false;
+            }
+        };
     }
 
     private PathSegment() {}

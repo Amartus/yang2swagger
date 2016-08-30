@@ -11,10 +11,8 @@
 
 package com.mrv.yangtools.codegen;
 
-import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
-import io.swagger.models.Model;
+import com.mrv.yangtools.codegen.impl.AbstractDataObjectBuilder;
 import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
-import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 
@@ -25,13 +23,13 @@ import org.opendaylight.yangtools.yang.model.api.SchemaNode;
  */
 public interface DataObjectRepo {
     /**
-     * Get definition id for node. Prerequisite is to have node's module traversed {@link UnpackingDataObjectsBuilder#processModule(Module)}.
+     * Get definition id for node. Prerequisite is to have node's module traversed {@link AbstractDataObjectBuilder#processModule(Module)}.
      * @param node node
      * @return id
      */
     <T extends SchemaNode & DataNodeContainer> String getDefinitionId(T node);
     /**
-     * Get name for data node. Prerequisite is to have node's module traversed {@link UnpackingDataObjectsBuilder#processModule(Module)}.
+     * Get name for data node. Prerequisite is to have node's module traversed {@link AbstractDataObjectBuilder#processModule(Module)}.
      * @param node node
      * @return name
      */

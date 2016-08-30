@@ -11,9 +11,7 @@
 
 package com.mrv.yangtools.codegen;
 
-import com.mrv.yangtools.codegen.impl.DataNodeHelper;
-import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
-import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.*;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.Model;
 import io.swagger.models.Swagger;
@@ -37,6 +35,7 @@ import java.util.function.Function;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 /**
  * @author cmurch@mrv.com
@@ -59,7 +58,7 @@ public class DataObjectsBuilderTest {
     @Test
     public void testAddModelGroupings() throws Exception {
         //having
-        UnpackingDataObjectsBuilder builder = new UnpackingDataObjectsBuilder(ctx, swagger);
+        UnpackingDataObjectsBuilder builder = new UnpackingDataObjectsBuilder(ctx, swagger, new AnnotatingTypeConverter(ctx));
         SchemaNode c1 = DataNodeHelper.stream(groupings).filter(n -> n.getQName().getLocalName().equals("c1")).findFirst().orElseThrow(IllegalArgumentException::new);
         //when
         builder.processModule(groupings);
@@ -71,7 +70,7 @@ public class DataObjectsBuilderTest {
     @Test
     public void testNameGroupingsUnpacking() throws Exception {
         //having
-        UnpackingDataObjectsBuilder builder = new UnpackingDataObjectsBuilder(ctx, swagger);
+        UnpackingDataObjectsBuilder builder = new UnpackingDataObjectsBuilder(ctx, swagger, new AnnotatingTypeConverter(ctx));
         builder.processModule(groupings);
         //when & then
         assertTrue(namesMeetNodes(builder,
@@ -83,7 +82,7 @@ public class DataObjectsBuilderTest {
     @Test
     public void testNameGroupingsOptimizing() throws Exception {
         //having
-        DataObjectBuilder builder = new OptimizingDataObjectBuilder(ctx, swagger);
+        DataObjectBuilder builder = new OptimizingDataObjectBuilder(ctx, swagger, new AnnotatingTypeConverter(ctx));
         builder.processModule(groupings);
         //when & then
         assertTrue(namesMeetNodes(builder,

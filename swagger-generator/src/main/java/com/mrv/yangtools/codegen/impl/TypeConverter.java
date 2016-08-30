@@ -11,6 +11,7 @@
 
 package com.mrv.yangtools.codegen.impl;
 
+import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
@@ -21,8 +22,6 @@ import org.opendaylight.yangtools.yang.model.util.type.BaseTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.stream.Collectors;
-
 /**
  * Supports type conversion between YANG and swagger
  * @author cmurch@mrv.com
@@ -31,6 +30,7 @@ import java.util.stream.Collectors;
 public class TypeConverter {
 
     private SchemaContext ctx;
+    private DataObjectBuilder dataObjectBuilder;
 
     public TypeConverter(SchemaContext ctx) {
         this.ctx = ctx;
@@ -41,7 +41,7 @@ public class TypeConverter {
     /**
      * Convert YANG type to swagger property
      * @param type YANG
-     * @param parent for scope computation (to support leafrefs
+     * @param parent for scope computation (to support leafrefs)
      * @return property
      */
     @SuppressWarnings("ConstantConditions")
@@ -67,18 +67,35 @@ public class TypeConverter {
             return integer;
         }
 
-        StringProperty result = new StringProperty();
-
-        if(type instanceof EnumTypeDefinition) {
-            result.setEnum(((EnumTypeDefinition) type).getValues()
-                    .stream()
-                    .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
-        } else if(baseType instanceof EnumTypeDefinition) {
-            result.setEnum(((EnumTypeDefinition) baseType).getValues()
-                    .stream()
-                    .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
+        EnumTypeDefinition e = toEnum(type);
+        if(e != null) {
+            if(enumToModel()) {
+                String refString = dataObjectBuilder.addModel(e);
+                return new RefProperty(refString);
+            }
         }
 
-        return result;
+        return new StringProperty();
+    }
+
+    /**
+     * Check if builder is present.
+     * @return <code>true</code>
+     * @throws IllegalStateException in case it is not present
+     */
+    protected boolean enumToModel() {
+        if(dataObjectBuilder == null) throw new IllegalStateException("no data object builder configured");
+        return true;
+    }
+
+    private EnumTypeDefinition toEnum(TypeDefinition<?> type) {
+        if(type instanceof  EnumTypeDefinition) return (EnumTypeDefinition) type;
+        if(type.getBaseType() instanceof  EnumTypeDefinition) return (EnumTypeDefinition) type.getBaseType();
+        return null;
+    }
+
+
+    public void setDataObjectBuilder(DataObjectBuilder dataObjectBuilder) {
+        this.dataObjectBuilder = dataObjectBuilder;
     }
 }

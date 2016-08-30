@@ -1,0 +1,43 @@
+module enum-module {
+    namespace "http://amartus/ns/yang/enum-module";
+    prefix em;
+    description "exmaple enum module";
+    organization "test-yang";
+
+    typedef simple-enum {
+            type enumeration {
+                enum A1 {
+                    description "none";
+                }
+                enum A2 {
+                    description "none";
+                }
+            }
+            description "none";
+        }
+
+    container root-node {
+        typedef inner-enum {
+            type enumeration {
+                enum B1 {
+                    description "none";
+                }
+                enum B2 {
+                    description "none";
+                }
+            }
+        }
+        leaf v1 {
+            type string;
+        }
+        leaf v2 {
+            type simple-enum;
+        }
+        leaf v3 {
+            type simple-enum;
+        }
+        leaf-list v4 {
+            type inner-enum;
+        }
+    }
+}

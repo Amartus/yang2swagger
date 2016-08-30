@@ -41,8 +41,8 @@ public class UnpackingDataObjectsBuilder extends AbstractDataObjectBuilder {
      * @param ctx YANG modules context
      * @param swagger for which models are built
      */
-    public UnpackingDataObjectsBuilder(SchemaContext ctx, Swagger swagger) {
-        super(ctx, swagger);
+    public UnpackingDataObjectsBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
+        super(ctx, swagger, converter);
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(swagger);
         built = new HashSet<>();

@@ -45,18 +45,18 @@ public class CodeGenerator {
 
         JerseyServerCodegen codegenConfig = new JerseyServerCodegen();
         codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
-                "@some.package.name.Leafref(\"" + v + "\")"
+                "@com.mrv.provision.di.rest.jersey.metadata.Leafref(\"" + v + "\")"
         );
 //        codegenConfig.addInterface("GlobalClass");
 
         ClientOpts clientOpts = new ClientOpts();
 
         Path target = Files.createTempDirectory("generated");
-        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.some.package.api");
-        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.some.package.model");
+        codegenConfig.additionalProperties().put(CodegenConstants.API_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.api");
+        codegenConfig.additionalProperties().put(CodegenConstants.MODEL_PACKAGE, "com.mrv.provision.di.rest.jersey.tapi.model");
         codegenConfig.setOutputDir(target.toString());
 
-        // write swagerr.yaml to the target
+        // write swagger.yaml to the target
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.writeValue(new FileWriter(new File(target.toFile(), "tapi.yaml")), swagger);

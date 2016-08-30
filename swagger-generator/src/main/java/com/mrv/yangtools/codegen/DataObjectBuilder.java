@@ -16,6 +16,7 @@ import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
+import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
 
 /**
  * API for handling YANG data types to Swagger models
@@ -43,4 +44,13 @@ public interface DataObjectBuilder extends DataObjectRepo {
      * @param <T>
      */
     <T extends SchemaNode & DataNodeContainer> void addModel(T node);
+
+    /**
+     * Add model for enum
+     * @param enumType enum to build swagger model from
+     * @return definition id like in {@link DataObjectRepo#getDefinitionId(SchemaNode)}
+     */
+    String addModel(EnumTypeDefinition enumType);
+
+
 }

@@ -222,4 +222,19 @@ public class SwaggerGeneratorTestIt {
 
     }
 
+    @org.junit.Test
+    public void testGenerateEnum() throws Exception {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("enum-module.yang"));
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        swagger = generator.generate();
+
+        Set<String> defNames = swagger.getDefinitions().keySet();
+
+        assertEquals(3, defNames.size());
+        assertEquals(new HashSet<>(Arrays.asList(
+                "SimpleEnum", "InnerEnum", "RootNode"
+        )), defNames);
+    }
+
 }

@@ -32,9 +32,11 @@ public class GroupingHierarchyHandler {
     private final Map<SchemaPath, HierarchyNode> hierarchy;
     private final Map<GroupingDefinition, String> groupingNames;
     private final SchemaContext ctx;
+    private final ModuleUtils moduleUtils;
 
     public GroupingHierarchyHandler(SchemaContext ctx) {
         this.ctx = ctx;
+        moduleUtils = new ModuleUtils(ctx);
         groupingNames = computeNames();
         hierarchy = buildHierarchy();
     }
@@ -52,7 +54,7 @@ public class GroupingHierarchyHandler {
 
         groupings.get().forEach(g -> {
             String name = g.getQName().getLocalName();
-            Set<QName> qNames = names.computeIfAbsent(name, (n) -> new HashSet<QName>());
+            Set<QName> qNames = names.computeIfAbsent(name, (n) -> new HashSet<>());
             qNames.add(g.getQName());
         });
 
@@ -60,14 +62,8 @@ public class GroupingHierarchyHandler {
             String localName = g.getQName().getLocalName();
             int times = names.get(localName).size();
             if(times < 2) return new Tuple<>(g, localName);
-            return new Tuple<>(g, toModuleName(g.getQName()) + ":" + localName);
+            return new Tuple<>(g, moduleUtils.toModuleName(g.getQName()) + ":" + localName);
         }).collect(Collectors.toMap(Tuple::first, Tuple::second));
-    }
-
-    private String toModuleName(QName qname) {
-        Set<Module> modules = ctx.findModuleByNamespace(qname.getNamespace());
-        if(modules.size() != 1) throw new IllegalStateException("no support for " + modules.size() + " modules with name " + qname);
-        return modules.iterator().next().getName();
     }
 
     private Map<SchemaPath, HierarchyNode> buildHierarchy() {
