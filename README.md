@@ -5,11 +5,13 @@ Having the definition you are able to build live documentation services, and gen
 
 Our tool supports:
 
+ * rpc - which are translated into POST operations 
  * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
  * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
  * leafrefs - which are represented as model attributes with types of the refereed leafs
  * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
  * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
+ * YANG modules documentation - which is added to generated swagger API specification
 
 
 In this project we use YANG parser from [OpenDaylight](https://www.opendaylight.org/) (ODL) yang-tools project. The generated Swagger specification is available as Java object or serialized either to YAML or JSON file. 
@@ -114,7 +116,6 @@ You might also consider to plug-in code generator into your model definition:
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
                 <version>1.0-SNAPSHOT</version>
-                <!--<type>jar</type>-->
             </dependency>
         </dependencies>
         <executions>
@@ -134,8 +135,6 @@ You might also consider to plug-in code generator into your model definition:
                         <dateLibrary>java8</dateLibrary>
                     </configOptions>
     
-                    <!-- override the default library to jersey2 -->
-                    <library>jersey2</library>
                     <addCompileSourceRoot>false</addCompileSourceRoot>
                     <output>target/generated-sources/jaxRS</output>
                 </configuration>
