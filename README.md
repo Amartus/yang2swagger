@@ -8,9 +8,9 @@ Our tool supports:
  * rpc - which are translated into POST operations 
  * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
  * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
- * leafrefs - which are represented as model attributes with types of the refereed leafs
- * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
- * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
+ * leafrefs - which are represented as model attributes with types of the referred leafs
+ * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
+ * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * YANG modules documentation - which is added to generated swagger API specification
 
 
