@@ -4,11 +4,12 @@ Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/Ope
 Having the definition you are able to build live documentation services, and generate client or server code using Swagger tools.
 
 Our tool supports:
-* container and list - which are represented in RESTCONF data space URI and Swagger modules.
-* leaf and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
-* leafrefs - which are represented as model attributes with types of the refereed leafs
-* groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
-* augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
+
+ * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
+ * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
+ * leafrefs - which are represented as model attributes with types of the refereed leafs
+ * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
+ * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritence structures
 
 
 In this project we use YANG parser from [OpenDaylight](https://www.opendaylight.org/) (ODL) yang-tools project. The generated Swagger specification is available as Java object or serialized either to YAML or JSON file. 
