@@ -1,7 +1,21 @@
 ### Yang2Swagger generator ###
 
-Project is a YANG to swagger generator tool. The YANG parser is build on top of OpenDaylight (ODL) yang-tools project. 
-Yang2Swagger generator is meant to be compliant with [RESTCONF specification  ](https://tools.ietf.org/html/draft-ietf-netconf-restconf-14)
+Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification  ](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
+Having the definition you are able to build live documentation services, and generate client or server code using Swagger tools.
+
+Our tool supports:
+
+ * rpc - which are translated into POST operations 
+ * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
+ * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
+ * leafrefs - which are represented as model attributes with types of the referred leafs
+ * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
+ * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
+ * YANG modules documentation - which is added to generated swagger API specification
+
+
+In this project we use YANG parser from [OpenDaylight](https://www.opendaylight.org/) (ODL) yang-tools project. The generated Swagger specification is available as Java object or serialized either to YAML or JSON file. 
+The project contains a customized Jersey code-generator that can be use to generate server side scaffolding compatible with API specification.
 
 
 Contact:
@@ -17,7 +31,7 @@ The main component of the project is ```SwaggerGenerator``` which can be run sta
 
 The generated yaml.swagger file might be used in swagger editor or standalone code generator. 
 As [mustache](https://mustache.github.io/) templates used in original jersey code generator apply HTML escaping to ```@Path``` parameters 
-we have prepared our own version of the code generator. You might run it standalone or integrate into your maven module.
+we have prepared our own version of the code generator. You might run it standalone or as maven plugin.
 
 ### Command-line Execution ###
 
@@ -102,7 +116,6 @@ You might also consider to plug-in code generator into your model definition:
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
                 <version>1.0-SNAPSHOT</version>
-                <!--<type>jar</type>-->
             </dependency>
         </dependencies>
         <executions>
@@ -122,8 +135,6 @@ You might also consider to plug-in code generator into your model definition:
                         <dateLibrary>java8</dateLibrary>
                     </configOptions>
     
-                    <!-- override the default library to jersey2 -->
-                    <library>jersey2</library>
                     <addCompileSourceRoot>false</addCompileSourceRoot>
                     <output>target/generated-sources/jaxRS</output>
                 </configuration>
