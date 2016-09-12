@@ -87,8 +87,6 @@
                                 <dateLibrary>java8</dateLibrary>
                             </configOptions>
 
-                            <!-- override the default library to jersey2 -->
-                            <library>jersey2</library>
                             <addCompileSourceRoot>false</addCompileSourceRoot>
                             <output>target/generated-sources/jaxRS</output>
                         </configuration>

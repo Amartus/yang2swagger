@@ -14,6 +14,7 @@ package com.mrv.yangutils.codegen;
 import io.swagger.codegen.*;
 import io.swagger.codegen.languages.JavaJerseyServerCodegen;
 import io.swagger.models.*;
+import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,7 +183,9 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
     @Override
     public CodegenProperty fromProperty(String name, Property p) {
         CodegenProperty property = super.fromProperty(name, p);
-
+        if(p instanceof ArrayProperty) {
+            p = ((ArrayProperty) p).getItems();
+        }
         //add annotations for vendor extensions
         Map<String, String> extensions = p.getVendorExtensions().entrySet().stream()
                 .filter(entry -> annotationGenerators.containsKey(entry.getKey()))
