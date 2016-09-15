@@ -58,6 +58,7 @@ public class GeneratorHelper {
         final Set<Module> toGenerate = ctx.getModules().stream().filter(toSelect).collect(Collectors.toSet());
 
         return new SwaggerGenerator(ctx, toGenerate)
+                .defaultConfig()
                 .format(SwaggerGenerator.Format.YAML)
                 .consumes("application/xml")
                 .produces("application/xml")

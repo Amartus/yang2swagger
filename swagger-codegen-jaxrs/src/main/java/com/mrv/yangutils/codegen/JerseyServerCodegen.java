@@ -80,24 +80,24 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
     @Override
     public void addOperationToGroup(String tag, String resourcePath, Operation operation, CodegenOperation co, Map<String, List<CodegenOperation>> operations) {
-
-        final String[] segments = resourcePath.split("/");
-        if(segments.length < 3 || !segments[1].equals("data")) {
-            super.addOperationToGroup(tag,resourcePath, operation, co, operations);
+        resourcePath = fixPath(resourcePath);
+        String basePath = resourcePath;
+        if(resourcePath.startsWith("/")) {
+            basePath = resourcePath.substring(1);
+        }
+        final String[] segments = basePath.split("/");
+        if(segments.length < 2 || !segments[0].equals("data")) {
+            super.addOperationToGroup(tag, resourcePath, operation, co, operations);
             return;
         }
 
-        String basePath = segments[1] + "/" + segments[2];
-
-        if(basePath.equals("")) {
-            basePath = "default";
-        } else {
-            if(co.path.startsWith("/" + basePath)) {
-                co.path = co.path.substring(("/" + basePath).length());
-            }
-
-            co.subresourceOperation = !co.path.isEmpty();
+        basePath = segments[0] + "/" + segments[1];
+        if(co.path.startsWith("/" + basePath)) {
+            co.path = fixPath(co.path.substring((basePath).length()+1));
         }
+
+        co.subresourceOperation = !co.path.isEmpty();
+
 
         List<CodegenOperation> opList = operations.get(basePath);
         if(opList == null) {
@@ -179,6 +179,19 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         throw new IllegalStateException("Exception type of model " + parent.getClass());
     }
 
+    @Override
+    public CodegenOperation fromOperation(String path, String httpMethod, Operation operation, Map<String, Model> definitions, Swagger swagger) {
+        path = fixPath(path);
+
+        CodegenOperation co = super.fromOperation(path, httpMethod, operation, definitions, swagger);
+        if("void".equals(co.returnType)) co.returnType = "Void";
+        return co;
+    }
+
+    private String fixPath(String path) {
+        if(path.endsWith("/")) path = path.substring(0, path.length() -1);
+        return path;
+    }
 
     @Override
     public CodegenProperty fromProperty(String name, Property p) {

@@ -57,6 +57,19 @@ public class SwaggerGenerator {
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
 
+    public SwaggerGenerator defaultConfig() {
+        //setting defaults
+        this
+                .host("localhost:8080")
+                .basePath("/restconf")
+                .consumes("application/json")
+                .produces("application/json")
+                .version("1.0.0-SNAPSHOT")
+                .elements(Elements.DATA, Elements.RCP)
+                .format(Format.YAML);
+        return this;
+    }
+
 
     public enum Format { YAML, JSON }
     public enum Elements {
@@ -93,15 +106,6 @@ public class SwaggerGenerator {
         //no exposed swagger API
         target.info(new Info());
 
-        //setting defaults
-        this
-            .host("localhost:8080")
-            .basePath("/restconf")
-            .consumes("application/json")
-            .produces("application/json")
-            .version("1.0.0-SNAPSHOT")
-            .elements(Elements.DATA, Elements.RCP)
-            .format(Format.YAML);
     }
 
     /**
