@@ -73,6 +73,7 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
 
         try(FileWriter fileWriter = new FileWriter(output)) {
             SwaggerGenerator generator = new SwaggerGenerator(schemaContext, modules)
+                    .format(SwaggerGenerator.Format.JSON)
                     .tagGenerator(new SegmentTagGenerator());
 
             mimes.forEach(m -> { generator.consumes("application/"+ m); generator.produces("application/"+ m);});

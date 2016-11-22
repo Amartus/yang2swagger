@@ -54,7 +54,7 @@ public class Main {
             System.err.println(e.getMessage());
             parser.printUsage(System.err);
         } catch (Throwable t) {
-            log.error(t.toString());
+            log.error("Error while generating Swagger", t);
         }
     }
 

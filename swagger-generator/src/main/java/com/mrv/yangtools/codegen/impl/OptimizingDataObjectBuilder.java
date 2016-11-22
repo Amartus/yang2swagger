@@ -42,6 +42,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         existingModels = new HashMap<>();
         usesCache = new HashMap<>();
         groupingHierarchyHandler = new GroupingHierarchyHandler(ctx);
+
+        Set<Module> allModules = ctx.getModules();
+        HashSet<String> names = new HashSet<>();
+        allModules.forEach(m -> processGroupings(m, names));
     }
 
 
@@ -97,6 +101,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     @Override
     protected void processNode(DataNodeContainer container, Set<String> cache) {
         super.processNode(container, cache);
+//        processGroupings(container, cache);
+    }
+
+    protected void processGroupings(DataNodeContainer container, Set<String> cache) {
         DataNodeHelper.stream(container).filter(n -> n instanceof GroupingDefinition)
                 .forEach(n -> {
                     String gName = groupingHierarchyHandler.getGroupingName((GroupingDefinition) n);

@@ -24,7 +24,13 @@ import java.io.*;
 public class YamlGenerator {
 
     public static void main(String[] args) throws Exception {
-        final SwaggerGenerator generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+        SwaggerGenerator generator;
+        if(args.length == 1) {
+            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> m.getName().startsWith("Tapi"));
+        } else {
+            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+        }
+
         generator.tagGenerator(new SegmentTagGenerator());
 
         generator.generate(new FileWriter("swagger.yaml"));
