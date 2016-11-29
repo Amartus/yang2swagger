@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
 
@@ -161,12 +162,13 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                 .filter(choiceP.and(acceptChoice)) // handling choices
                 .flatMap(c -> {
                     ChoiceSchemaNode choice = (ChoiceSchemaNode) c;
-                    return choice.getCases().stream()
+                    Stream<Pair> streamOfPairs = choice.getCases().stream()
                             .flatMap(_case -> _case.getChildNodes().stream().map(sc -> {
                                 Pair prop = prop(sc);
                                 assignCaseMetadata(prop.property, choice, _case);
                                 return prop;
                             }));
+                    return streamOfPairs;
                 }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
 
         HashMap<String, Property> result = new HashMap<>();

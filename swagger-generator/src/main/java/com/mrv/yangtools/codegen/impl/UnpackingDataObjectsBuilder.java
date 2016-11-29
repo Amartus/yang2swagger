@@ -68,7 +68,8 @@ public class UnpackingDataObjectsBuilder extends AbstractDataObjectBuilder {
      * @param node node
      * @return name
      */
-    public String getName(SchemaNode node) {
+    @Override
+    public <T extends SchemaNode & DataNodeContainer>  String getName(T node) {
         return names.get(node);
     }
 
