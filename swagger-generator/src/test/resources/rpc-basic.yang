@@ -1,5 +1,5 @@
-module rock {
-    namespace "http://amartus/ns/yang/simplests";
+module rpc-basic {
+    namespace "http://amartus/ns/yang/rock";
     prefix ro;
     description "read-only test module";
     organization "test-yang";
@@ -17,10 +17,10 @@ module rock {
 
     rpc rock-the-house {
         input {
-            leaf zip-code {
-                type string;
+            container xyz {
+                uses res;
             }
-            uses res;
+
         }
         output {
             container response {
@@ -49,5 +49,9 @@ module rock {
                 type string;
             }
         }
+    }
+
+    container root {
+        uses res;
     }
 }

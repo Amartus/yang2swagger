@@ -1,0 +1,36 @@
+module rpc-augmentations {
+    namespace "http://amartus/ns/yang/rpc-augmentations";
+    prefix raug;
+    import rpc-basic { prefix rb; }
+
+    grouping addition {
+        container a-container {
+            leaf abcd { type string; }
+        }
+
+    }
+
+    augment "/rb:root/rb:c-res" {
+        uses addition;
+    }
+
+    augment "/rb:rock-the-house/rb:input/rb:xyz/rb:c-res" {
+        uses addition;
+    }
+
+    augment "aug-root/a" {
+        container ab {
+            uses addition;
+        }
+    }
+
+    container aug-root {
+        list a {
+            leaf key {type string; }
+
+        }
+        container b {
+            uses addition;
+        }
+    }
+}

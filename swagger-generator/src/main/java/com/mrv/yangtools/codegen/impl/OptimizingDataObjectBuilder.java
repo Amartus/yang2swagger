@@ -57,6 +57,9 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return names.get(node);
     }
 
+    private static Predicate<SchemaNode> isAugmented = (n -> (n instanceof AugmentationTarget) &&
+            !((AugmentationTarget) n).getAvailableAugmentations().isEmpty());
+
     private <T extends SchemaNode & DataNodeContainer> GroupingDefinition grouping(T node) {
         Set<UsesNode> uses = uses(node);
         assert uses.size() == 1;
@@ -73,7 +76,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     @SuppressWarnings("unchecked")
     private  <T extends SchemaNode & DataNodeContainer> boolean isGrouping(SchemaNode node) {
         if(node instanceof AugmentationTarget) {
-            if(!((AugmentationTarget) node).getAvailableAugmentations().isEmpty()) return false;
+            if(isAugmented.test(node)) return false;
         }
         if(node instanceof DataNodeContainer) {
             Set<UsesNode> uses = uses((T) node);
@@ -348,7 +351,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     protected <T extends SchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
-        Predicate<DataSchemaNode> toSimpleProperty = d -> d.isAugmenting() || ! d.isAddedByUses();
+        boolean noUses = node.getUses().isEmpty();
+        Predicate<DataSchemaNode> toSimpleProperty = d -> d.isAugmenting() || noUses  || ! d.isAddedByUses();
         return super.structure(node, toSimpleProperty, toSimpleProperty);
     }
 }

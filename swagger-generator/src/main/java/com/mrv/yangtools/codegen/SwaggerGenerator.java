@@ -260,6 +260,7 @@ public class SwaggerGenerator {
         private PathSegment pathCtx;
 
         private ModuleGenerator(Module module) {
+            if(module == null) throw new NullPointerException("module is null");
             this.module = module;
 
 

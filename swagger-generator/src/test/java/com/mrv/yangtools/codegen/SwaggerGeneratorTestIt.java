@@ -22,17 +22,16 @@ import io.swagger.models.properties.Property;
 
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
+import org.junit.Ignore;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
@@ -62,7 +61,7 @@ public class SwaggerGeneratorTestIt {
     public void testGenerateSimpleModule() throws Exception {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
 
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -100,7 +99,8 @@ public class SwaggerGeneratorTestIt {
         };
 
         //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+
         swagger = generator.generate();
 
         //then
@@ -114,7 +114,7 @@ public class SwaggerGeneratorTestIt {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
 
         //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         generator.strategy(SwaggerGenerator.Strategy.optimizing);
         swagger = generator.generate();
 
@@ -132,7 +132,7 @@ public class SwaggerGeneratorTestIt {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().endsWith("groupings.yang"));
 
         //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         generator.strategy(SwaggerGenerator.Strategy.optimizing);
         swagger = generator.generate();
 
@@ -150,7 +150,7 @@ public class SwaggerGeneratorTestIt {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
 
         //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         generator.strategy(SwaggerGenerator.Strategy.unpacking);
         swagger = generator.generate();
 
@@ -167,7 +167,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateRCPModule() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rcp.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rpc-basic.yang"));
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -175,21 +175,45 @@ public class SwaggerGeneratorTestIt {
         };
 
         //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
         //then
         Map<String, Path> paths = swagger.getPaths();
-        assertEquals(3, paths.keySet().size());
-        paths.keySet().forEach(n -> n.startsWith("/operational"));
-        paths.values().forEach(singlePostOperation);
+        assertEquals(5, paths.keySet().size());
+        List<String> operations = paths.keySet().stream().filter(p -> p.startsWith("/operations")).collect(Collectors.toList());
+        assertEquals(3, operations.size());
+        paths.entrySet().stream().filter(e -> e.getKey().startsWith("/operations")).map(Map.Entry::getValue).forEach(singlePostOperation);
+
+        Map<String, Model> definitions = swagger.getDefinitions();
+        assertEquals(7, definitions.size());
+    }
+
+    @Ignore
+    @org.junit.Test
+    public void testGenerateRCPModuleWithAugmentations() throws Exception {
+        List<String> yangs = Arrays.asList("rpc-basic.yang", "rpc-augmentations.yang");
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> yangs.contains(p.getFileName().toString()));
+
+        //when
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+        swagger = generator.generate();
+
+        //then
+        Map<String, Path> paths = swagger.getPaths();
+        assertEquals(6, paths.keySet().size());
+
+        Map<String, Model> models = swagger.getDefinitions();
+        assertEquals(8, models.size());
+        Property augmented = models.get("CRes").getProperties().get("a-container");
+        assertNotNull(augmented);
     }
 
     @org.junit.Test
     public void testGenerateAugmentation() throws Exception {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().startsWith("simple"));
 
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -207,7 +231,7 @@ public class SwaggerGeneratorTestIt {
     public void testGenerateChoice() throws Exception {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
 
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -226,7 +250,7 @@ public class SwaggerGeneratorTestIt {
     public void testGenerateEnum() throws Exception {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("enum-module.yang"));
 
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules());
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
         Set<String> defNames = swagger.getDefinitions().keySet();

@@ -87,7 +87,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     protected  void processNode(ContainerSchemaNode container, String proposedName, Set<String> cache) {
-
+        if(container == null) return;
         String name = generateName(container, proposedName, cache);
         names.put(container, name);
 

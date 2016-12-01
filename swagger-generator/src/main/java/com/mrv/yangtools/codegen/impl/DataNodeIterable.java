@@ -60,7 +60,7 @@ public class DataNodeIterable implements Iterable<SchemaNode> {
         if (childNodes != null) {
             for (DataSchemaNode childNode : childNodes) {
                 if (childNode.isAugmenting()) {
-                    log.debug("stopping to process on node {}", childNode.getQName());
+                    log.debug("skipping augmenting node {}", childNode.getPath());
                     continue;
                 }
                 allChildren.add(childNode);
