@@ -47,7 +47,7 @@ public class TypeConverter {
     @SuppressWarnings("ConstantConditions")
     public Property convert(TypeDefinition<?> type, SchemaNode parent) {
         TypeDefinition<?> baseType = type.getBaseType();
-
+        if(baseType == null) baseType = type;
 
         if(type instanceof LeafrefTypeDefinition) {
             log.debug("leaf node {}",  type);
