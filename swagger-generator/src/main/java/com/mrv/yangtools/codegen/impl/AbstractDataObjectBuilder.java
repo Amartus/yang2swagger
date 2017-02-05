@@ -236,7 +236,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
         String modelName = getName(node);
         if(swagger.getDefinitions() != null && swagger.getDefinitions().containsKey(modelName)) {
-            if(swagger.getDefinitions().get(modelName) == model) {
+            if(model.equals(swagger.getDefinitions().get(modelName))) {
                 return;
             }
             log.warn("Overriding model {} with node {}", modelName, node.getQName());

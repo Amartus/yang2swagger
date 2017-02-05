@@ -75,9 +75,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
      */
     @SuppressWarnings("unchecked")
     private  <T extends SchemaNode & DataNodeContainer> boolean isGrouping(SchemaNode node) {
-        if(node instanceof AugmentationTarget) {
-            if(isAugmented.test(node)) return false;
-        }
+        if(isAugmented.test(node)) return false;
+
         if(node instanceof DataNodeContainer) {
             Set<UsesNode> uses = uses((T) node);
             if(uses.size() == 1) {
