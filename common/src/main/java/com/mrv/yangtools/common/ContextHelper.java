@@ -22,7 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -40,7 +40,7 @@ public class ContextHelper {
      * @return YANG context
      * @throws ReactorException in case of parsing errors
      */
-    public static SchemaContext getFromDir(Path dir, Function<Path, Boolean> accept) throws ReactorException {
+    public static SchemaContext getFromDir(Path dir, Predicate<Path> accept) throws ReactorException {
         return getCtx(Stream.of(dir), accept);
     }
 
@@ -50,7 +50,7 @@ public class ContextHelper {
      * @return YANG context in case of parsing errors
      * @throws ReactorException in case of problem with YANG modules parsing
      */
-    public static SchemaContext getFromClasspath(Function<Path, Boolean> accept) throws ReactorException {
+    public static SchemaContext getFromClasspath(Predicate<Path> accept) throws ReactorException {
         return getCtx(Arrays.stream(System.getProperty("java.class.path", ".").split(File.pathSeparator)).map(s -> Paths.get(s)), accept);
     }
 
@@ -61,7 +61,7 @@ public class ContextHelper {
      * @return YANG context
      * @throws ReactorException in case of parsing errors
      */
-    public static SchemaContext getCtx(Stream<Path> dirs, Function<Path, Boolean> accept) throws ReactorException {
+    public static SchemaContext getCtx(Stream<Path> dirs, Predicate<Path> accept) throws ReactorException {
 
         SchemaBuilder builder = new SchemaBuilder().accepts(accept);
 

@@ -50,7 +50,7 @@ public class GeneratorHelper {
     public static SwaggerGenerator getGenerator(File dir, Predicate<Module> toSelect) throws Exception {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
-        Function<Path, Boolean> acc = p ->  matcher.matches(p.getFileName());
+        Predicate<Path> acc = p ->  matcher.matches(p.getFileName());
 
         final SchemaContext ctx = dir == null ? getFromClasspath(acc) : getFromDir(dir.toPath(), acc);
         log.info("Context parsed {}", ctx);

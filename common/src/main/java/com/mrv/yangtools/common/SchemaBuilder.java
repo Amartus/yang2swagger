@@ -26,7 +26,7 @@ import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Yang schema context builder
@@ -35,10 +35,10 @@ import java.util.function.Function;
  */
 public class SchemaBuilder {
 
-    final private  static PathMatcher yang = FileSystems.getDefault().getPathMatcher("glob:*.yang");
+    final public static PathMatcher yang = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
     private static final Logger log = LoggerFactory.getLogger(SchemaBuilder.class);
-    private Function<Path, Boolean> accept;
+    private Predicate<Path> accept;
     private List<Path> yangs;
 
 
@@ -47,12 +47,12 @@ public class SchemaBuilder {
         yangs = new ArrayList<>();
     }
 
-    public static Function<Path, Boolean> defaultYangMatcher() {
+    public static Predicate<Path> defaultYangMatcher() {
         return (path) -> yang.matches(path.getFileName());
     }
 
 
-    public SchemaBuilder accepts(Function<Path, Boolean> accept) {
+    public SchemaBuilder accepts(Predicate<Path> accept) {
         Objects.requireNonNull(accept);
         this.accept = accept;
         return this;
@@ -61,7 +61,7 @@ public class SchemaBuilder {
     public SchemaBuilder add(Path path) throws IOException {
         if(Files.isDirectory(path)) {
             Files.walk(path)
-                    .filter(p -> Files.isRegularFile(p) && accept.apply(p))
+                    .filter(p -> Files.isRegularFile(p) && accept.test(p))
                     .forEach(p -> {if(!yangs.contains(p)) yangs.add(p); });
         }
 

@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.kohsuke.args4j.Argument;
@@ -78,7 +78,7 @@ public class Main {
         generator.generate(new OutputStreamWriter(out));
     }
 
-    protected SchemaContext buildSchemaContext(String dir, Function<Path, Boolean> accept)
+    protected SchemaContext buildSchemaContext(String dir, Predicate<Path> accept)
             throws ReactorException, IOException {
         SchemaBuilder builder = new SchemaBuilder().accepts(accept);
         builder.add(FileSystems.getDefault().getPath(dir));
