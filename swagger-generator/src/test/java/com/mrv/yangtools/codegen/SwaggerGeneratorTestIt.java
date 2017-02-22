@@ -22,16 +22,17 @@ import io.swagger.models.properties.Property;
 
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
-import org.junit.Ignore;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
@@ -67,14 +68,10 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "SimpleRoot", "Children1", "Children2"
+                "simplest.SimpleRoot", "simplest.Children1", "simplest.Children2"
         )), defNames);
 
-        assertEquals(new HashSet<>(Arrays.asList(
-                "SimpleRoot", "Children1", "Children2"
-        )), defNames);
-
-        checkLeafrefAreFollowed("Children2", "parent-id", "integer");
+        checkLeafrefAreFollowed("simplest.Children2", "parent-id", "integer");
 
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}/"));
     }
@@ -100,7 +97,6 @@ public class SwaggerGeneratorTestIt {
 
         //when
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
-
         swagger = generator.generate();
 
         //then
@@ -121,10 +117,10 @@ public class SwaggerGeneratorTestIt {
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(7, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
-        Model model = swagger.getDefinitions().get("GroupingRoot");
+        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.G1", "with.groupings.G2", "with.groupings.G3"));
+        Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("G2", groupingChild2.getSimpleRef());
+        assertEquals("with.groupings.G2", groupingChild2.getSimpleRef());
     }
 
     @org.junit.Test
@@ -139,10 +135,10 @@ public class SwaggerGeneratorTestIt {
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(9, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("G1", "G2", "G3"));
-        Model model = swagger.getDefinitions().get("GroupingRoot");
+        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.G1", "with.groupings.G2", "with.groupings.G3"));
+        Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("GroupingChild2", groupingChild2.getSimpleRef());
+        assertEquals("with.groupings.GroupingChild2", groupingChild2.getSimpleRef());
     }
 
     @org.junit.Test
@@ -159,15 +155,15 @@ public class SwaggerGeneratorTestIt {
         assertEquals(8, swagger.getDefinitions().keySet().size());
         assertThat(swagger.getDefinitions().keySet(), not(hasItems("G1", "G2", "G3")));
 
-        Model model = swagger.getDefinitions().get("GroupingRoot");
+        Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("GroupingChild2", groupingChild2.getSimpleRef());
+        assertEquals("with.groupings.GroupingChild2", groupingChild2.getSimpleRef());
 
     }
 
     @org.junit.Test
     public void testGenerateRCPModule() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rpc-basic.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rcp.yang"));
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -180,33 +176,9 @@ public class SwaggerGeneratorTestIt {
 
         //then
         Map<String, Path> paths = swagger.getPaths();
-        assertEquals(5, paths.keySet().size());
-        List<String> operations = paths.keySet().stream().filter(p -> p.startsWith("/operations")).collect(Collectors.toList());
-        assertEquals(3, operations.size());
-        paths.entrySet().stream().filter(e -> e.getKey().startsWith("/operations")).map(Map.Entry::getValue).forEach(singlePostOperation);
-
-        Map<String, Model> definitions = swagger.getDefinitions();
-        assertEquals(7, definitions.size());
-    }
-
-    @Ignore
-    @org.junit.Test
-    public void testGenerateRCPModuleWithAugmentations() throws Exception {
-        List<String> yangs = Arrays.asList("rpc-basic.yang", "rpc-augmentations.yang");
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> yangs.contains(p.getFileName().toString()));
-
-        //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
-        swagger = generator.generate();
-
-        //then
-        Map<String, Path> paths = swagger.getPaths();
-        assertEquals(6, paths.keySet().size());
-
-        Map<String, Model> models = swagger.getDefinitions();
-        assertEquals(8, models.size());
-        Property augmented = models.get("CRes").getProperties().get("a-container");
-        assertNotNull(augmented);
+        assertEquals(3, paths.keySet().size());
+        paths.keySet().forEach(n -> n.startsWith("/operational"));
+        paths.values().forEach(singlePostOperation);
     }
 
     @org.junit.Test
@@ -219,11 +191,11 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "SimpleRoot", "Children1", "Children2", "AddedA", "AddedAChildren1"
+                "simplest.SimpleRoot", "simpleaugmentation.Children1", "simplest.Children2", "simpleaugmentation.AddedA", "simplest.Children1"
         )), defNames);
 
-        checkLeafrefAreFollowed("Children2", "parent-id", "integer");
-        checkLeafrefAreFollowed("AddedA", "simpleAugmentation:a1", "string");
+        checkLeafrefAreFollowed("simplest.Children2", "parent-id", "integer");
+        checkLeafrefAreFollowed("simpleaugmentation.AddedA", "simpleAugmentation:a1", "string");
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/added-a/children1/"));
     }
 
@@ -237,7 +209,7 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "Data", "Protocol"
+                "choice.example.Data", "choice.example.Protocol"
         )), defNames);
 
         assertEquals(new HashSet<>(Arrays.asList(
@@ -257,7 +229,7 @@ public class SwaggerGeneratorTestIt {
 
         assertEquals(3, defNames.size());
         assertEquals(new HashSet<>(Arrays.asList(
-                "SimpleEnum", "InnerEnum", "RootNode"
+                "SimpleEnum", "InnerEnum", "enum.module.RootNode"
         )), defNames);
     }
 

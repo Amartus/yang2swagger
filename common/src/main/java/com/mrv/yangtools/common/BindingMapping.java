@@ -160,6 +160,8 @@ public final class BindingMapping {
 
     public static String getClassName(QName name) {
         Preconditions.checkArgument(name != null, "Name should not be null.");
+
+
         return toFirstUpper(toCamelCase(name.getLocalName()));
     }
 
@@ -172,6 +174,16 @@ public final class BindingMapping {
     public static String getPropertyName(String yangIdentifier) {
         String potential = toFirstLower(toCamelCase(yangIdentifier));
         return "class".equals(potential)?"xmlClass":potential;
+    }
+
+    public static String nameToPackageSegment(String rawString) {
+//        com.mrv.yangtools.codegen.impl.ModuleUtils
+        Preconditions.checkArgument(rawString != null, "String should not be null");
+
+        return StreamSupport.stream(CAMEL_SPLITTER.split(rawString).spliterator(), false)
+                    .map(s -> checkNumericPrefix(s.toLowerCase())).collect(Collectors.joining("."));
+
+
     }
 
     private static String toCamelCase(String rawString) {

@@ -110,6 +110,15 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
     }
 
     @Override
+    public String toModelFilename(String name) {
+        //TODO this is how it could be fixed
+//        String[] segments = name.split("\\.");
+//        segments[segments.length-1] = super.toModelFilename(segments[segments.length-1]);
+//        return Arrays.stream(segments).collect(Collectors.joining("/"));
+        return super.toModelFilename(name);
+    }
+
+    @Override
     public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
 
         if (!(model instanceof ComposedModel)) {

@@ -63,7 +63,7 @@ public class DataObjectsBuilderTest {
         builder.processModule(groupings);
         builder.addModel((ListEffectiveStatementImpl) c1);
         //then
-        verify(swagger).addDefinition(eq("C1"), any(Model.class));
+        verify(swagger).addDefinition(eq("with.groupings.C1"), any(Model.class));
     }
 
     @Test
@@ -74,7 +74,7 @@ public class DataObjectsBuilderTest {
         //when & then
         assertTrue(namesMeetNodes(builder,
                 x -> x.getQName().getLocalName().equals("g2-l1"), new HashSet<>(
-                        Collections.singletonList("G2L1")
+                        Collections.singletonList("with.groupings.G2L1")
                 )));
     }
 
@@ -86,7 +86,7 @@ public class DataObjectsBuilderTest {
         //when & then
         assertTrue(namesMeetNodes(builder,
                 x -> x.getQName().getLocalName().equals("g2-l1"), new HashSet<>(
-                        Collections.singletonList("G3")
+                        Collections.singletonList("with.groupings.G3")
                 )));
 
     }

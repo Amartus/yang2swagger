@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
+import static com.mrv.yangtools.common.BindingMapping.nameToPackageSegment;
 
 /**
  * @author cmurch@mrv.com
@@ -79,8 +80,10 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
         log.debug("processing rpcs defined in {}", module.getName());
         module.getRpcs().forEach(r -> {
-            processNode(r.getInput(), r.getQName().getLocalName() + "-input",  cache);
-            processNode(r.getOutput(),r.getQName().getLocalName() + "-output", cache);
+            if(r.getInput() != null)
+                processNode(r.getInput(), r.getQName().getLocalName() + "-input",  cache);
+            if(r.getOutput() != null)
+                processNode(r.getOutput(),r.getQName().getLocalName() + "-output", cache);
         });
         log.debug("processing augmentations defined in {}", module.getName());
         module.getAugmentations().forEach(r -> processNode(r, cache));
@@ -105,19 +108,21 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
     protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
 
+        String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(node.getQName()));
+
+
+
         String name = proposedName != null ? getClassName(proposedName) : getClassName(node.getQName());
-        if(cache.contains(name)) {
+        if(cache.contains(modulePrefix + "." + name)) {
 
             final Iterable<QName> path = node.getPath().getParent().getPathTowardsRoot();
 
             for(QName p : path) {
                 name = getClassName(p) + name;
-                if(! cache.contains(name)) break;
+                if(! cache.contains(modulePrefix + "." + name)) break;
             }
-
-            //TODO if still we have a problem add module name !!!
         }
-        return name;
+        return modulePrefix + "." + name;
     }
 
     /**

@@ -15,6 +15,7 @@ import io.swagger.models.*;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.GroupingEffectiveStatementImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,19 +109,21 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     protected void processGroupings(DataNodeContainer container, Set<String> cache) {
         DataNodeHelper.stream(container).filter(n -> n instanceof GroupingDefinition)
+                .map(n -> (GroupingDefinition)n)
                 .forEach(n -> {
-                    String gName = groupingHierarchyHandler.getGroupingName((GroupingDefinition) n);
-                    if(gName != null) {
-                        gName = generateName(n, gName, cache);
-                    } else {
-                        gName = generateName(n, null, cache);
-                        if(names.values().contains(gName)) {
-                            //TODO better strategy to handle grouping names
+                    String gName = generateName(n, null, cache);
+                    if(names.values().contains(gName)) {
+                        //no type compatibility check at the moment thus this piece of code is prone to changes in parser
+
+                        boolean differentDeclaration = groupings.values().stream().map(g -> ((GroupingEffectiveStatementImpl) g).getDeclared())
+                                .noneMatch(g -> g.equals(((GroupingEffectiveStatementImpl) n).getDeclared()));
+                        if(differentDeclaration) {
                             gName = "G" + gName;
                         }
                     }
+
                     names.put(n, gName);
-                    groupings.put(n.getPath(), (GroupingDefinition) n);
+                    groupings.put(n.getPath(), n);
                 });
     }
 
@@ -201,10 +204,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return result.stream().filter(r -> {
             SchemaPath rName = r.getGroupingPath();
 
-            return ! result.stream().filter(o -> ! o.equals(r))
-                    .map(o -> groupingHierarchyHandler.isParent(rName, o.getGroupingPath().getLastComponent()))
-                    .filter(hasParent -> hasParent)
-                    .findFirst().orElse(false);
+            return result.stream().filter(o -> ! o.equals(r))
+                    .noneMatch(o -> groupingHierarchyHandler.isParent(rName, o.getGroupingPath().getLastComponent()));
         }).collect(Collectors.toSet());
     }
 

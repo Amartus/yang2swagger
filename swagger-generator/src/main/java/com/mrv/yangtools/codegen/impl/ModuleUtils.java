@@ -28,7 +28,7 @@ public class ModuleUtils {
         this.ctx = ctx;
     }
     public String toModuleName(QName qname) {
-        Set<Module> modules = ctx.findModuleByNamespace(qname.getNamespace());
+        Set<Module> modules = ctx.findModuleByNamespace(qname.getModule().getNamespace());
         if(modules.size() != 1) throw new IllegalStateException("no support for " + modules.size() + " modules with name " + qname);
         return modules.iterator().next().getName();
     }
