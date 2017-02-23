@@ -11,15 +11,18 @@
 
 package com.mrv.yangutils.codegen;
 
+import com.google.common.base.Strings;
 import io.swagger.codegen.*;
 import io.swagger.codegen.languages.JavaJerseyServerCodegen;
 import io.swagger.models.*;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
+import io.swagger.models.properties.RefProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -112,11 +115,42 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
     @Override
     public String toModelFilename(String name) {
         //TODO this is how it could be fixed
-//        String[] segments = name.split("\\.");
-//        segments[segments.length-1] = super.toModelFilename(segments[segments.length-1]);
-//        return Arrays.stream(segments).collect(Collectors.joining("/"));
-        return super.toModelFilename(name);
+        String[] segments = name.split("\\.");
+        segments[segments.length-1] = super.toModelFilename(segments[segments.length-1]);
+        return Arrays.stream(segments).collect(Collectors.joining("/"));
     }
+
+    @Override
+    public String toModelName(String name) {
+        return name;
+
+    }
+
+
+    @Override
+    public String getSwaggerType(Property p) {
+
+        if (p instanceof RefProperty) {
+            String datatype;
+            try {
+                RefProperty r = (RefProperty) p;
+                datatype = r.get$ref();
+                if (datatype.indexOf("#/definitions/") == 0) {
+                    datatype = datatype.substring("#/definitions/".length());
+                }
+                datatype = modelPackage + "." + datatype;
+            } catch (Exception e) {
+                log.warn("Error obtaining the datatype from RefProperty:" + p + ". Datatype default to Object");
+                datatype = "Object";
+                log.error(e.getMessage(), e);
+            }
+            return datatype;
+
+        }
+
+        return super.getSwaggerType(p);
+    }
+
 
     @Override
     public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
@@ -150,6 +184,8 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         return codegenModel;
     }
 
+
+
     private void multiInheritanceSupport(CodegenModel codegenModel, ComposedModel model, Map<String, Model> allDefinitions) {
         List<CodegenProperty> vars = new ArrayList<>(codegenModel.allVars);
         Set<String> mandatory = new HashSet<>(codegenModel.allMandatory);
@@ -171,7 +207,8 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
     private Set<String> getParentProperties(Model parent, Map<String, Model> allDefinitions) {
         if(parent == null) return Collections.emptySet();
-        if(parent instanceof ModelImpl) return parent.getProperties().keySet();
+        if(parent instanceof ModelImpl)
+            return parent.getProperties() == null ? Collections.emptySet() : parent.getProperties().keySet();
         if(parent instanceof RefModel) {
             String ref = ((RefModel) parent).getSimpleRef();
             Model model = allDefinitions.get(ref);
@@ -193,8 +230,57 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         path = fixPath(path);
 
         CodegenOperation co = super.fromOperation(path, httpMethod, operation, definitions, swagger);
+
+        Consumer<CodegenParameter> changePkg = p -> {
+            if(definitions.keySet().contains(p.dataType)) {
+                p.dataType = this.modelPackage + "." + p.dataType;
+            }
+            if(definitions.keySet().contains(p.baseType)) {
+                p.baseType = this.modelPackage + "." + p.baseType;
+            }
+        };
+
+        if(co.getHasBodyParam()) {
+            co.bodyParams.forEach(changePkg);
+        }
+        if(co.getHasPathParams()) {
+            co.pathParams.forEach(changePkg);
+        }
+
+        if(co.hasParams != null && co.hasParams) {
+            co.allParams.forEach(changePkg);
+        }
+
         if("void".equals(co.returnType)) co.returnType = "Void";
         return co;
+    }
+
+
+    @Override
+    public Map<String, Object> postProcessOperations(Map<String, Object> objs) {
+        return super.postProcessOperations(objs);
+    }
+
+    @Override
+    public Map<String, Object> postProcessModels(Map<String, Object> objs) {
+        String pkgBase = (String) objs.get("package");
+        List<HashMap<String, Object>> models = (List<HashMap<String, Object>>) objs.get("models");
+        if(models.size() > 1) {
+            log.warn("unsupported data - to many codegen models");
+            throw new IllegalArgumentException("unsupported data - to many codegen models");
+        }
+        CodegenModel model = (CodegenModel) models.get(0).get("model");
+        int idx = model.name.lastIndexOf(".");
+        String modelPkg =  "";
+        if(idx > 0) {
+            modelPkg = "." + model.name.substring(0, idx);
+            model.classname = model.name.substring(idx+1);
+            if(!Strings.isNullOrEmpty(model.parent)) {
+                model.parent = pkgBase + "." + model.parent;
+            }
+        }
+        objs.put("package", pkgBase+modelPkg);
+        return super.postProcessModels(objs);
     }
 
     private String fixPath(String path) {
