@@ -275,15 +275,17 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     protected String getName(QName qname) {
-        String name = getClassName(qname);
-        if (generatedEnums.values().contains(name)) {
-            name = moduleUtils.toModuleName(qname) + name;
+        String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(qname));
+        String name = modulePrefix + "." + getClassName(qname);
+
+        String candidate = name;
+
+        int idx = 1;
+        while(generatedEnums.values().contains(candidate)) {
+            log.warn("Name {} already defined for enum. generating random postfix", candidate);
+            candidate = name + idx;
         }
-        while(generatedEnums.values().contains(name)) {
-            log.warn("Name {} already defined for enum. generating random postfix");
-            name = name + new Random().nextInt();
-        }
-        return name;
+        return candidate;
     }
 
     protected String desc(DocumentedNode node) {

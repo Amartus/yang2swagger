@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
@@ -163,7 +164,7 @@ public class SwaggerGeneratorTestIt {
 
     @org.junit.Test
     public void testGenerateRCPModule() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rcp.yang"));
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rpc-basic.yang"));
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -175,9 +176,11 @@ public class SwaggerGeneratorTestIt {
         swagger = generator.generate();
 
         //then
-        Map<String, Path> paths = swagger.getPaths();
+        Map<String, Path> paths = swagger.getPaths().entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith("/operations"))
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+
         assertEquals(3, paths.keySet().size());
-        paths.keySet().forEach(n -> n.startsWith("/operational"));
         paths.values().forEach(singlePostOperation);
     }
 
@@ -229,7 +232,7 @@ public class SwaggerGeneratorTestIt {
 
         assertEquals(3, defNames.size());
         assertEquals(new HashSet<>(Arrays.asList(
-                "SimpleEnum", "InnerEnum", "enum.module.RootNode"
+                "enum.module.InnerEnum", "enum.module.RootNode", "enum.module.SimpleEnum"
         )), defNames);
     }
 
