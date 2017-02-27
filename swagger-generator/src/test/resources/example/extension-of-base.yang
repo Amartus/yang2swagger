@@ -1,0 +1,40 @@
+module extension-of-base {
+    namespace "http://amartus/ns/yang/extension-of-base";
+    prefix eob;
+    import base {prefix b;}
+    description "";
+    organization "test-yang";
+
+    augment "/b:base" {
+        uses eob-main;
+    }
+
+    augment "/b:x" {
+            uses b:ident;
+        }
+
+    grouping eob-main {
+        list children1 {
+            uses eob-child;
+            key "uuid";
+        }
+        list children2 {
+            uses eob-child;
+            uses b:ident2;
+            key "uuid";
+        }
+    }
+
+    grouping eob-child {
+        grouping internal {
+            leaf child-name {type string;}
+            list child-properties {
+                leaf id {type string;}
+                leaf value {type string;}
+                key "id";
+            }
+        }
+        uses internal;
+        uses b:ident;
+    }
+}

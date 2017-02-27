@@ -44,7 +44,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected final Swagger swagger;
     protected final TypeConverter converter;
     protected final SchemaContext ctx;
-    private final ModuleUtils moduleUtils;
+    protected final ModuleUtils moduleUtils;
     protected final Map<SchemaNode, String> names;
     private final HashMap<QName, String> generatedEnums;
 
@@ -110,8 +110,6 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
         String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(node.getQName()));
 
-
-
         String name = proposedName != null ? getClassName(proposedName) : getClassName(node.getQName());
         if(cache.contains(modulePrefix + "." + name)) {
 
@@ -148,12 +146,12 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
 
-    protected <T extends SchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
+    protected Map<String, Property> structure(DataNodeContainer node) {
         return structure(node,  x -> true, x -> true);
     }
 
 
-    protected <T extends SchemaNode & DataNodeContainer> Map<String, Property> structure(T node, Predicate<DataSchemaNode> acceptNode, Predicate<DataSchemaNode> acceptChoice) {
+    protected Map<String, Property> structure(DataNodeContainer node, Predicate<DataSchemaNode> acceptNode, Predicate<DataSchemaNode> acceptChoice) {
 
         Predicate<DataSchemaNode> choiceP = c -> c instanceof ChoiceSchemaNode;
 
@@ -237,6 +235,8 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
      */
     @Override
     public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
+
+
         Model model = build(node);
 
         String modelName = getName(node);

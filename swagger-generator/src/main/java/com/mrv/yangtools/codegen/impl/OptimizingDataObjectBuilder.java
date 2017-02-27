@@ -11,6 +11,7 @@
 
 package com.mrv.yangtools.codegen.impl;
 
+import com.mrv.yangtools.common.BindingMapping;
 import io.swagger.models.*;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
@@ -19,7 +20,10 @@ import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.GroupingEff
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.*;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -33,9 +37,11 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private HashMap<SchemaPath, GroupingDefinition> groupings;
 
-    private Map<SchemaNode, Model> existingModels;
+    private Map<Object, Model> existingModels;
     private final GroupingHierarchyHandler groupingHierarchyHandler;
     private Map<Object, Set<UsesNode>> usesCache;
+
+    private final Deque<DataNodeContainer> effectiveNode;
 
     public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
         super(ctx, swagger, converter);
@@ -43,6 +49,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         existingModels = new HashMap<>();
         usesCache = new HashMap<>();
         groupingHierarchyHandler = new GroupingHierarchyHandler(ctx);
+        effectiveNode = new LinkedList<>();
 
         Set<Module> allModules = ctx.getModules();
         HashSet<String> names = new HashSet<>();
@@ -52,16 +59,29 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
-        if(isGrouping(node)) {
-            return names.get(grouping(node));
+        if(isAugmented.test(node)) {
+            return names.get(node);
+        } else {
+            DataNodeContainer toCheck = original(node) == null ? node : original(node);
+
+            if(isDirectGrouping(toCheck)) {
+                return names.get(grouping(toCheck));
+            }
         }
         return names.get(node);
     }
 
-    private static Predicate<SchemaNode> isAugmented = (n -> (n instanceof AugmentationTarget) &&
-            !((AugmentationTarget) n).getAvailableAugmentations().isEmpty());
+    private static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
+        if(node instanceof AugmentationTarget) {
+            Set<AugmentationSchema> res = ((AugmentationTarget) node).getAvailableAugmentations();
+            if(res != null) return res;
+        }
+        return Collections.emptySet();
+    };
 
-    private <T extends SchemaNode & DataNodeContainer> GroupingDefinition grouping(T node) {
+    private static Predicate<DataNodeContainer> isAugmented = n -> !augmentations.apply(n).isEmpty();
+
+    private GroupingDefinition grouping(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
         assert uses.size() == 1;
         //noinspection SuspiciousMethodCalls
@@ -75,17 +95,11 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
      * @return <code>true</code> if node is using single grouping and has no attributes
      */
     @SuppressWarnings("unchecked")
-    private  <T extends SchemaNode & DataNodeContainer> boolean isGrouping(SchemaNode node) {
-        if(isAugmented.test(node)) return false;
+    private  boolean isDirectGrouping(DataNodeContainer node) {
+        if (isAugmented.test(node)) return false;
 
-        if(node instanceof DataNodeContainer) {
-            Set<UsesNode> uses = uses((T) node);
-            if(uses.size() == 1) {
-                return ((DataNodeContainer) node).getChildNodes().stream()
-                        .filter(n -> !n.isAddedByUses()).count() == 0;
-            }
-        }
-        return false;
+        Set<UsesNode> uses = uses(node);
+        return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
     }
 
     @Override
@@ -104,7 +118,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     @Override
     protected void processNode(DataNodeContainer container, Set<String> cache) {
         super.processNode(container, cache);
-//        processGroupings(container, cache);
     }
 
     protected void processGroupings(DataNodeContainer container, Set<String> cache) {
@@ -127,9 +140,21 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 });
     }
 
+
+
+    @SuppressWarnings("unchecked")
     @Override
     protected <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
-        final String definitionId = getDefinitionId(node);
+        String definitionId = getDefinitionId(node);
+        if(! effectiveNode.isEmpty()) {
+            T effectiveNode = (T) this.effectiveNode.peekFirst().getDataChildByName(node.getQName());
+            if(isAugmented.test(effectiveNode)) {
+                definitionId = getDefinitionId(effectiveNode);
+            }
+        }
+
+
+
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
 
@@ -142,51 +167,163 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
 
-
-
     @Override
     public <T extends SchemaNode & DataNodeContainer> Model build(T node) {
+        if(isAugmented.test(node)) {
+            return model(node);
+        }
         Model model = existingModel(node);
-        if(model != null) return model;
-
-        return model(node);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T extends SchemaNode & DataNodeContainer> Model existingModel(T node) {
-        T toModel = isGrouping(node) ? (T) grouping(node) : node;
-        return existingModels.get(toModel);
-    }
-
-
-    /**
-     * Create model for a node with zero of single uses
-     * @param node to process
-     * @param <T> type
-     * @return model or null in case more than one grouping is used
-     */
-    @SuppressWarnings("unchecked")
-    private <T extends SchemaNode & DataNodeContainer> Model model(T node) {
-        T tmp;
-        T toModel = node;
-        boolean simpleModel;
-        do {
-            tmp = toModel;
-            simpleModel = isGrouping(toModel) || uses(toModel).isEmpty();
-            toModel = isGrouping(toModel) ? (T) grouping(toModel) : toModel;
-            if(log.isDebugEnabled() && tmp != toModel) {
-                log.debug("substitute {} with {}", tmp.getQName(), toModel.getQName());
-            }
-        } while(tmp != toModel && simpleModel);
-
-        Model model = simpleModel ? simple(toModel) : composed(toModel);
-
-        existingModels.put(toModel, model);
+        if(model == null) {
+            model = model(node);
+        }
 
         return model;
     }
 
-    private <T extends SchemaNode & DataNodeContainer> Set<UsesNode> uses(T toModel) {
+    @SuppressWarnings("unchecked")
+    private DataNodeContainer original(DataNodeContainer node) {
+        DataNodeContainer result = null;
+        DataNodeContainer tmp = node;
+        do {
+            if(tmp instanceof DerivableSchemaNode) {
+                com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) tmp).getOriginal();
+                tmp = null;
+                if(original.isPresent() && original.get() instanceof DataNodeContainer) {
+                    result = (DataNodeContainer) original.get();
+                    tmp = result;
+                }
+            } else {
+                tmp = null;
+            }
+        } while (tmp != null);
+
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<DataNodeContainer> findRelatedNodes(DataNodeContainer node) {
+        ArrayList<DataNodeContainer> result = new ArrayList<>();
+        result.add(node);
+        DataNodeContainer candidate = original(node);
+        if(candidate != null) {
+            result.add(candidate);
+        } else {
+            candidate = node;
+        }
+
+        if(isDirectGrouping(candidate)) {
+            result.add(grouping(candidate));
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends DataNodeContainer> Model existingModel(T node) {
+        return findRelatedNodes(node).stream().map(n -> existingModels.get(n))
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+    /**
+     * Create model for a node with zero of single uses
+     * @param c to process
+     * @return model or null in case more than one grouping is used
+     */
+
+    private Model fromContainer(DataNodeContainer c) {
+        boolean simpleModel;
+        DataNodeContainer tmp;
+        DataNodeContainer toModel = c;
+        do {
+            tmp = toModel;
+            simpleModel = uses(toModel).isEmpty() || isDirectGrouping(toModel);
+            toModel = isDirectGrouping(toModel) ?  grouping(toModel) : toModel;
+        } while(tmp != toModel && simpleModel);
+
+        return simpleModel ? simple(toModel) : composed(toModel);
+    }
+
+    private Model fromAugmentation(AugmentationSchema augmentation) {
+
+        Model model = fromContainer(augmentation);
+        final Model toCheck = model;
+
+        String existingId = swagger.getDefinitions().entrySet().stream().filter(e -> e.getValue().equals(toCheck)).map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+
+        if(existingId != null) {
+            RefModel ref = new RefModel(existingId);
+            ComposedModel composedModel = new ComposedModel();
+            composedModel.setChild(ref);
+            model = composedModel;
+        }
+
+        HashMap<String, String> properties = new HashMap<>();
+
+        if(augmentation instanceof NamespaceRevisionAware) {
+            URI uri = ((NamespaceRevisionAware) augmentation).getNamespace();
+            properties.put("namespace", uri.toString());
+            properties.put("prefix", moduleUtils.toModuleName(uri));
+            model.getVendorExtensions().put("x-augmentation", properties);
+        }
+
+
+        return model;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends SchemaNode & DataNodeContainer> Model model(T node) {
+        effectiveNode.addFirst(node);
+        DataNodeContainer original = original(node);
+        T toModel =  node;
+        if(original instanceof SchemaNode) {
+            toModel = (T) original;
+        }
+
+        Model model = fromContainer(toModel);
+
+        assert original == null || !isAugmented.test(original);
+        if(isAugmented.test(node)) {
+            String modelName = getName(toModel);
+            int lastSegment = modelName.lastIndexOf(".") + 1;
+            assert lastSegment > 0 : "Expecting name convention from name generator";
+            modelName = modelName.substring(lastSegment);
+
+            log.debug("processing augmentations for {}", node.getQName().getLocalName());
+            //TODO order models
+            List<Model> models = augmentations.apply(node).stream().map(this::fromAugmentation).collect(Collectors.toList());
+
+            ComposedModel augmented = new ComposedModel();
+            if(model instanceof ComposedModel) {
+                augmented = (ComposedModel) model;
+            } else {
+                augmented.setDescription(model.getDescription());
+                model.setDescription("");
+                augmented.child(model);
+            }
+
+            LinkedList<RefModel> aModels = new LinkedList(augmented.getInterfaces());
+            int idx = 1;
+            for(Model m : models) {
+                Map<String, String> prop = (Map<String, String>) m.getVendorExtensions().getOrDefault("x-augmentation", Collections.emptyMap());
+                String pkg = BindingMapping.nameToPackageSegment(prop.get("prefix"));
+                String augName = pkg + "." + modelName + "Augmentation" + idx;
+                swagger.getDefinitions().put(augName, m);
+                aModels.add(new RefModel("#/definitions/"+augName));
+                idx++;
+
+            }
+            augmented.setInterfaces(aModels);
+            model = augmented;
+        }
+
+        existingModels.put(toModel, model);
+        existingModels.put(node, model);
+        effectiveNode.removeFirst();
+        return model;
+    }
+
+    private Set<UsesNode> uses(DataNodeContainer toModel) {
         if(usesCache.containsKey(toModel)) {
             return usesCache.get(toModel);
         }
@@ -209,7 +346,12 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         }).collect(Collectors.toSet());
     }
 
-    private <T extends SchemaNode & DataNodeContainer> Model composed(T node) {
+    @Override
+    public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
+        super.addModel(node);
+    }
+
+    private Model composed(DataNodeContainer node) {
         ComposedModel newModel = new ComposedModel();
 
 
@@ -228,16 +370,25 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
         models = optimizeInheritance(models);
 
-        if(models.size() > 1) {
-            log.warn("Multiple inheritance for {}", node.getQName());
+
+        SchemaNode doc = null;
+        if(node instanceof SchemaNode) {
+            doc = (SchemaNode) node;
         }
+
+        if(models.size() > 1 && doc != null) {
+            log.warn("Multiple inheritance for {}", doc.getQName());
+        }
+        // XXX this behavior might be prone to future changes to Swagger model
+        // currently interfaces are stored as well in allOf property
         newModel.setInterfaces(models);
         if(!models.isEmpty())
-            newModel.child(models.get(0));
+            newModel.parent(models.get(0));
 
         final ModelImpl attributes = new ModelImpl();
-        attributes.description(desc(node));
-        attributes.setProperties(structure(node));
+        if(doc != null)
+            attributes.description(desc(doc));
+        attributes.setProperties(structure(node ));
         attributes.setDiscriminator("objType");
         boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
         if(! noAttributes) {
@@ -334,25 +485,24 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         throw new IllegalArgumentException("model type not supported for " + id);
     }
 
-
-
     private static class RefModelTuple extends Tuple<RefModel, Set<String>> {
         private RefModelTuple(RefModel model, Set<String> keys) {
             super(model, keys);
         }
     }
 
-    private <T extends SchemaNode & DataNodeContainer> Model simple(T toModel) {
+    private  Model simple(DataNodeContainer toModel) {
         final ModelImpl model = new ModelImpl();
-        model.description(desc(toModel));
+        if(model instanceof DocumentedNode) {
+            model.description(desc((DocumentedNode) toModel));
+        }
         model.setProperties(structure(toModel));
         return model;
     }
 
     @Override
-    protected <T extends SchemaNode & DataNodeContainer> Map<String, Property> structure(T node) {
-        boolean noUses = node.getUses().isEmpty();
-        Predicate<DataSchemaNode> toSimpleProperty = d -> d.isAugmenting() || noUses  || ! d.isAddedByUses();
+    protected Map<String, Property> structure(DataNodeContainer node) {
+        Predicate<DataSchemaNode> toSimpleProperty = d ->  !d.isAugmenting() && ! d.isAddedByUses();
         return super.structure(node, toSimpleProperty, toSimpleProperty);
     }
 }

@@ -1,0 +1,26 @@
+module base {
+    namespace "http://amartus/ns/yang/base";
+    prefix b;
+    description "";
+    organization "test-yang";
+
+    grouping ident {
+        leaf uuid {type string;}
+    }
+    grouping ident2 {
+        leaf uuid2 {type string;}
+    }
+
+    container base {
+        config false;
+        leaf name { type string;}
+        uses ident;
+        container identifier {
+            uses ident;
+        }
+    }
+
+    container x {
+        uses ident;
+    }
+}

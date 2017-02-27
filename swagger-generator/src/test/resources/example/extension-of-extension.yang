@@ -1,0 +1,20 @@
+module extension-of-extension {
+    namespace "http://amartus/ns/yang/extension-of-extension";
+    prefix eoe;
+    import extension-of-base {prefix eob;}
+    import base {prefix b;}
+    description "";
+    organization "test-yang";
+
+    augment "/b:base/eob:children1" {
+        uses eoe-simple;
+        leaf-list extra-numbers {type int32;}
+    }
+
+    grouping eoe-simple {
+        container extra-container {
+            leaf extra {type string;}
+            uses b:ident;
+        }
+    }
+}

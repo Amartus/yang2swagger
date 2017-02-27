@@ -50,6 +50,8 @@ public class SwaggerGenerator {
     private final SchemaContext ctx;
     private final Set<Module> modules;
     private final Swagger target;
+    private final Set<String> moduleNames;
+    private final ModuleUtils moduleUtils;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
     private Set<TagGenerator> tagGenerators = new HashSet<>();
@@ -98,8 +100,8 @@ public class SwaggerGenerator {
         this.modules = modulesToGenerate;
         target = new Swagger();
         converter = new AnnotatingTypeConverter(ctx);
-
-
+        moduleUtils = new ModuleUtils(ctx);
+        this.moduleNames = modulesToGenerate.stream().map(ModuleIdentifier::getName).collect(Collectors.toSet());
         //assign default strategy
         strategy(Strategy.optimizing);
 
@@ -296,6 +298,10 @@ public class SwaggerGenerator {
         }
 
         private void generate(DataSchemaNode node) {
+            if(!moduleNames.contains(moduleUtils.toModuleName(node))) {
+                log.debug("skipping {} as it is from {} module", node.getPath(), moduleUtils.toModuleName(node));
+                return;
+            }
 
             if(node instanceof ContainerSchemaNode) {
                 log.info("processing container statement {}", node.getQName().getLocalName() );

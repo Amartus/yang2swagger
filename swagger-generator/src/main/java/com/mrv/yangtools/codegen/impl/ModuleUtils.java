@@ -14,7 +14,9 @@ package com.mrv.yangtools.codegen.impl;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 
+import java.net.URI;
 import java.util.Set;
 
 /**
@@ -31,5 +33,15 @@ public class ModuleUtils {
         Set<Module> modules = ctx.findModuleByNamespace(qname.getModule().getNamespace());
         if(modules.size() != 1) throw new IllegalStateException("no support for " + modules.size() + " modules with name " + qname);
         return modules.iterator().next().getName();
+    }
+
+    public String toModuleName(URI uri) {
+        Set<Module> modules = ctx.findModuleByNamespace(uri);
+        if(modules.size() != 1) throw new IllegalStateException("no support for " + modules.size() + " modules with uri " + uri);
+        return modules.iterator().next().getName();
+    }
+
+    public String toModuleName(SchemaNode node) {
+        return toModuleName(node.getQName());
     }
 }
