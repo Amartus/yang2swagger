@@ -121,26 +121,16 @@ public final class BindingMapping {
     public static String normalizePackageName(String packageName) {
         if(packageName == null) {
             return null;
-        } else {
-            StringBuilder builder = new StringBuilder();
-            boolean first = true;
-
-            String p;
-            for(Iterator var3 = DOT_SPLITTER.split(packageName.toLowerCase()).iterator(); var3.hasNext(); builder.append(p)) {
-                p = (String)var3.next();
-                if(first) {
-                    first = false;
-                } else {
-                    builder.append('.');
-                }
-
-                if(Character.isDigit(p.charAt(0)) || JAVA_RESERVED_WORDS.contains(p)) {
-                    builder.append('_');
-                }
-            }
-
-            return PACKAGE_INTERNER.intern(builder.toString());
         }
+        return PACKAGE_INTERNER.intern(StreamSupport.stream(DOT_SPLITTER.split(packageName.toLowerCase()).spliterator(), false)
+                .map(BindingMapping::normalize).collect(Collectors.joining(".")));
+    }
+
+    public static String normalize(String name) {
+        if(Character.isDigit(name.charAt(0)) || JAVA_RESERVED_WORDS.contains(name)) {
+            return "_" + name;
+        }
+        return name;
     }
 
     public static String getMethodName(QName name) {

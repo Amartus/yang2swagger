@@ -302,7 +302,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 augmented.child(model);
             }
 
-            LinkedList<RefModel> aModels = new LinkedList(augmented.getInterfaces());
+            LinkedList<RefModel> aModels = new LinkedList();
+            if(augmented.getInterfaces() != null) {
+                aModels.addAll(augmented.getInterfaces());
+            }
             int idx = 1;
             for(Model m : models) {
                 Map<String, String> prop = (Map<String, String>) m.getVendorExtensions().getOrDefault("x-augmentation", Collections.emptyMap());

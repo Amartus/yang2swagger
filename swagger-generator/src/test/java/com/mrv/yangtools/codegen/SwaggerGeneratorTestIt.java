@@ -135,7 +135,7 @@ public class SwaggerGeneratorTestIt {
 
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
-        assertEquals(10, swagger.getDefinitions().keySet().size());
+        assertEquals(12, swagger.getDefinitions().keySet().size());
         assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.G1", "with.groupings.G2", "with.groupings.G3"));
         Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
@@ -194,7 +194,9 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "simplest.SimpleRoot", "simpleaugmentation.Children1", "simplest.Children2", "simpleaugmentation.AddedA", "simplest.Children1"
+                "simplest.Children1", "simplest.SimpleRoot", "simplest.Children2",
+                "simpleaugmentation.AddedA", "simpleaugmentation.Children1",
+                "simpleaugmentation.Children1Augmentation1", "simpleaugmentation.SimpleRootAugmentation1"
         )), defNames);
 
         checkLeafrefAreFollowed("simplest.Children2", "parent-id", "integer");

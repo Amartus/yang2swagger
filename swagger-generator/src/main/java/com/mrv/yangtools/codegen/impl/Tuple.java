@@ -14,7 +14,7 @@ package com.mrv.yangtools.codegen.impl;
 /**
  * @author bartosz.michalik@amartus.com
  */
-class Tuple<A, B> {
+public class Tuple<A, B> {
     private final A first;
     private B second;
 
