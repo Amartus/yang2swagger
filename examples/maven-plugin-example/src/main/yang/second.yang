@@ -1,5 +1,5 @@
 module pingpong-module {
-  namespace "http://amartus/ns/yang/example-module";
+  namespace "http://amartus/ns/yang/pingpong-module";
   prefix s;
   organization "test-yang";
   description "example-module to demo maven integration";
