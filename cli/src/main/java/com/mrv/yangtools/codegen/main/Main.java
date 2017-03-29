@@ -36,7 +36,7 @@ public class Main {
     @Option(name = "-output", usage = "File to generate, containing the output - defaults to stdout", metaVar = "file")
     public String output = "";
 
-    @Argument(required = true, usage = "List of YANG module names to generate in swagger output", metaVar = "module ...")
+    @Argument(multiValued = true, usage = "List of YANG module names to generate in swagger output", metaVar = "module ...")
     List<String> modules;
 
     OutputStream out = System.out;
@@ -68,7 +68,7 @@ public class Main {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
         final SchemaContext context = buildSchemaContext(yangDir, p -> matcher.matches(p.getFileName()));
-        final Set<Module> toGenerate = context.getModules().stream().filter(m -> modules.contains(m.getName()))
+        final Set<Module> toGenerate = context.getModules().stream().filter(m -> modules == null || modules.contains(m.getName()))
                 .collect(Collectors.toSet());
 
         final SwaggerGenerator generator = new SwaggerGenerator(context, toGenerate)
