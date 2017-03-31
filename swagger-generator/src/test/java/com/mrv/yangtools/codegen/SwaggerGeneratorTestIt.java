@@ -238,4 +238,18 @@ public class SwaggerGeneratorTestIt {
         )), defNames);
     }
 
+
+    @org.junit.Test
+    public void testBaseAug() throws Exception {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("aug-group-ex"));
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+        swagger = generator.generate();
+
+        Set<String> defNames = swagger.getDefinitions().keySet();
+
+        //FIXME do test validation
+    }
+
+
 }

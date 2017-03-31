@@ -26,7 +26,7 @@ public class YamlGenerator {
     public static void main(String[] args) throws Exception {
         SwaggerGenerator generator;
         if(args.length == 1) {
-            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> m.getName().startsWith("Tapi"));
+            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> true);
         } else {
             generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
         }

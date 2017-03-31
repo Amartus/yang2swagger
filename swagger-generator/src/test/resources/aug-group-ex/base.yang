@@ -1,0 +1,36 @@
+module base {
+    namespace "http://amartus/ns/yang/base";
+    prefix b;
+    description "";
+    organization "test-yang";
+
+    grouping ident {
+        leaf id {type string;}
+    }
+
+    grouping anodeg {
+        uses ident;
+        container c-2 {
+            leaf c-21 {type string;}
+        }
+    }
+
+    grouping coll {
+        list anode {
+            key 'id';
+            min-elements 1;
+            uses anodeg;
+        }
+    }
+
+    container base {
+        leaf name { type string;}
+        config false;
+        container c1 {
+            uses coll;
+        }
+        container c2 {
+            uses coll;
+        }
+    }
+}

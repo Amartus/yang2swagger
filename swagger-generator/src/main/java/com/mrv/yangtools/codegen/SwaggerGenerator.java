@@ -58,6 +58,7 @@ public class SwaggerGenerator {
 
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
+    private PathHandler pathHandler;
 
     public SwaggerGenerator defaultConfig() {
         //setting defaults
@@ -312,6 +313,7 @@ public class SwaggerGenerator {
                         .withModule(module.getName())
                         .asReadOnly(!cN.isConfiguration());
 
+//                pathHandler.addPath(cN, pathCtx);
                 addPath(cN);
 
                 cN.getChildNodes().forEach(this::generate);

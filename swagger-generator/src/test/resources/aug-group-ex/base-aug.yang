@@ -1,0 +1,17 @@
+module base-aug {
+    namespace "http://amartus/ns/yang/base-aug";
+    prefix ba;
+    import base {prefix b;}
+    description "";
+    organization "test-yang";
+
+    augment "/b:base/b:c2/b:anode" {
+        uses aug;
+    }
+
+    grouping aug {
+        container xxx {
+            leaf yyy {type string;}
+        }
+    }
+}
