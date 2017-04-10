@@ -11,6 +11,7 @@
 
 package com.mrv.yangtools.codegen.impl;
 
+import com.mrv.yangtools.common.Tuple;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;

@@ -12,7 +12,7 @@
 package com.mrv.yangutils.codegen;
 
 import com.google.common.base.Strings;
-import com.mrv.yangtools.codegen.impl.Tuple;
+import com.mrv.yangtools.common.Tuple;
 import com.mrv.yangtools.common.BindingMapping;
 import io.swagger.codegen.*;
 import io.swagger.codegen.languages.JavaJerseyServerCodegen;

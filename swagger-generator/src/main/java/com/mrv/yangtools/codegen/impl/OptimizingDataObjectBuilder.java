@@ -12,6 +12,7 @@
 package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.common.BindingMapping;
+import com.mrv.yangtools.common.Tuple;
 import io.swagger.models.*;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
