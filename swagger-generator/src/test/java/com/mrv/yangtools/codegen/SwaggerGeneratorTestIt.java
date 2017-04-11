@@ -22,7 +22,9 @@ import io.swagger.models.properties.Property;
 
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
+import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -246,10 +248,12 @@ public class SwaggerGeneratorTestIt {
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
-        Set<String> defNames = swagger.getDefinitions().keySet();
+        Model base = swagger.getDefinitions().get("base.Base");
+        RefProperty c1 = (RefProperty) base.getProperties().get("c1");
+        RefProperty c2 = (RefProperty) base.getProperties().get("c2");
 
-        //FIXME do test validation
+
+        assertEquals("base.Coll",c1.getSimpleRef());
+        assertEquals("base.C2",c2.getSimpleRef());
     }
-
-
 }

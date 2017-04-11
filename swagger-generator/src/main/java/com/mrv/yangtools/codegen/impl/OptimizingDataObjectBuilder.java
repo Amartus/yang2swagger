@@ -16,6 +16,7 @@ import com.mrv.yangtools.common.Tuple;
 import io.swagger.models.*;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
+import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.GroupingEffectiveStatementImpl;
 import org.slf4j.Logger;
@@ -57,11 +58,19 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         allModules.forEach(m -> processGroupings(m, names));
     }
 
+    @SuppressWarnings("unchecked")
+    public <T extends SchemaNode & DataNodeContainer> Optional<T> effective(T node) {
+        return effectiveNode.stream().filter(n -> {
+            return n instanceof SchemaNode && ((SchemaNode) n).getQName().equals(node.getQName());
+        }).map(n -> (T)n).findFirst();
+    }
+
 
     @Override
     public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
-        if(isAugmented.test(node)) {
-            return names.get(node);
+        if(isTreeAugmented.test(node)) {
+            Optional<T> effective = effective(node);
+            return effective.isPresent() ? names.get(effective.get()) : names.get(node);
         } else {
             DataNodeContainer toCheck = original(node) == null ? node : original(node);
 
@@ -72,6 +81,14 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return names.get(node);
     }
 
+    private <T extends SchemaNode & DataNodeContainer> T getEffectiveChild(QName name) {
+        if(effectiveNode.isEmpty()) return null;
+        return effectiveNode.stream().map(n -> (T) n.getDataChildByName(name))
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+
     private static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
         if(node instanceof AugmentationTarget) {
             Set<AugmentationSchema> res = ((AugmentationTarget) node).getAvailableAugmentations();
@@ -81,6 +98,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     };
 
     private static Predicate<DataNodeContainer> isAugmented = n -> !augmentations.apply(n).isEmpty();
+
+    private Predicate<DataNodeContainer> isTreeAugmented = n ->  n != null && (isAugmented.test(n) || n.getChildNodes().stream()
+            .filter(c -> c instanceof DataNodeContainer)
+            .anyMatch(c -> this.isTreeAugmented.test((DataNodeContainer) c)));
 
     private GroupingDefinition grouping(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
@@ -96,8 +117,23 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
      * @return <code>true</code> if node is using single grouping and has no attributes
      */
     @SuppressWarnings("unchecked")
-    private  boolean isDirectGrouping(DataNodeContainer node) {
-        if (isAugmented.test(node)) return false;
+    private <T extends SchemaNode & DataNodeContainer> boolean isDirectGrouping(DataNodeContainer node) {
+
+        if(node instanceof DataSchemaNode) {
+            T n = (T) node;
+            T effective = getEffectiveChild(n.getQName());
+            if(effective == null) {
+                if(! effectiveNode.isEmpty()) {
+                    DataNodeContainer first = effectiveNode.getFirst();
+                    if(first instanceof SchemaNode && ((SchemaNode) first).getQName().equals(n.getQName())) {
+                        effective = (T) first;
+                    }
+                }
+            }
+            if(isTreeAugmented.test(effective)) return false;
+        }
+
+        if(isAugmented.test(node)) return false;
 
         Set<UsesNode> uses = uses(node);
         return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
@@ -147,14 +183,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     @Override
     protected <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
         String definitionId = getDefinitionId(node);
-        if(! effectiveNode.isEmpty()) {
-            T effectiveNode = (T) this.effectiveNode.peekFirst().getDataChildByName(node.getQName());
-            if(isAugmented.test(effectiveNode)) {
-                definitionId = getDefinitionId(effectiveNode);
-            }
+        T effectiveNode = (T) getEffectiveChild(node.getQName());
+        if(isTreeAugmented.test(effectiveNode)) {
+            definitionId = getDefinitionId(effectiveNode);
         }
-
-
 
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
@@ -170,7 +202,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     public <T extends SchemaNode & DataNodeContainer> Model build(T node) {
-        if(isAugmented.test(node)) {
+        if(isTreeAugmented.test(node)) {
             return model(node);
         }
         Model model = existingModel(node);
@@ -274,7 +306,18 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @SuppressWarnings("unchecked")
     private <T extends SchemaNode & DataNodeContainer> Model model(T node) {
-        effectiveNode.addFirst(node);
+        if(effectiveNode.isEmpty()) {
+            effectiveNode.addFirst(node);
+        } else {
+            T effectiveChild = getEffectiveChild(node.getQName());
+            if(effectiveChild == null) {
+                log.warn("no child found with name {}", node.getQName());
+                effectiveNode.addFirst(node);
+            } else {
+                effectiveNode.addFirst(effectiveChild);
+            }
+
+        }
         DataNodeContainer original = original(node);
         T toModel =  node;
         if(original instanceof SchemaNode) {
@@ -323,7 +366,13 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
         existingModels.put(toModel, model);
         existingModels.put(node, model);
-        effectiveNode.removeFirst();
+
+        Optional<DataNodeContainer> toRemove = effectiveNode.stream().filter(
+                n -> n instanceof SchemaNode && ((SchemaNode) n).getQName().equals(node.getQName()))
+                .findFirst();
+
+        toRemove.ifPresent(effectiveNode::remove);
+
         return model;
     }
 
@@ -360,19 +409,33 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
 
         // because of for swagger model order matters we need to add attributes at the end
-        List<RefModel> models = uses(node).stream().map(u -> {
-            String groupingIdx = getDefinitionId(groupings.get(u.getGroupingPath()));
-            log.debug("adding grouping {} to composed model", groupingIdx);
-            RefModel refModel = new RefModel(groupingIdx);
 
-            if (existingModel(node) == null) {
-                log.debug("adding model {} for grouping", groupingIdx);
-                addModel(groupings.get(u.getGroupingPath()));
+        final Set<QName> fromAugmentedGroupings = new HashSet<>();
+        final List<RefModel> models = new LinkedList<>();
+
+        uses(node).forEach(u -> {
+            GroupingDefinition grouping = groupings.get(u.getGroupingPath());
+            boolean isGroupingAugmented = grouping.getChildNodes().stream().map(p -> {
+                DataSchemaNode effectiveChild = getEffectiveChild(p.getQName());
+                return (effectiveChild instanceof DataNodeContainer && isTreeAugmented.test((DataNodeContainer) effectiveChild));
+            }).findFirst().orElse(false);
+
+            if(isGroupingAugmented) fromAugmentedGroupings.addAll(grouping.getChildNodes().stream().map(SchemaNode::getQName).collect(Collectors.toList()));
+            else {
+                String groupingIdx = getDefinitionId(grouping);
+                log.debug("adding grouping {} to composed model", groupingIdx);
+                RefModel refModel = new RefModel(groupingIdx);
+
+                if (existingModel(node) == null) {
+                    log.debug("adding model {} for grouping", groupingIdx);
+                    addModel(grouping);
+                }
+                models.add(refModel);
             }
-            return refModel;
-        }).collect(Collectors.toList());
 
-        models = optimizeInheritance(models);
+        });
+
+        List<RefModel> optimizedModels = optimizeInheritance(models);
 
 
         SchemaNode doc = null;
@@ -380,19 +443,19 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             doc = (SchemaNode) node;
         }
 
-        if(models.size() > 1 && doc != null) {
+        if(optimizedModels.size() > 1 && doc != null) {
             log.warn("Multiple inheritance for {}", doc.getQName());
         }
         // XXX this behavior might be prone to future changes to Swagger model
         // currently interfaces are stored as well in allOf property
-        newModel.setInterfaces(models);
+        newModel.setInterfaces(optimizedModels);
         if(!models.isEmpty())
             newModel.parent(models.get(0));
 
         final ModelImpl attributes = new ModelImpl();
         if(doc != null)
             attributes.description(desc(doc));
-        attributes.setProperties(structure(node ));
+        attributes.setProperties(structure(node, n -> fromAugmentedGroupings.contains(n.getQName()) ));
         attributes.setDiscriminator("objType");
         boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
         if(! noAttributes) {
@@ -508,5 +571,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     protected Map<String, Property> structure(DataNodeContainer node) {
         Predicate<DataSchemaNode> toSimpleProperty = d ->  !d.isAugmenting() && ! d.isAddedByUses();
         return super.structure(node, toSimpleProperty, toSimpleProperty);
+    }
+
+    protected Map<String, Property> structure(DataNodeContainer node, Predicate<DataSchemaNode> includeAttributes) {
+        Predicate<DataSchemaNode> toSimpleProperty = d ->  !d.isAugmenting() && ! d.isAddedByUses();
+        return super.structure(node, toSimpleProperty.or(includeAttributes), toSimpleProperty.or(includeAttributes));
     }
 }
