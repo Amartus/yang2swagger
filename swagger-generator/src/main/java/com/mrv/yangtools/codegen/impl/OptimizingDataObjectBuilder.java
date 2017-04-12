@@ -83,8 +83,9 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private <T extends SchemaNode & DataNodeContainer> T getEffectiveChild(QName name) {
         if(effectiveNode.isEmpty()) return null;
-        return effectiveNode.stream().map(n -> (T) n.getDataChildByName(name))
-                .filter(Objects::nonNull)
+        return effectiveNode.stream().map(n -> n.getDataChildByName(name))
+                .filter(n -> n instanceof DataNodeContainer)
+                .map(n -> (T)n)
                 .findFirst().orElse(null);
     }
 
@@ -139,14 +140,25 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
     }
 
+    private HashMap<DataNodeContainer, String> orgNames = new HashMap<>();
+
     @Override
     protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
-        if(node instanceof DerivableSchemaNode) {
-
-            com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) node).getOriginal();
-            if(original.isPresent()){
+        if(node instanceof DataNodeContainer) {
+            DataNodeContainer original = original((DataNodeContainer) node);
+            if(original != null) {
                 log.debug("reusing original definition to get name for {}", node.getQName());
-                return super.generateName(original.get(), proposedName, cache);
+                if(! orgNames.containsKey(original)) {
+                    String name = super.generateName((SchemaNode)original, proposedName, cache);
+                    orgNames.put(original, name);
+                }
+
+                return orgNames.get(original);
+            } else {
+                DataNodeContainer t = (DataNodeContainer) node;
+                if(orgNames.containsKey(t)) {
+                    return orgNames.get(t);
+                }
             }
         }
         return super.generateName(node, proposedName, cache);
@@ -154,8 +166,17 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     protected void processNode(DataNodeContainer container, Set<String> cache) {
-        super.processNode(container, cache);
+        final HashSet<String> used = new HashSet<String>(cache);
+
+        DataNodeHelper.stream(container).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+                .filter(n -> ! names.containsKey(n))
+                .forEach(n -> {
+                    String name = generateName(n, null, used);
+                    used.add(name);
+                    names.put(n, name);
+                });
     }
+
 
     protected void processGroupings(DataNodeContainer container, Set<String> cache) {
         DataNodeHelper.stream(container).filter(n -> n instanceof GroupingDefinition)

@@ -254,6 +254,17 @@ public class SwaggerGeneratorTestIt {
 
 
         assertEquals("base.Coll",c1.getSimpleRef());
-        assertEquals("base.C2",c2.getSimpleRef());
+        assertEquals("base.BaseC2",c2.getSimpleRef());
+    }
+
+    @Test
+    public void testDuplicatedNames() throws ReactorException {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("duplicated-names.yang"));
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+        swagger = generator.generate();
+
+        long nsCount = swagger.getDefinitions().keySet().stream().filter(n -> n.endsWith("Netnamespace")).count();
+
+        assertEquals(2, nsCount);
     }
 }

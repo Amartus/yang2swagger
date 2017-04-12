@@ -1,0 +1,54 @@
+module duplicated-names {
+   namespace "http://amartus/ns/yang/duplicated-names";
+   prefix s;
+   organization "test-yang";
+   description "example-module to demo maven integration";
+
+   revision 2016-08-08 {
+       description "Final";
+   }
+
+   container configuration {
+     leaf customize { type boolean; }
+     container test {
+         leaf name { type string; }
+     }
+   }
+
+   rpc ping {
+     input {
+       leaf ping { type string; }
+     }
+     output {
+         container response {
+             leaf pong { type string; }
+         }
+     }
+   }
+
+   container interfaces {
+       list netnamespace {
+         key "name";
+         leaf name { type string; }
+         list interface {
+           key "name";
+           leaf name { type string; }
+           leaf leaf1 { type string; }
+           leaf leaf2 { type string; }
+         }
+     }
+    }
+
+   container stats {
+       list netnamespace {
+         key "name";
+         leaf name { type string; }
+         list interface {
+           key "name";
+           leaf name { type string; }
+           leaf leaf3 { type string; }
+           leaf leaf4 { type string; }
+         }
+     }
+}
+}
