@@ -28,6 +28,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
 import static com.mrv.yangtools.common.BindingMapping.nameToPackageSegment;
@@ -106,21 +107,62 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                 });
     }
 
+    private HashMap<DataNodeContainer, String> orgNames = new HashMap<>();
+
+    @SuppressWarnings("unchecked")
+    protected DataNodeContainer original(DataNodeContainer node) {
+        DataNodeContainer result = null;
+        DataNodeContainer tmp = node;
+        do {
+            if(tmp instanceof DerivableSchemaNode) {
+                com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) tmp).getOriginal();
+                tmp = null;
+                if(original.isPresent() && original.get() instanceof DataNodeContainer) {
+                    result = (DataNodeContainer) original.get();
+                    tmp = result;
+                }
+            } else {
+                tmp = null;
+            }
+        } while (tmp != null);
+
+        return result;
+    }
+
     protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
+        if(node instanceof DataNodeContainer) {
+            DataNodeContainer original = original((DataNodeContainer) node);
+            if(original != null) {
+                if(! orgNames.containsKey(original)) {
+                    String name = generateName((SchemaNode)original, proposedName, cache);
+                    orgNames.put(original, name);
+                } else {
+                    log.trace("reusing original definition to get name for {}", node.getQName());
+                }
+
+                return orgNames.get(original);
+            } else {
+                DataNodeContainer t = (DataNodeContainer) node;
+                if(orgNames.containsKey(t)) {
+                    return orgNames.get(t);
+                }
+            }
+        }
 
         String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(node.getQName()));
 
-        String name = proposedName != null ? getClassName(proposedName) : getClassName(node.getQName());
-        if(cache.contains(modulePrefix + "." + name)) {
-
-            final Iterable<QName> path = node.getPath().getParent().getPathTowardsRoot();
-
-            for(QName p : path) {
-                name = getClassName(p) + name;
-                if(! cache.contains(modulePrefix + "." + name)) break;
-            }
+        if(proposedName != null) {
+            return modulePrefix + "." + getClassName(proposedName);
         }
-        return modulePrefix + "." + name;
+
+        String name = getClassName(node.getQName());
+        final Iterable<QName> path = node.getPath().getParent().getPathFromRoot();
+        if(path == null || !path.iterator().hasNext()) {
+            return modulePrefix + "." + name;
+        }
+        String pkg = StreamSupport.stream(path.spliterator(), false).map(n -> getClassName(n.getLocalName()).toLowerCase()).collect(Collectors.joining("."));
+
+        return modulePrefix + "." + pkg + "." + name;
     }
 
     /**

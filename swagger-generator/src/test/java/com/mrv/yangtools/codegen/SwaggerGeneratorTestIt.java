@@ -71,10 +71,10 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "simplest.SimpleRoot", "simplest.Children1", "simplest.Children2"
+                "simplest.SimpleRoot", "simplest.simpleroot.Children1", "simplest.simpleroot.children1.Children2"
         )), defNames);
 
-        checkLeafrefAreFollowed("simplest.Children2", "parent-id", "integer");
+        checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
 
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}/"));
     }
@@ -120,7 +120,7 @@ public class SwaggerGeneratorTestIt {
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(7, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.G1", "with.groupings.G2", "with.groupings.G3"));
+        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G1", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
         Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
         assertEquals("with.groupings.G2", groupingChild2.getSimpleRef());
@@ -138,10 +138,10 @@ public class SwaggerGeneratorTestIt {
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(12, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.G1", "with.groupings.G2", "with.groupings.G3"));
+        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G1", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
         Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("with.groupings.GroupingChild2", groupingChild2.getSimpleRef());
+        assertEquals("with.groupings.groupingroot.GroupingChild2", groupingChild2.getSimpleRef());
     }
 
     @org.junit.Test
@@ -160,7 +160,7 @@ public class SwaggerGeneratorTestIt {
 
         Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("with.groupings.GroupingChild2", groupingChild2.getSimpleRef());
+        assertEquals("with.groupings.groupingroot.GroupingChild2", groupingChild2.getSimpleRef());
 
     }
 
@@ -196,13 +196,13 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "simplest.Children1", "simplest.SimpleRoot", "simplest.Children2",
-                "simpleaugmentation.AddedA", "simpleaugmentation.Children1",
+                "simplest.simpleroot.Children1", "simplest.SimpleRoot", "simplest.simpleroot.children1.Children2",
+                "simpleaugmentation.simpleroot.AddedA", "simpleaugmentation.simpleroot.addeda.Children1",
                 "simpleaugmentation.Children1Augmentation1", "simpleaugmentation.SimpleRootAugmentation1"
         )), defNames);
 
-        checkLeafrefAreFollowed("simplest.Children2", "parent-id", "integer");
-        checkLeafrefAreFollowed("simpleaugmentation.AddedA", "a1", "string");
+        checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
+        checkLeafrefAreFollowed("simpleaugmentation.simpleroot.AddedA", "a1", "string");
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/added-a/children1/"));
     }
 
@@ -216,7 +216,7 @@ public class SwaggerGeneratorTestIt {
         Set<String> defNames = swagger.getDefinitions().keySet();
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "choice.example.Data", "choice.example.Protocol"
+                "choice.example.protocol.name.b.Data", "choice.example.Protocol"
         )), defNames);
 
         assertEquals(new HashSet<>(Arrays.asList(
@@ -254,7 +254,7 @@ public class SwaggerGeneratorTestIt {
 
 
         assertEquals("base.Coll",c1.getSimpleRef());
-        assertEquals("base.BaseC2",c2.getSimpleRef());
+        assertEquals("base.base.C2",c2.getSimpleRef());
     }
 
     @Test

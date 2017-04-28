@@ -143,28 +143,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private HashMap<DataNodeContainer, String> orgNames = new HashMap<>();
 
     @Override
-    protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
-        if(node instanceof DataNodeContainer) {
-            DataNodeContainer original = original((DataNodeContainer) node);
-            if(original != null) {
-                log.debug("reusing original definition to get name for {}", node.getQName());
-                if(! orgNames.containsKey(original)) {
-                    String name = super.generateName((SchemaNode)original, proposedName, cache);
-                    orgNames.put(original, name);
-                }
-
-                return orgNames.get(original);
-            } else {
-                DataNodeContainer t = (DataNodeContainer) node;
-                if(orgNames.containsKey(t)) {
-                    return orgNames.get(t);
-                }
-            }
-        }
-        return super.generateName(node, proposedName, cache);
-    }
-
-    @Override
     protected void processNode(DataNodeContainer container, Set<String> cache) {
         final HashSet<String> used = new HashSet<String>(cache);
 
@@ -234,25 +212,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return model;
     }
 
-    @SuppressWarnings("unchecked")
-    private DataNodeContainer original(DataNodeContainer node) {
-        DataNodeContainer result = null;
-        DataNodeContainer tmp = node;
-        do {
-            if(tmp instanceof DerivableSchemaNode) {
-                com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) tmp).getOriginal();
-                tmp = null;
-                if(original.isPresent() && original.get() instanceof DataNodeContainer) {
-                    result = (DataNodeContainer) original.get();
-                    tmp = result;
-                }
-            } else {
-                tmp = null;
-            }
-        } while (tmp != null);
 
-        return result;
-    }
 
     @SuppressWarnings("unchecked")
     private List<DataNodeContainer> findRelatedNodes(DataNodeContainer node) {
