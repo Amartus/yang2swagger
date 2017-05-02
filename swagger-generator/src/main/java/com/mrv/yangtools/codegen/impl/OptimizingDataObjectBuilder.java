@@ -396,10 +396,14 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
         uses(node).forEach(u -> {
             GroupingDefinition grouping = groupings.get(u.getGroupingPath());
-            boolean isGroupingAugmented = grouping.getChildNodes().stream().map(p -> {
+            boolean isGroupingAugmented = grouping.getChildNodes().stream().anyMatch(p -> {
                 DataSchemaNode effectiveChild = getEffectiveChild(p.getQName());
                 return (effectiveChild instanceof DataNodeContainer && isTreeAugmented.test((DataNodeContainer) effectiveChild));
-            }).findFirst().orElse(false);
+            });
+
+
+
+
 
             if(isGroupingAugmented) fromAugmentedGroupings.addAll(grouping.getChildNodes().stream().map(SchemaNode::getQName).collect(Collectors.toList()));
             else {

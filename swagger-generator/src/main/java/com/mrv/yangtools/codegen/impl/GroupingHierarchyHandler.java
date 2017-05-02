@@ -85,6 +85,12 @@ public class GroupingHierarchyHandler {
         return result;
     }
 
+    /**
+     * Get parent for a given node (with node qname)
+     * @param parentName path of parent
+     * @param forNode name of current node
+     * @return
+     */
     public boolean isParent(SchemaPath parentName, QName forNode) {
         HierarchyNode node = hierarchy.get(forNode);
         if(node == null) {
