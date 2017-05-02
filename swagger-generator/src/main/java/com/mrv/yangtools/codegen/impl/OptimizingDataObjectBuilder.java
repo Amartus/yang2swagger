@@ -402,7 +402,13 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             });
 
 
+            if(isGroupingAugmented) {
+                //do the needful
 
+
+
+                System.out.println(grouping);
+            }
 
 
             if(isGroupingAugmented) fromAugmentedGroupings.addAll(grouping.getChildNodes().stream().map(SchemaNode::getQName).collect(Collectors.toList()));

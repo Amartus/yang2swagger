@@ -1,0 +1,17 @@
+module base-aug {
+    namespace "http://amartus/ns/yang/base-aug";
+    prefix ba;
+    import base {prefix b;}
+    description "";
+    organization "test-yang";
+
+    augment "/b:base/b:users/b:job" {
+        uses aug;
+    }
+
+    grouping aug {
+        container extra {
+            leaf phone {type string;}
+        }
+    }
+}

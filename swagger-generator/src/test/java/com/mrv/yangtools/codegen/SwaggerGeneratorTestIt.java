@@ -242,8 +242,24 @@ public class SwaggerGeneratorTestIt {
 
 
     @org.junit.Test
-    public void testBaseAug() throws Exception {
+    public void testAugGroupEx() throws Exception {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("aug-group-ex"));
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+        swagger = generator.generate();
+
+        Model base = swagger.getDefinitions().get("base.Base");
+        RefProperty c1 = (RefProperty) base.getProperties().get("c1");
+        RefProperty c2 = (RefProperty) base.getProperties().get("c2");
+
+
+        assertEquals("base.Coll",c1.getSimpleRef());
+        assertEquals("base.base.C2",c2.getSimpleRef());
+    }
+
+    @org.junit.Test
+    public void testInheritenceWithAugmentation() throws Exception {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("inheritence-with-augmentation"));
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
