@@ -41,7 +41,11 @@ public class ContextHelper {
      * @throws ReactorException in case of parsing errors
      */
     public static SchemaContext getFromDir(Path dir, Predicate<Path> accept) throws ReactorException {
-        return getCtx(Stream.of(dir), accept);
+        return getFromDir(Stream.of(dir), accept);
+    }
+
+    public static SchemaContext getFromDir(Stream<Path> dirs, Predicate<Path> accept) throws ReactorException {
+        return getCtx(dirs, accept);
     }
 
     /**
