@@ -227,7 +227,7 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
             if(pkgClass != null) {
                 imp = BindingMapping.nameToPackageSegment(pkgClass.first()) + "." + pkgClass.second();
             }
-            addImport(codegenModel, cp.baseType);
+            addImport(codegenModel, imp);
             cp.hasMore = true;
             return cp;
         }).collect(Collectors.toList());
@@ -295,7 +295,7 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         }
 
         Function<String, String> typeFix = t -> {
-            if(t == null) return t;
+            if(t == null) return "Void";
             Tuple<String, String> c = toPkgClass(t);
             if(c != null) return c.second();
             if ("void".equals(t)) return "Void";
@@ -304,9 +304,20 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
         co.returnType = typeFix.apply(co.returnType);
         co.returnBaseType = typeFix.apply(co.returnBaseType);
-
+        fixImports(co);
 
         return co;
+    }
+
+    private void fixImports(CodegenOperation co) {
+        Set<String> imports = co.imports;
+        co.imports = imports.stream().map(p -> {
+            Tuple<String, String> pkgClass = toPkgClass(p);
+            if(pkgClass != null){
+                return BindingMapping.normalizePackageName(pkgClass.first())+ "." + pkgClass.second();
+            }
+            return p;
+        }).collect(Collectors.toSet());
     }
 
     @SuppressWarnings("unchecked")
