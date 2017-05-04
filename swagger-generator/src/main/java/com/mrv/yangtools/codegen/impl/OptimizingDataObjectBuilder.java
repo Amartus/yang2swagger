@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.*;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -89,20 +88,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 .findFirst().orElse(null);
     }
 
-
-    private static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
-        if(node instanceof AugmentationTarget) {
-            Set<AugmentationSchema> res = ((AugmentationTarget) node).getAvailableAugmentations();
-            if(res != null) return res;
-        }
-        return Collections.emptySet();
-    };
-
-    private static Predicate<DataNodeContainer> isAugmented = n -> !augmentations.apply(n).isEmpty();
-
-    private Predicate<DataNodeContainer> isTreeAugmented = n ->  n != null && (isAugmented.test(n) || n.getChildNodes().stream()
-            .filter(c -> c instanceof DataNodeContainer)
-            .anyMatch(c -> this.isTreeAugmented.test((DataNodeContainer) c)));
 
     private GroupingDefinition grouping(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
