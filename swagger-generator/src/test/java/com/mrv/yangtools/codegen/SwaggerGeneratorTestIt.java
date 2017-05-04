@@ -15,9 +15,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.common.ContextHelper;
+import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
+import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 
 import io.swagger.models.properties.RefProperty;
@@ -264,13 +266,20 @@ public class SwaggerGeneratorTestIt {
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         swagger = generator.generate();
 
-        Model base = swagger.getDefinitions().get("base.Base");
-        RefProperty c1 = (RefProperty) base.getProperties().get("c1");
-        RefProperty c2 = (RefProperty) base.getProperties().get("c2");
+        ComposedModel base = (ComposedModel) swagger.getDefinitions().get("base.Base");
+        assertEquals(1, base.getInterfaces().size());
+        assertEquals("base.Ident", base.getInterfaces().get(0).getSimpleRef());
+        RefProperty managersRef = (RefProperty) ((ArrayProperty) base.getChild().getProperties().get("managers")).getItems();
+        RefProperty usersRef = (RefProperty) ((ArrayProperty) base.getChild().getProperties().get("users")).getItems();
 
 
-        assertEquals("base.Coll",c1.getSimpleRef());
-        assertEquals("base.base.C2",c2.getSimpleRef());
+        ComposedModel managers = (ComposedModel) swagger.getDefinitions().get(managersRef.getSimpleRef());
+        ComposedModel users = (ComposedModel) swagger.getDefinitions().get(usersRef.getSimpleRef());
+        assertEquals(2, managers.getAllOf().size());
+        assertEquals(2, managers.getInterfaces().size());
+        //users are augmented
+        assertEquals(3, users.getAllOf().size());
+        assertEquals(2, users.getInterfaces().size());
     }
 
     @Test
