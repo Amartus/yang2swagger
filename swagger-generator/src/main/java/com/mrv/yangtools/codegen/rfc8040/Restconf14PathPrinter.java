@@ -9,8 +9,10 @@
  *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
-package com.mrv.yangtools.codegen;
+package com.mrv.yangtools.codegen.rfc8040;
 
+import com.mrv.yangtools.codegen.PathPrinter;
+import com.mrv.yangtools.codegen.PathSegment;
 import io.swagger.models.parameters.Parameter;
 
 import java.util.Collection;
@@ -47,6 +49,7 @@ public class Restconf14PathPrinter extends PathPrinter {
     }
 
     protected String segment(Function<Collection<? extends Parameter>, String> paramWriter, String moduleName, PathSegment seg) {
+        if(seg.getName() == null) return "";
         return (useModuleName && moduleName != null && !moduleName.isEmpty() ? moduleName + ":" : "") + seg.getName() + paramWriter.apply(seg.getParam());
     }
 

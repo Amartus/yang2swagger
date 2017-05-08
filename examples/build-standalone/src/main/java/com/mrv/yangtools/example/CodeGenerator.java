@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder;
 import com.mrv.yangutils.codegen.JerseyServerCodegen;
 import io.swagger.codegen.*;
 import io.swagger.models.Swagger;
@@ -34,20 +35,28 @@ public class CodeGenerator {
     public static void main(String[] args) throws Exception {
         SwaggerGenerator generator;
         if(args.length == 1) {
-            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> m.getName().startsWith("Tapi"));
+            // prepare a default generator for a given directory with YANG modules and accept all of them for path
+            // generation
+            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> true);
         } else {
-            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+            // prepare a default generator for all YANG modules and from classpath and accept only these which name
+            // starts from 'tapi'
+            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }
-//        final SwaggerGenerator generator = GeneratorHelper.getGenerator("Tapi");
-//        final SwaggerGenerator generator = GeneratorHelper.getGenerator(new File("some directory"),m -> m.getName().startsWith("Tapi"));
         generator.tagGenerator(new SegmentTagGenerator());
+        // -------- configure path generator ---------------
+        // for data tree generate only GET operations
+//        generator.pathHandler(new PathHandlerBuilder().withoutFullCrud());
+        // for data tree generate full CRUD (depending on config flag in yang modules
+        generator.pathHandler(new PathHandlerBuilder());
         Swagger swagger = generator.generate();
 
         JerseyServerCodegen codegenConfig = new JerseyServerCodegen();
-        codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
-                "@com.mrv.provision.di.rest.jersey.metadata.Leafref(\"" + v + "\")"
-        );
-//        codegenConfig.addInterface("GlobalClass");
+
+        // add handler for x-path annotation
+//        codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
+//                "@com.mrv.provision.di.rest.jersey.metadata.Leafref(\"" + v + "\")"
+//        );
 
         ClientOpts clientOpts = new ClientOpts();
 

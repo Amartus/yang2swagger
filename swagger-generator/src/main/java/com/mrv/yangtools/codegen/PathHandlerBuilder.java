@@ -11,14 +11,19 @@
 
 package com.mrv.yangtools.codegen;
 
-import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
+import io.swagger.models.Swagger;
+import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+
+import java.util.Set;
 
 /**
  * @author bartosz.michalik@amartus.com
  */
-public interface PathHandler {
-    void path(ContainerSchemaNode node, PathSegment path);
-    void path(ListSchemaNode node, PathSegment path);
-    void path(ContainerSchemaNode input, ContainerSchemaNode output, PathSegment path);
+public interface PathHandlerBuilder {
+    PathHandler forModule(Module module);
+
+    void configure(SchemaContext ctx, Swagger target, DataObjectBuilder builder);
+
+    void addTagGenerator(TagGenerator generator);
 }

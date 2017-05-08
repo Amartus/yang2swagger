@@ -54,11 +54,11 @@ public class SwaggerGenerator {
     private final ModuleUtils moduleUtils;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
-    private Set<TagGenerator> tagGenerators = new HashSet<>();
+
 
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
-    private PathHandler pathHandler;
+    private PathHandlerBuilder pathHandlerBuilder;
 
     public SwaggerGenerator defaultConfig() {
         //setting defaults
@@ -109,6 +109,7 @@ public class SwaggerGenerator {
         //no exposed swagger API
         target.info(new Info());
 
+        pathHandlerBuilder = new com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder();
     }
 
     /**
@@ -127,7 +128,7 @@ public class SwaggerGenerator {
      * @return this
      */
     public SwaggerGenerator tagGenerator(TagGenerator generator) {
-        tagGenerators.add(generator);
+        pathHandlerBuilder.addTagGenerator(generator);
         return this;
     }
 
@@ -146,6 +147,12 @@ public class SwaggerGenerator {
             default:
                 this.dataObjectsBuilder = new UnpackingDataObjectsBuilder(ctx, target, converter);
         }
+        return this;
+    }
+
+    public SwaggerGenerator pathHandler(PathHandlerBuilder handlerBuilder) {
+        Objects.requireNonNull(handlerBuilder);
+        this.pathHandlerBuilder = handlerBuilder;
         return this;
     }
 
@@ -246,6 +253,8 @@ public class SwaggerGenerator {
             dataObjectsBuilder.processModule(m);
 
         });
+        //initialize plugable path handler
+        pathHandlerBuilder.configure(ctx, target, dataObjectsBuilder);
 
         modules.forEach(m -> new ModuleGenerator(m).generate());
 
@@ -261,10 +270,12 @@ public class SwaggerGenerator {
     private class ModuleGenerator {
         private final Module module;
         private PathSegment pathCtx;
+        private PathHandler handler;
 
         private ModuleGenerator(Module module) {
             if(module == null) throw new NullPointerException("module is null");
             this.module = module;
+            handler = pathHandlerBuilder.forModule(module);
 
 
         }
@@ -272,14 +283,12 @@ public class SwaggerGenerator {
         void generate() {
             if(toGenerate.contains(Elements.DATA)) {
                 pathCtx = new PathSegment(ctx)
-                        .withName("/data")
                         .withModule(module.getName());
                 module.getChildNodes().forEach(this::generate);
             }
 
             if(toGenerate.contains(Elements.RCP)) {
                 pathCtx = new PathSegment(ctx)
-                        .withName("/operations")
                         .withModule(module.getName());
                 module.getRpcs().forEach(this::generate);
             }
@@ -292,8 +301,7 @@ public class SwaggerGenerator {
 
             ContainerSchemaNode input = rcp.getInput();
             ContainerSchemaNode output = rcp.getOutput();
-
-            addPath(input, output);
+            handler.path(input, output, pathCtx);
 
             pathCtx = pathCtx.drop();
         }
@@ -313,9 +321,7 @@ public class SwaggerGenerator {
                         .withModule(module.getName())
                         .asReadOnly(!cN.isConfiguration());
 
-//                pathHandler.addPath(cN, pathCtx);
-                addPath(cN);
-
+                handler.path(cN, pathCtx);
                 cN.getChildNodes().forEach(this::generate);
                 dataObjectsBuilder.addModel(cN);
 
@@ -330,7 +336,7 @@ public class SwaggerGenerator {
                         .asReadOnly(!lN.isConfiguration())
                         .withListNode(lN);
 
-                addPath(lN);
+                handler.path(lN, pathCtx);
                 lN.getChildNodes().forEach(this::generate);
                 dataObjectsBuilder.addModel(lN);
 
@@ -342,102 +348,5 @@ public class SwaggerGenerator {
                         .flatMap(_case -> _case.getChildNodes().stream()).forEach(this::generate);
             }
         }
-
-        private Operation defaultOperation() {
-            final Operation operation = new Operation();
-            operation.response(400, new Response().description("Internal error"));
-            operation.setParameters(pathCtx.params());
-            return operation;
-        }
-
-        /**
-         * Add path for rcp
-         * @param input optional rcp input
-         * @param output optional rcp output
-         */
-        private void addPath(ContainerSchemaNode input, ContainerSchemaNode output) {
-
-            final Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
-
-            Operation post = defaultOperation();
-
-            post.tag(module.getName());
-            if(input != null) {
-                dataObjectsBuilder.addModel(input);
-
-                post.parameter(new BodyParameter()
-                        .name("body-param")
-                        .schema(new RefModel(dataObjectsBuilder.getDefinitionId(input)))
-                        .description(input.getDescription())
-                );
-            }
-
-            if(output != null) {
-                String description = output.getDescription();
-                if(description == null) {
-                    description = "Correct response";
-                }
-
-                dataObjectsBuilder.addModel(output);
-                post.response(200, new Response()
-                        .schema(new RefProperty(dataObjectsBuilder.getDefinitionId(output)))
-                        .description(description));
-            }
-            post.response(201, new Response().description("No response")); //no output body
-            target.path(printer.path(), new Path().post(post));
-        }
-
-        private void addPath(ListSchemaNode lN) {
-            final Path path = new Path();
-
-            List<String> tags = tags(pathCtx);
-            tags.add(module.getName());
-
-            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
-            if(!pathCtx.isReadOnly()) {
-                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
-                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(lN).tags(tags));
-                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(lN).tags(tags));
-            }
-            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
-            target.path(printer.path(), path);
-
-            //yes I know it can be written in previous 'if statement' but at some point it is to be refactored
-            if(pathCtx.isReadOnly()) return;
-
-
-            //add list path
-            final Path list = new Path();
-            list.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, true).execute(lN));
-
-
-            Restconf14PathPrinter postPrinter = new Restconf14PathPrinter(pathCtx, false, true);
-            target.path(postPrinter.path(), list);
-
-        }
-
-        private void addPath(ContainerSchemaNode cN) {
-            final Path path = new Path();
-            List<String> tags = tags(pathCtx);
-            tags.add(module.getName());
-
-            path.get(new GetOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
-            if(!pathCtx.isReadOnly()) {
-                path.put(new PutOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
-                path.post(new PostOperationGenerator(pathCtx, dataObjectsBuilder, false).execute(cN).tags(tags));
-                path.delete(new DeleteOperationGenerator(pathCtx, dataObjectsBuilder).execute(cN).tags(tags));
-            }
-            //TODO pluggable PathPrinter
-            Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
-
-            target.path(printer.path(), path);
-        }
-    }
-
-    private List<String> tags(PathSegment pathCtx) {
-        List<String> tags = new ArrayList<>(tagGenerators.stream().flatMap(g -> g.tags(pathCtx).stream())
-                .collect(Collectors.toSet()));
-        Collections.sort(tags);
-        return tags;
     }
 }
