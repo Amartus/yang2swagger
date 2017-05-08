@@ -1,18 +1,17 @@
 package com.mrv.yangtools.codegen.main;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.mrv.yangtools.common.ContextHelper;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -30,7 +29,8 @@ public class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
-    @Option(name = "-yang-dir", usage = "Directory to search for YANG modules - defaults to current directory", metaVar = "path")
+    @Option(name = "-yang-dir", usage = "Directory to search for YANG modules - defaults to current directory. " +
+            "Multiple dirs might be separated by system path separator", metaVar = "path")
     public String yangDir = "";
 
     @Option(name = "-output", usage = "File to generate, containing the output - defaults to stdout", metaVar = "file")
@@ -80,8 +80,10 @@ public class Main {
 
     protected SchemaContext buildSchemaContext(String dir, Predicate<Path> accept)
             throws ReactorException, IOException {
-        SchemaBuilder builder = new SchemaBuilder().accepts(accept);
-        builder.add(FileSystems.getDefault().getPath(dir));
-        return builder.build();
+        if(dir.contains(File.pathSeparator)) {
+            return ContextHelper.getFromDir(Arrays.stream(dir.split(File.pathSeparator)).map(s -> FileSystems.getDefault().getPath(s)), accept);
+        } else {
+            return ContextHelper.getFromDir(Stream.of(FileSystems.getDefault().getPath(dir)), accept);
+        }
     }
 }

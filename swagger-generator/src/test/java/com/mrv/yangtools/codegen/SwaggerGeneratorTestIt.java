@@ -15,9 +15,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.common.ContextHelper;
+import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
+import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 
 import io.swagger.models.properties.RefProperty;
@@ -242,7 +244,7 @@ public class SwaggerGeneratorTestIt {
 
 
     @org.junit.Test
-    public void testBaseAug() throws Exception {
+    public void testAugGroupEx() throws Exception {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("aug-group-ex"));
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
@@ -255,6 +257,29 @@ public class SwaggerGeneratorTestIt {
 
         assertEquals("base.Coll",c1.getSimpleRef());
         assertEquals("base.base.C2",c2.getSimpleRef());
+    }
+
+    @org.junit.Test
+    public void testInheritenceWithAugmentation() throws Exception {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("inheritence-with-augmentation"));
+
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+        swagger = generator.generate();
+
+        ComposedModel base = (ComposedModel) swagger.getDefinitions().get("base.Base");
+        assertEquals(1, base.getInterfaces().size());
+        assertEquals("base.Ident", base.getInterfaces().get(0).getSimpleRef());
+        RefProperty managersRef = (RefProperty) ((ArrayProperty) base.getChild().getProperties().get("managers")).getItems();
+        RefProperty usersRef = (RefProperty) ((ArrayProperty) base.getChild().getProperties().get("users")).getItems();
+
+
+        ComposedModel managers = (ComposedModel) swagger.getDefinitions().get(managersRef.getSimpleRef());
+        ComposedModel users = (ComposedModel) swagger.getDefinitions().get(usersRef.getSimpleRef());
+        assertEquals(2, managers.getAllOf().size());
+        assertEquals(2, managers.getInterfaces().size());
+        //users are augmented
+        assertEquals(3, users.getAllOf().size());
+        assertEquals(2, users.getInterfaces().size());
     }
 
     @Test

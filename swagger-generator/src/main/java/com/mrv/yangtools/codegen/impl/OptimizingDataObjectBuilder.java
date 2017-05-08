@@ -25,9 +25,9 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.*;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The builder strategy is to reuse grouping wherever possible. Therefore in generated Swagger models, groupings are transformed to models
@@ -90,19 +90,11 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
 
-    private static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
-        if(node instanceof AugmentationTarget) {
-            Set<AugmentationSchema> res = ((AugmentationTarget) node).getAvailableAugmentations();
-            if(res != null) return res;
-        }
-        return Collections.emptySet();
-    };
-
-    private static Predicate<DataNodeContainer> isAugmented = n -> !augmentations.apply(n).isEmpty();
-
-    private Predicate<DataNodeContainer> isTreeAugmented = n ->  n != null && (isAugmented.test(n) || n.getChildNodes().stream()
-            .filter(c -> c instanceof DataNodeContainer)
-            .anyMatch(c -> this.isTreeAugmented.test((DataNodeContainer) c)));
+    private Stream<GroupingDefinition> groupings(DataNodeContainer node) {
+        Set<UsesNode> uses = uses(node);
+        //noinspection SuspiciousMethodCalls
+        return uses.stream().map(u -> groupings.get(u.getGroupingPath()));
+    }
 
     private GroupingDefinition grouping(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
@@ -385,43 +377,75 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         super.addModel(node);
     }
 
+
+    private static class GroupingInfo {
+        final Set<GroupingDefinition> models;
+        final Set<QName> attributes;
+
+        private GroupingInfo() {
+            attributes = new HashSet<>();
+            models = new HashSet<>();
+        }
+        private void addUse(GroupingInfo u) {
+            attributes.addAll(u.attributes);
+            models.addAll(u.models);
+        }
+    }
+
+    private GroupingInfo traverse(GroupingDefinition def) {
+        GroupingInfo info = groupings(def).map(this::traverse)
+                .reduce(new GroupingInfo(), (o, cgi) -> {
+                    o.addUse(cgi);
+                    return o;
+                });
+        boolean tryToReuseGroupings = info.attributes.isEmpty();
+        if(tryToReuseGroupings) {
+            boolean noneAugmented = def.getChildNodes().stream().filter(c -> !c.isAddedByUses())
+                    .allMatch(c -> {
+                        DataSchemaNode effectiveChild = getEffectiveChild(c.getQName());
+                        return ! OptimizingDataObjectBuilder.isAugmented.test((DataNodeContainer) effectiveChild);
+                    });
+            if(noneAugmented) {
+                String groupingIdx = getDefinitionId(def);
+                log.debug("found grouping id {} for {}", groupingIdx, def.getQName());
+                info.models.clear();
+                info.models.add(def);
+            } else tryToReuseGroupings = false;
+
+        }
+        if(! tryToReuseGroupings) {
+            def.getChildNodes().stream().filter(c -> !c.isAddedByUses())
+                    .forEach(c -> info.attributes.add(c.getQName()));
+        }
+        return info;
+    }
+
+
+
     private Model composed(DataNodeContainer node) {
         ComposedModel newModel = new ComposedModel();
-
-
-        // because of for swagger model order matters we need to add attributes at the end
 
         final Set<QName> fromAugmentedGroupings = new HashSet<>();
         final List<RefModel> models = new LinkedList<>();
 
         uses(node).forEach(u -> {
             GroupingDefinition grouping = groupings.get(u.getGroupingPath());
-            boolean isGroupingAugmented = grouping.getChildNodes().stream().anyMatch(p -> {
-                DataSchemaNode effectiveChild = getEffectiveChild(p.getQName());
-                return (effectiveChild instanceof DataNodeContainer && isTreeAugmented.test((DataNodeContainer) effectiveChild));
-            });
-
-
-
-
-
-            if(isGroupingAugmented) fromAugmentedGroupings.addAll(grouping.getChildNodes().stream().map(SchemaNode::getQName).collect(Collectors.toList()));
-            else {
-                String groupingIdx = getDefinitionId(grouping);
+            GroupingInfo info = traverse(grouping);
+            info.models.forEach(def -> {
+                String groupingIdx = getDefinitionId(def);
                 log.debug("adding grouping {} to composed model", groupingIdx);
                 RefModel refModel = new RefModel(groupingIdx);
 
-                if (existingModel(node) == null) {
+                if (existingModel(def) == null) {
                     log.debug("adding model {} for grouping", groupingIdx);
-                    addModel(grouping);
+                    addModel(def);
                 }
                 models.add(refModel);
-            }
-
+            });
+            fromAugmentedGroupings.addAll(new ArrayList<>(info.attributes));
         });
 
         List<RefModel> optimizedModels = optimizeInheritance(models);
-
 
         SchemaNode doc = null;
         if(node instanceof SchemaNode) {
@@ -437,6 +461,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(!models.isEmpty())
             newModel.parent(models.get(0));
 
+        // because of for swagger model order matters we need to add attributes at the end
         final ModelImpl attributes = new ModelImpl();
         if(doc != null)
             attributes.description(desc(doc));

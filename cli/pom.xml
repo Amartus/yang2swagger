@@ -24,6 +24,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.mrv.yangtools</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
           <groupId>args4j</groupId>
           <artifactId>args4j</artifactId>
           <version>2.33</version>

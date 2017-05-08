@@ -1,0 +1,44 @@
+module base {
+    namespace "http://amartus/ns/yang/base";
+    prefix b;
+    description "";
+    organization "test-yang";
+
+    grouping ident {
+        leaf id {type string;}
+    }
+    grouping uuid {
+        leaf uuid {type string;}
+        leaf system-uuid {type string;}
+    }
+
+   grouping address {
+    uses ident;
+    container addr {
+        leaf street {type string;}
+        leaf city {type string;}
+    }
+   }
+
+   grouping job-attr {
+    uses uuid;
+    container job {
+        leaf title {type string;}
+    }
+   }
+
+    container base {
+        uses ident;
+        config false;
+        list managers {
+            uses address;
+            uses job-attr;
+            key 'id';
+        }
+        list users {
+            uses address;
+            uses job-attr;
+            key 'id';
+        }
+    }
+}

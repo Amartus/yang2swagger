@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,6 +49,20 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected final ModuleUtils moduleUtils;
     protected final Map<SchemaNode, String> names;
     private final HashMap<QName, String> generatedEnums;
+
+    protected final static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
+        if(node instanceof AugmentationTarget) {
+            Set<AugmentationSchema> res = ((AugmentationTarget) node).getAvailableAugmentations();
+            if(res != null) return res;
+        }
+        return Collections.emptySet();
+    };
+
+    protected final static Predicate<DataNodeContainer> isAugmented = n -> !augmentations.apply(n).isEmpty();
+
+    protected final Predicate<DataNodeContainer> isTreeAugmented = n ->  n != null && (isAugmented.test(n) || n.getChildNodes().stream()
+            .filter(c -> c instanceof DataNodeContainer)
+            .anyMatch(c -> this.isTreeAugmented.test((DataNodeContainer) c)));
 
     public AbstractDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
         names = new HashMap<>();
@@ -131,7 +146,11 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
     protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
         if(node instanceof DataNodeContainer) {
-            DataNodeContainer original = original((DataNodeContainer) node);
+            DataNodeContainer original = null;
+            if(! isTreeAugmented.test((DataNodeContainer) node)) {
+                original = original((DataNodeContainer) node);
+            }
+
             if(original != null) {
                 if(! orgNames.containsKey(original)) {
                     String name = generateName((SchemaNode)original, proposedName, cache);
