@@ -329,9 +329,10 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
     protected ModelImpl build(EnumTypeDefinition enumType) {
         ModelImpl model = new ModelImpl();
-        model._enum(enumType.getValues().stream()
+        model.setEnum(enumType.getValues().stream()
                 .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
-        model.setType(ModelImpl.OBJECT);
+        model.setType("string");
+        model.setReference(getName(enumType.getQName()));
         return model;
     }
 
