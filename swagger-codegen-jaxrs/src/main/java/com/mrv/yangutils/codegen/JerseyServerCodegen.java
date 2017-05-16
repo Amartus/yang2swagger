@@ -17,6 +17,7 @@ import com.mrv.yangtools.common.BindingMapping;
 import io.swagger.codegen.*;
 import io.swagger.codegen.languages.JavaJerseyServerCodegen;
 import io.swagger.models.*;
+import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
@@ -27,6 +28,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Simple enhancement to JaxRS generator to disable HTML escaping in <code>@Path</code> annotations.
@@ -141,10 +143,6 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
                 datatype = r.get$ref();
                 if (datatype.indexOf("#/definitions/") == 0) {
                     datatype = datatype.substring("#/definitions/".length());
-                    Tuple<String, String> splitted = toPkgClass(datatype);
-                    if(splitted != null) {
-                        datatype = BindingMapping.normalizePackageName(splitted.first()) + "." + splitted.second();
-                    }
                 }
             } catch (Exception e) {
                 log.warn("Error obtaining the datatype from RefProperty:" + p + ". Datatype default to Object");
@@ -164,9 +162,7 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
                 && !languageSpecificPrimitives.contains(type);
     }
 
-    @Override
-    public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
-
+    protected CodegenModel fromModelInternal(String name, Model model, Map<String, Model> allDefinitions) {
         if (!(model instanceof ComposedModel)) {
             return super.fromModel(name, model, allDefinitions);
         }
@@ -194,7 +190,21 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         CodegenModel codegenModel = super.fromModel(name, model, allDefinitions);
         removeAugmentedImports(codegenModel, allDefinitions);
         multiInheritanceSupport(codegenModel, (ComposedModel) model, allDefinitions);
+        postprocessProperties(codegenModel);
         return codegenModel;
+    }
+
+    @Override
+    public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
+        CodegenModel cm =  fromModelInternal(name, model,allDefinitions);
+        Set<String> imports = cm.imports;
+        cm.imports = fixImports(imports.stream()).collect(Collectors.toSet());
+        return cm;
+    }
+
+    private void postprocessProperties(CodegenModel codegenModel) {
+        codegenModel.allVars.forEach(p -> postProcessModelProperty(codegenModel, p));
+        codegenModel.vars.forEach(p -> postProcessModelProperty(codegenModel, p));
     }
 
     private void removeAugmentedImports(CodegenModel codegenModel, Map<String, Model> allDefinitions) {
@@ -225,7 +235,7 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
 
             Tuple<String, String> pkgClass = toPkgClass(imp);
             if(pkgClass != null) {
-                imp = BindingMapping.nameToPackageSegment(pkgClass.first()) + "." + pkgClass.second();
+                imp = BindingMapping.normalizePackageName(pkgClass.first()) + "." + pkgClass.second();
             }
             addImport(codegenModel, imp);
             cp.hasMore = true;
@@ -240,9 +250,6 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         mandatory = mandatory.stream().filter(m -> ! properties.contains(m)).collect(Collectors.toSet());
         codegenModel.vars = vars;
         codegenModel.mandatory = mandatory;
-
-        codegenModel.allVars.forEach(p -> postProcessModelProperty(codegenModel, p));
-        codegenModel.vars.forEach(p -> postProcessModelProperty(codegenModel, p));
     }
 
 
@@ -268,18 +275,36 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
     }
 
     @Override
+    public CodegenParameter fromParameter(Parameter param, Set<String> imports) {
+        return super.fromParameter(param, imports);
+    }
+
+    @Override
     public CodegenOperation fromOperation(String path, String httpMethod, Operation operation, Map<String, Model> definitions, Swagger swagger) {
         path = fixPath(path);
 
         CodegenOperation co = super.fromOperation(path, httpMethod, operation, definitions, swagger);
 
+        final Function<String, String> fixedPkgName = n -> {
+            Tuple<String, String> pkgClass = toPkgClass(n);
+            if(pkgClass == null) return null;
+            return BindingMapping.normalizePackageName(pkgClass.first()) + "." + pkgClass.second();
+        };
+
+        final Function<String,String> fullPkgName = p -> {
+            String f = fixedPkgName.apply(p);
+            if(f == null) return p;
+            return this.modelPackage + "." + f;
+        };
+
         Consumer<CodegenParameter> changePkg = p -> {
             if (definitions.keySet().contains(p.dataType)) {
-
-                p.dataType = toPkgClass(p.dataType).second();
+                co.imports.removeIf(x -> x.endsWith(p.dataType));
+                p.dataType = fullPkgName.apply(p.dataType);
             }
             if (definitions.keySet().contains(p.baseType)) {
-                p.baseType = toPkgClass(p.baseType).second();
+                co.imports.removeIf(x -> x.endsWith(p.baseType));
+                p.baseType = fullPkgName.apply(p.baseType);
             }
         };
 
@@ -295,29 +320,40 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         }
 
         Function<String, String> typeFix = t -> {
-            if(t == null) return "Void";
-            Tuple<String, String> c = toPkgClass(t);
-            if(c != null) return c.second();
-            if ("void".equals(t)) return "Void";
+            if(t == null || "void".equals(t)) return "Void";
+            if (definitions.keySet().contains(t))
+                return fullPkgName.apply(t);
             return t;
         };
+
+        if (definitions.keySet().contains(co.returnType)) {
+            co.imports.removeIf(x -> x.endsWith(co.returnType));
+        }
+
+        if (definitions.keySet().contains(co.returnType)) {
+            co.imports.removeIf(x -> x.endsWith(co.returnBaseType));
+        }
+
 
         co.returnType = typeFix.apply(co.returnType);
         co.returnBaseType = typeFix.apply(co.returnBaseType);
         fixImports(co);
-
         return co;
     }
 
     private void fixImports(CodegenOperation co) {
         Set<String> imports = co.imports;
-        co.imports = imports.stream().map(p -> {
+        co.imports = fixImports(imports.stream()).collect(Collectors.toSet());
+    }
+
+    private Stream<String> fixImports(Stream<String> imports) {
+        return imports.map(p -> {
             Tuple<String, String> pkgClass = toPkgClass(p);
             if(pkgClass != null){
                 return BindingMapping.normalizePackageName(pkgClass.first())+ "." + pkgClass.second();
             }
             return p;
-        }).collect(Collectors.toSet());
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -332,16 +368,33 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
         CodegenModel model = (CodegenModel) models.get(0).get("model");
         String modelPkg =  "";
         Tuple<String, String> pkgClass = toPkgClass(model.name);
+        //XXX to support name conficts for imports - finish belove code
+//        Map<String, Set<String>> importsByClass = model.imports.stream()
+//                .map(this::toPkgClass)
+//                .filter(Objects::nonNull)
+//                .collect(Collectors.groupingBy(Tuple::second, Collectors.mapping(p -> p.first() + "." + p.second(), Collectors.toSet())));
+//        importsByClass = importsByClass.entrySet().stream().filter(e -> e.getValue().size() > 1)
+//                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         if(pkgClass != null) {
             modelPkg = pkgClass.first();
             model.classname = pkgClass.second();
             if(!Strings.isNullOrEmpty(model.parent)) {
                 pkgClass = toPkgClass(model.parent);
                 if(pkgClass != null){
+                    if(model.classname.equals(pkgClass.second())) {
+
+                        List<HashMap<String, String>> imports = ((List<HashMap<String, String>>) objs.get("imports")).stream()
+                                .filter(m -> {
+                                    String anImport = m.get("import");
+                                    return !anImport.endsWith(model.classname);
+                                }).collect(Collectors.toList());
+                        objs.put("imports", imports);
+                    }
                     model.parent = BindingMapping.normalizePackageName(pkgBase + "." + pkgClass.first())+ "." + pkgClass.second();
                 }
             }
         }
+
         objs.put("package", BindingMapping.normalizePackageName(pkgBase + "." + modelPkg));
         return super.postProcessModels(objs);
     }

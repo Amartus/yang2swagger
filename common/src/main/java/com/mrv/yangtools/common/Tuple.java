@@ -30,4 +30,9 @@ public class Tuple<A, B> {
     public B second() {
         return second;
     }
+
+    @Override
+    public String toString() {
+        return first + "." + second;
+    }
 }
