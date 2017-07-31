@@ -2,6 +2,7 @@
 
 Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification  ](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
 Having the definition you are able to build live documentation services, and generate client or server code using Swagger tools.
+Current stable relase is [release-1.0.0](https://bitbucket.org/cmurch/yang2swagger-generator/branch/release-1.0.0) version. 
 
 Our tool supports:
 
@@ -48,10 +49,7 @@ Argument "module ..." is required
 
 For example:
 ```
-java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar \
- -yang-dir examples/build-standalone/src/main/resources \
- -output swagger.yaml \
- mef-services
+java java -jar swagger-generator-cli-1.0.0-executable.jar -yang-dir presto_yang_dir -output swagger.yaml
 ```
 
 ### Maven integration ###
@@ -75,7 +73,7 @@ To do so please add following plugin configuration to your project:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-maven-plugin</artifactId>
-                <version>1.0-SNAPSHOT</version>
+                <version>1.0.0</version>
                 <type>jar</type>
             </dependency>
         </dependencies>
@@ -115,7 +113,7 @@ You might also consider to plug-in code generator into your model definition:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
-                <version>1.0-SNAPSHOT</version>
+                <version>1.0.0</version>
             </dependency>
         </dependencies>
         <executions>
