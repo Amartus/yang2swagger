@@ -28,7 +28,7 @@ public class YamlGenerator {
         if(args.length == 1) {
             generator = GeneratorHelper.getGenerator(new File(args[0]),m -> true);
         } else {
-            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
+            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }
 
         generator.tagGenerator(new SegmentTagGenerator());
