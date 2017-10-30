@@ -319,7 +319,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 augmented.child(model);
             }
 
-            LinkedList<RefModel> aModels = new LinkedList();
+            LinkedList<RefModel> aModels = new LinkedList<RefModel>();
             if(augmented.getInterfaces() != null) {
                 aModels.addAll(augmented.getInterfaces());
             }
@@ -467,6 +467,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             attributes.description(desc(doc));
         attributes.setProperties(structure(node, n -> fromAugmentedGroupings.contains(n.getQName()) ));
         attributes.setDiscriminator("objType");
+        attributes.setType("object");
         boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
         if(! noAttributes) {
             newModel.child(attributes);
@@ -573,6 +574,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(model instanceof DocumentedNode) {
             model.description(desc((DocumentedNode) toModel));
         }
+        log.debug("added object type for {}", toModel.toString());
+        model.setType("object");
         model.setProperties(structure(toModel));
         return model;
     }

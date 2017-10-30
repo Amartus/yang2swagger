@@ -63,9 +63,9 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
 
         File output = new File(outputBaseDir, "yang.swagger");
 
-
-        List<String> mimes = Arrays.asList(System.getProperty("generator-mime", "json,xml").split(","));
-        List<SwaggerGenerator.Elements> elements = Arrays.stream(System.getProperty("generator-elements", "DATA,RCP").split(","))
+        String version = getAdditionalConfigOrDefault("api-version", mavenProject.getVersion());
+        List<String> mimes = Arrays.asList(getAdditionalConfigOrDefault("generator-mime", "json,xml").split(","));
+        List<SwaggerGenerator.Elements> elements = Arrays.stream(getAdditionalConfigOrDefault("generator-elements", "DATA,RCP").split(","))
                 .filter(e -> {try{ SwaggerGenerator.Elements.valueOf(e); return true;} catch(IllegalArgumentException ex) {return false;}})
                 .map(SwaggerGenerator.Elements::valueOf).collect(Collectors.toList());
 
@@ -74,8 +74,8 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         try(FileWriter fileWriter = new FileWriter(output)) {
             SwaggerGenerator generator = new SwaggerGenerator(schemaContext, modules)
                     .format(SwaggerGenerator.Format.JSON)
-                    .tagGenerator(new SegmentTagGenerator());
-
+                    .tagGenerator(new SegmentTagGenerator())
+            		.version(version);
             mimes.forEach(m -> { generator.consumes("application/"+ m); generator.produces("application/"+ m);});
             generator.elements(elements.toArray(new SwaggerGenerator.Elements[elements.size()]));
             generator.generate(fileWriter);
@@ -118,4 +118,12 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         mavenProject.addCompileSourceRoot(outputBaseDir.getPath());
     }
 
+    private String getAdditionalConfigOrDefault(String key, String defaulted) {
+    	String value = additionalConfig.get(key);
+    	if(value != null) {
+    		return value;
+    	} else {
+    		return defaulted;
+    	}
+    }
 }
