@@ -54,13 +54,13 @@ java java -jar swagger-generator-cli-1.0.0-executable.jar -yang-dir presto_yang_
 
 ### Maven integration ###
 
-You can generate ```yaml.swagger``` as part of resource generation step in your maven module.
-To do so please add following plugin configuration to your project:
+You can generate ```yaml.swagger``` as part of resource generation step in your maven module. You can also choose the name by editing base-module and swagger-format additionalConfigs. To do so please add following plugin configuration to your project:
 
 ```
     <properties>
         <swaggerGeneratorPath>${project.basedir}/target/generated-sources/swagger</swaggerGeneratorPath>
         <swagger.version>1.5.9</swagger.version>
+        <yangName>yang</yangName>
     </properties>
 
     ...
@@ -73,8 +73,7 @@ To do so please add following plugin configuration to your project:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-maven-plugin</artifactId>
-                <version>1.0.0</version>
-                <type>jar</type>
+                <version>1.1.0</version>
             </dependency>
         </dependencies>
         <executions>
@@ -85,8 +84,14 @@ To do so please add following plugin configuration to your project:
                 <configuration>
                     <codeGenerators>
                         <generator>
-                            <codeGeneratorClass>com.mrv.yangtools.maven.gen.swagger.MavenSwaggerGenerator</codeGeneratorClass>
-                            <outputBaseDir>${swaggerGeneratorPath}</outputBaseDir>
+		                      <codeGeneratorClass>com.mrv.yangtools.maven.gen.swagger.MavenSwaggerGenerator</codeGeneratorClass>
+		                          <outputBaseDir>${project.build.directory}/generated-sources/swagger-maven-api-gen</outputBaseDir>
+		                          <resourceBaseDir>${project.basedir}/src/main/yang</resourceBaseDir>
+		                          <additionalConfiguration>
+		                              <api-version>${project.version}</api-version>
+		                              <base-module>${yangName}</base-module>
+		                              <swagger-format>yaml</swagger-format>
+		                          </additionalConfiguration>
                         </generator>
                     </codeGenerators>
                     <inspectDependencies>true</inspectDependencies>
@@ -113,7 +118,7 @@ You might also consider to plug-in code generator into your model definition:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
-                <version>1.0.0</version>
+                <version>1.1.0</version>
             </dependency>
         </dependencies>
         <executions>
