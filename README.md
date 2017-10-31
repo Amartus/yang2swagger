@@ -1,8 +1,8 @@
 ### Yang2Swagger generator ###
 
-Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification  ](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
+Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
 Having the definition you are able to build live documentation services, and generate client or server code using Swagger tools.
-Current stable relase is [release-1.0.0](https://bitbucket.org/cmurch/yang2swagger-generator/branch/release-1.0.0) version. 
+Current stable release is [1.1.0](https://github.com/UltimateDogg/yang2swagger-generator/tree/1.1.0) version. 
 
 Our tool supports:
 
