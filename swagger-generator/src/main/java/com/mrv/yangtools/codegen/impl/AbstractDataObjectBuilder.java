@@ -321,7 +321,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         }
 
         if(! generatedEnums.containsKey(qName)) {
-            log.debug("generating enum model for {} with basetype {} with localname {}",  enumType.getQName(), enumType.getBaseType(), qName.getLocalName());
+            log.debug("generating enum model for {}",  qName);
             String name = getName(qName);
             ModelImpl enumModel = build(enumType, qName);
             swagger.addDefinition(name, enumModel);
@@ -341,9 +341,8 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         return model;
     }
 
-    protected String getName(QName qname) {        
+    protected String getName(QName qname) {
         String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(qname));
-
         String name = modulePrefix + "." + getClassName(qname);
 
         String candidate = name;
