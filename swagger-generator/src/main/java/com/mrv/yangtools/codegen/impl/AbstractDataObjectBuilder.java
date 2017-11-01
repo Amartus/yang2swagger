@@ -314,11 +314,16 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     @Override
     public String addModel(EnumTypeDefinition enumType) {
         QName qName = enumType.getQName();
+        
+        //inline enumerations are a special case that needs extra enumeration
+        if(qName.getLocalName().equals("enumeration") && enumType.getBaseType() == null) {
+        	qName = QName.create(qName, enumType.getPath().getParent().getLastComponent().getLocalName() + "-" + qName.getLocalName());
+        }
 
         if(! generatedEnums.containsKey(qName)) {
-            log.debug("generating enum model for {}", enumType.getQName());
+            log.debug("generating enum model for {} with basetype {} with localname {}",  enumType.getQName(), enumType.getBaseType(), qName.getLocalName());
             String name = getName(qName);
-            ModelImpl enumModel = build(enumType);
+            ModelImpl enumModel = build(enumType, qName);
             swagger.addDefinition(name, enumModel);
             generatedEnums.put(qName, DEF_PREFIX + name);
         } else {
@@ -327,23 +332,24 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         return generatedEnums.get(qName);
     }
 
-    protected ModelImpl build(EnumTypeDefinition enumType) {
+    protected ModelImpl build(EnumTypeDefinition enumType, QName qName) {
         ModelImpl model = new ModelImpl();
         model.setEnum(enumType.getValues().stream()
                 .map(EnumTypeDefinition.EnumPair::getName).collect(Collectors.toList()));
         model.setType("string");
-        model.setReference(getName(enumType.getQName()));
+        model.setReference(getName(qName));
         return model;
     }
 
-    protected String getName(QName qname) {
+    protected String getName(QName qname) {        
         String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(qname));
+
         String name = modulePrefix + "." + getClassName(qname);
 
         String candidate = name;
 
         int idx = 1;
-        while(generatedEnums.values().contains(candidate)) {
+        while(generatedEnums.values().contains(DEF_PREFIX + candidate)) {
             log.warn("Name {} already defined for enum. generating random postfix", candidate);
             candidate = name + idx;
         }

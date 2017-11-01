@@ -13,6 +13,8 @@ package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.properties.*;
+
+import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.model.api.TypeDefinition;
@@ -67,7 +69,7 @@ public class TypeConverter {
             return integer;
         }
 
-        EnumTypeDefinition e = toEnum(type);
+        EnumTypeDefinition e = toEnum(type, parent);
         if(e != null) {
             if(enumToModel()) {
                 String refString = dataObjectBuilder.addModel(e);
@@ -88,8 +90,17 @@ public class TypeConverter {
         return true;
     }
 
-    private EnumTypeDefinition toEnum(TypeDefinition<?> type) {
-        if(type instanceof  EnumTypeDefinition) return (EnumTypeDefinition) type;
+    private EnumTypeDefinition toEnum(TypeDefinition<?> type, SchemaNode parent) {
+        if(type instanceof  EnumTypeDefinition) {
+            QName qName = type.getQName();
+            //inline enumerations are a special case
+            if(qName.getLocalName().equals("enumeration") && type.getBaseType() == null) {
+            	log.debug("enumerated parent qname: {}", parent.getQName());
+            	log.debug("enumType.getClass() {}", type.getClass() );
+            	log.debug("enumerated parent: {}", type.getPath().getParent().getLastComponent().getLocalName());
+            }
+        	return (EnumTypeDefinition) type;
+        }
         if(type.getBaseType() instanceof  EnumTypeDefinition) return (EnumTypeDefinition) type.getBaseType();
         return null;
     }
