@@ -100,7 +100,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         Set<UsesNode> uses = uses(node);
         assert uses.size() == 1;
         //noinspection SuspiciousMethodCalls
-
         return groupings.get(uses.iterator().next().getGroupingPath());
     }
 
@@ -131,8 +130,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         Set<UsesNode> uses = uses(node);
         return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
     }
-
-    private HashMap<DataNodeContainer, String> orgNames = new HashMap<>();
 
     @Override
     protected void processNode(DataNodeContainer container, Set<String> cache) {
@@ -206,7 +203,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
 
 
-    @SuppressWarnings("unchecked")
     private List<DataNodeContainer> findRelatedNodes(DataNodeContainer node) {
         ArrayList<DataNodeContainer> result = new ArrayList<>();
         result.add(node);
@@ -223,7 +219,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return result;
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends DataNodeContainer> Model existingModel(T node) {
         return findRelatedNodes(node).stream().map(n -> existingModels.get(n))
                 .filter(Objects::nonNull)

@@ -73,7 +73,7 @@ You can generate ```yaml.swagger``` as part of resource generation step in your 
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-maven-plugin</artifactId>
-                <version>1.1.1</version>
+                <version>1.1.2</version>
             </dependency>
         </dependencies>
         <executions>
@@ -118,7 +118,7 @@ You might also consider to plug-in code generator into your model definition:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
-                <version>1.1.1</version>
+                <version>1.1.2</version>
             </dependency>
         </dependencies>
         <executions>

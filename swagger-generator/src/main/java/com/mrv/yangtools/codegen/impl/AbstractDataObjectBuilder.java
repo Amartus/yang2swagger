@@ -49,6 +49,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected final ModuleUtils moduleUtils;
     protected final Map<SchemaNode, String> names;
     private final HashMap<QName, String> generatedEnums;
+    private final HashMap<DataNodeContainer, String> orgNames;
 
     protected final static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
         if(node instanceof AugmentationTarget) {
@@ -65,13 +66,14 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             .anyMatch(c -> this.isTreeAugmented.test((DataNodeContainer) c)));
 
     public AbstractDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
-        names = new HashMap<>();
+        this.names = new HashMap<>();
         this.converter = converter;
         converter.setDataObjectBuilder(this);
         this.swagger = swagger;
         this.ctx = ctx;
         this.moduleUtils = new ModuleUtils(ctx);
-        generatedEnums = new HashMap<>();
+        this.generatedEnums = new HashMap<>();
+        this.orgNames = new HashMap<>();
     }
 
     /**
@@ -114,6 +116,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     protected void processNode(DataNodeContainer container, Set<String> cache) {
+        log.debug("DataNodeContainer string: {}", container.toString());
         DataNodeHelper.stream(container).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
                 .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
@@ -122,9 +125,6 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                 });
     }
 
-    private HashMap<DataNodeContainer, String> orgNames = new HashMap<>();
-
-    @SuppressWarnings("unchecked")
     protected DataNodeContainer original(DataNodeContainer node) {
         DataNodeContainer result = null;
         DataNodeContainer tmp = node;
@@ -156,7 +156,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                     String name = generateName((SchemaNode)original, proposedName, cache);
                     orgNames.put(original, name);
                 } else {
-                    log.trace("reusing original definition to get name for {}", node.getQName());
+                    log.debug("reusing original definition to get name for {}", node.getQName());
                 }
 
                 return orgNames.get(original);
@@ -169,7 +169,6 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         }
 
         String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(node.getQName()));
-
         if(proposedName != null) {
             return modulePrefix + "." + getClassName(proposedName);
         }
@@ -177,10 +176,11 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         String name = getClassName(node.getQName());
         final Iterable<QName> path = node.getPath().getParent().getPathFromRoot();
         if(path == null || !path.iterator().hasNext()) {
+            log.debug("generatedName: {}", modulePrefix + "." + name);
             return modulePrefix + "." + name;
         }
         String pkg = StreamSupport.stream(path.spliterator(), false).map(n -> getClassName(n.getLocalName()).toLowerCase()).collect(Collectors.joining("."));
-
+        log.debug("generatedName: {}", modulePrefix + "." + pkg + "." + name);
         return modulePrefix + "." + pkg + "." + name;
     }
 
