@@ -37,7 +37,7 @@
         <dependency>
             <groupId>com.mrv.yangtools</groupId>
             <artifactId>common</artifactId>
-            <version>1.1-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
