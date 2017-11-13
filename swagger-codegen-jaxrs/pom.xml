@@ -56,7 +56,7 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>com.mrv.yangtools:common</include>
+                                    <include>com.att.sdnctl:common</include>
                                 </includes>
                             </artifactSet>
                         </configuration>

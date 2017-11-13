@@ -29,7 +29,7 @@
     <dependencies>
 
         <dependency>
-            <groupId>com.mrv.yangtools</groupId>
+            <groupId>com.att.sdnctl</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
