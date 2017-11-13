@@ -17,7 +17,7 @@
 
     <groupId>com.mrv.yangtools</groupId>
     <artifactId>yangtools</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1.2</version>
     <modules>
         <module>swagger-generator</module>
         <module>common</module>
@@ -135,4 +135,16 @@
         </plugins>
     </build>
 
+	<distributionManagement>
+		<repository>
+			<id>nexus</id>
+			<name>att-repository-releases</name>
+			<url>http://mavencentral.it.att.com:8084/nexus/content/repositories/att-repository-releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>nexus</id>
+			<name>att-repository-snapshots</name>
+			<url>http://mavencentral.it.att.com:8084/nexus/content/repositories/att-repository-snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>   
 </project>
