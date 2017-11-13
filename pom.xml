@@ -15,9 +15,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.mrv.yangtools</groupId>
+    <groupId>com.att.sdnctl</groupId>
     <artifactId>yangtools</artifactId>
-    <version>1.1.2</version>
+    <version>1.1-SNAPSHOT</version>
     <modules>
         <module>swagger-generator</module>
         <module>common</module>
