@@ -35,7 +35,7 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.mrv.yangtools</groupId>
+            <groupId>com.att.sdnctl</groupId>
             <artifactId>common</artifactId>
             <version>1.1-SNAPSHOT</version>
         </dependency>
