@@ -44,7 +44,8 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
     private static final Logger log = LoggerFactory.getLogger(MavenSwaggerGenerator.class);
     private MavenProject mavenProject;
 
-
+    public static final String DEFAULT_OUTPUT_FORMAT = "json";
+    
     public static final String DEFAULT_OUTPUT_BASE_DIR_PATH = "target" + File.separator + "generated-sources"
             + File.separator + "swagger-maven-api-gen";
     private File projectBaseDir;
@@ -60,12 +61,13 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
                 throw new IllegalStateException("cannot create " + outputBaseDir);
             }
         }
+        String swaggerName = getAdditionalConfigOrDefault("base-module", "yang");
 
-        File output = new File(outputBaseDir, "yang.swagger");
+        File output = new File(outputBaseDir, swaggerName + "." + getFileExtension());
 
-
-        List<String> mimes = Arrays.asList(System.getProperty("generator-mime", "json,xml").split(","));
-        List<SwaggerGenerator.Elements> elements = Arrays.stream(System.getProperty("generator-elements", "DATA,RCP").split(","))
+        String version = getAdditionalConfigOrDefault("api-version", mavenProject.getVersion());
+        List<String> mimes = Arrays.asList(getAdditionalConfigOrDefault("generator-mime", "json,xml").split(","));
+        List<SwaggerGenerator.Elements> elements = Arrays.stream(getAdditionalConfigOrDefault("generator-elements", "DATA,RCP").split(","))
                 .filter(e -> {try{ SwaggerGenerator.Elements.valueOf(e); return true;} catch(IllegalArgumentException ex) {return false;}})
                 .map(SwaggerGenerator.Elements::valueOf).collect(Collectors.toList());
 
@@ -73,9 +75,9 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
 
         try(FileWriter fileWriter = new FileWriter(output)) {
             SwaggerGenerator generator = new SwaggerGenerator(schemaContext, modules)
-                    .format(SwaggerGenerator.Format.JSON)
-                    .tagGenerator(new SegmentTagGenerator());
-
+                    .format(format())
+                    .tagGenerator(new SegmentTagGenerator())
+            		.version(version);
             mimes.forEach(m -> { generator.consumes("application/"+ m); generator.produces("application/"+ m);});
             generator.elements(elements.toArray(new SwaggerGenerator.Elements[elements.size()]));
             generator.generate(fileWriter);
@@ -105,6 +107,27 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         this.projectBaseDir = project.getBasedir();
 
     }
+    
+    private String getFileExtension() {
+        String stringFormat = additionalConfig.get("swagger-format");
+        if(stringFormat != null) {
+        	return stringFormat;
+        } else {
+           return "swagger";
+        }
+    }
+    
+    private SwaggerGenerator.Format format() {
+        String stringFormat = getAdditionalConfigOrDefault("swagger-format", DEFAULT_OUTPUT_FORMAT);
+        if(stringFormat.equalsIgnoreCase("json")) {
+            return SwaggerGenerator.Format.JSON;
+        } else if(stringFormat.equalsIgnoreCase("yaml")) {
+        	return SwaggerGenerator.Format.YAML;
+        } else {
+            throw new IllegalStateException("cannot output format " + stringFormat);
+        }
+    }
+    
     private File getDefaultOutputBaseDir() {
         File outputBaseDir;
         outputBaseDir = new File(DEFAULT_OUTPUT_BASE_DIR_PATH);
@@ -118,4 +141,12 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         mavenProject.addCompileSourceRoot(outputBaseDir.getPath());
     }
 
+    private String getAdditionalConfigOrDefault(String key, String defaulted) {
+    	String value = additionalConfig.get(key);
+    	if(value != null) {
+    		return value;
+    	} else {
+    		return defaulted;
+    	}
+    }
 }
