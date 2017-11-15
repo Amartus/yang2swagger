@@ -461,7 +461,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(doc != null)
             attributes.description(desc(doc));
         attributes.setProperties(structure(node, n -> fromAugmentedGroupings.contains(n.getQName()) ));
-        attributes.setDiscriminator("objType");
+        //attributes.setDiscriminator("objType");
         attributes.setType("object");
         boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
         if(! noAttributes) {
