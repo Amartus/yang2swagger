@@ -49,7 +49,7 @@ Argument "module ..." is required
 
 For example:
 ```
-java java -jar swagger-generator-cli-1.0.0-executable.jar -yang-dir presto_yang_dir -output swagger.yaml
+java -jar swagger-generator-cli-1.0.0-executable.jar -yang-dir presto_yang_dir -output swagger.yaml
 ```
 
 ### Maven integration ###
