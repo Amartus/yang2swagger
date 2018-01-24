@@ -38,7 +38,13 @@ public class Main {
 
     @Argument(multiValued = true, usage = "List of YANG module names to generate in swagger output", metaVar = "module ...")
     List<String> modules;
-
+    
+    @Option(name = "-format", usage = "Output format of generated file - defaults to yaml with options of json or yaml", metaVar = "enum")
+    public SwaggerGenerator.Format outputFormat = SwaggerGenerator.Format.YAML;
+    
+    @Option(name = "-api-version", usage = "Version of api generated - default 1.0", metaVar = "file", )
+    public String apiVersion = "1.0";
+    
     OutputStream out = System.out;
 
     public static void main(String[] args) {
@@ -72,7 +78,8 @@ public class Main {
                 .collect(Collectors.toSet());
 
         final SwaggerGenerator generator = new SwaggerGenerator(context, toGenerate)
-                .format(SwaggerGenerator.Format.YAML).consumes("application/xml").produces("application/xml")
+        		.version(apiVersion)
+                .format(outputFormat).consumes("application/xml").produces("application/xml")
                 .host("localhost:1234").elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP);
 
         generator.generate(new OutputStreamWriter(out));
