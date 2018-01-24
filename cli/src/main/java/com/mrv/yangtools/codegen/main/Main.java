@@ -42,7 +42,7 @@ public class Main {
     @Option(name = "-format", usage = "Output format of generated file - defaults to yaml with options of json or yaml", metaVar = "enum")
     public SwaggerGenerator.Format outputFormat = SwaggerGenerator.Format.YAML;
     
-    @Option(name = "-api-version", usage = "Version of api generated - default 1.0", metaVar = "file", )
+    @Option(name = "-api-version", usage = "Version of api generated - default 1.0", metaVar = "file")
     public String apiVersion = "1.0";
     
     OutputStream out = System.out;
