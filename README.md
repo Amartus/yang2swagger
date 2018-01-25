@@ -40,11 +40,13 @@ You can easily run ```SwaggerGenerator``` from the command-line:
 ```
 java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar
 Argument "module ..." is required
- module ...     : List of YANG module names to generate in swagger output
- -output file   : File to generate, containing the output - defaults to stdout
-                  (default: )
- -yang-dir path : Directory to search for YANG modules - defaults to current
-                  directory (default: )
+ module ...          : List of YANG module names to generate in swagger output
+ -output file        : File to generate, containing the output - defaults to stdout
+                       (default: )
+ -yang-dir path      : Directory to search for YANG modules - defaults to current
+                       directory (default: )
+ -api-version string : The current version of your API (default: 1.0)
+ -format enum        : The output format (options: YAML, JSON) (default: YAML)
 ```
 
 For example:
