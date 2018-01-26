@@ -175,14 +175,21 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     protected <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
         String definitionId = getDefinitionId(node);
         T effectiveNode = (T) getEffectiveChild(node.getQName());
-        if(isTreeAugmented.test(effectiveNode)) {
+
+        boolean treeAugmented = isTreeAugmented.test(effectiveNode);
+
+        if(treeAugmented) {
             definitionId = getDefinitionId(effectiveNode);
         }
 
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
 
-        if(existingModel(node) == null) {
+        if(treeAugmented && ! existingModels.containsKey(effectiveNode)) {
+            log.debug("adding referenced model {} for node {} ", definitionId, node);
+            addModel(node);
+
+        } else if(existingModel(node) == null) {
             log.debug("adding referenced model {} for node {} ", definitionId, node);
             addModel(node);
         }
