@@ -101,6 +101,7 @@ public class SwaggerGenerator {
     public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
+        if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");
         this.ctx = ctx;
         this.modules = modulesToGenerate;
         target = new Swagger();
@@ -274,10 +275,37 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Replace empty definitions with their parents
+     * Replace empty definitions with their parents.
+     * Sort models (ref models first)
      * @param target to work on
      */
     protected void postProcessSwagger(Swagger target) {
+        replaceEmptyWithParent(target);
+        sortDefinitions(target);
+    }
+
+    private void sortDefinitions(Swagger target) {
+        target.getDefinitions().values().stream()
+                .filter(d -> d instanceof ComposedModel)
+                .forEach(d -> {
+                    ComposedModel m = (ComposedModel) d;
+
+                    m.getAllOf().sort((a,b) -> {
+                        if(a instanceof RefModel) {
+                            if(b instanceof RefModel) {
+                                return ((RefModel) a).getSimpleRef().compareTo(((RefModel) b).getSimpleRef());
+                            }
+
+                        }
+                        if(b instanceof RefModel) return 1;
+                        //preserve the order for others
+                        return -1;
+                    });
+
+        });
+    }
+
+    private void replaceEmptyWithParent(Swagger target) {
         Map<String, String> replacements = target.getDefinitions().entrySet()
                 .stream().filter(e -> {
                     Model model = e.getValue();
@@ -304,7 +332,6 @@ public class SwaggerGenerator {
             log.debug("removing {} model from swagger definitions", r);
             target.getDefinitions().remove(r);
         });
-
     }
 
     private void fixModel(String name, Model m, Map<String, String> replacements) {

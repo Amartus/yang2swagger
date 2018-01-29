@@ -53,4 +53,5 @@ public interface DataObjectBuilder extends DataObjectRepo {
     String addModel(EnumTypeDefinition enumType);
 
 
+    <T extends SchemaNode & DataNodeContainer> void addModel(T input, String parentTag);
 }
