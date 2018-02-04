@@ -29,7 +29,7 @@ import java.util.stream.Stream;
  */
 public class GroupingHierarchyHandler {
     private static final Logger log = LoggerFactory.getLogger(GroupingHierarchyHandler.class);
-    private final Map<SchemaPath, HierarchyNode> hierarchy;
+    private final Map<QName, HierarchyNode> hierarchy;
     private final Map<GroupingDefinition, String> groupingNames;
     private final SchemaContext ctx;
     private final ModuleUtils moduleUtils;
@@ -66,8 +66,8 @@ public class GroupingHierarchyHandler {
         }).collect(Collectors.toMap(Tuple::first, Tuple::second));
     }
 
-    private Map<SchemaPath, HierarchyNode> buildHierarchy() {
-        Map<SchemaPath, HierarchyNode> result = ctx.getGroupings().stream().map(g -> new Tuple<>(g.getPath(), new HierarchyNode(g.getPath())))
+    private Map<QName, HierarchyNode> buildHierarchy() {
+        Map<QName, HierarchyNode> result = ctx.getGroupings().stream().map(g -> new Tuple<>(g.getPath().getLastComponent(), new HierarchyNode(g.getPath())))
                 .collect(Collectors.toMap(Tuple::first, Tuple::second));
 
         ctx.getGroupings().forEach(g -> {

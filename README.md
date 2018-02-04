@@ -1,6 +1,6 @@
 ### Yang2Swagger generator ###
 
-Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification  ](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
+Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
 Having the definition you are able to build live documentation services, and generate client or server code using Swagger tools.
 
 Our tool supports:
@@ -39,11 +39,13 @@ You can easily run ```SwaggerGenerator``` from the command-line:
 ```
 java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar
 Argument "module ..." is required
- module ...     : List of YANG module names to generate in swagger output
- -output file   : File to generate, containing the output - defaults to stdout
-                  (default: )
- -yang-dir path : Directory to search for YANG modules - defaults to current
-                  directory (default: )
+ module ...          : List of YANG module names to generate in swagger output
+ -output file        : File to generate, containing the output - defaults to stdout
+                       (default: )
+ -yang-dir path      : Directory to search for YANG modules - defaults to current
+                       directory (default: )
+ -api-version string : The current version of your API (default: 1.0)
+ -format enum        : The output format (options: YAML, JSON) (default: YAML)
 ```
 
 For example:
@@ -56,13 +58,13 @@ java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/
 
 ### Maven integration ###
 
-You can generate ```yaml.swagger``` as part of resource generation step in your maven module.
-To do so please add following plugin configuration to your project:
+You can generate ```yaml.swagger``` as part of resource generation step in your maven module. You can also choose the name by editing base-module and swagger-format additionalConfigs. To do so please add following plugin configuration to your project:
 
 ```
     <properties>
         <swaggerGeneratorPath>${project.basedir}/target/generated-sources/swagger</swaggerGeneratorPath>
         <swagger.version>1.5.9</swagger.version>
+        <yangName>yang</yangName>
     </properties>
 
     ...
@@ -75,8 +77,7 @@ To do so please add following plugin configuration to your project:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-maven-plugin</artifactId>
-                <version>1.0-SNAPSHOT</version>
-                <type>jar</type>
+                <version>1.1.3</version>
             </dependency>
         </dependencies>
         <executions>
@@ -87,8 +88,14 @@ To do so please add following plugin configuration to your project:
                 <configuration>
                     <codeGenerators>
                         <generator>
-                            <codeGeneratorClass>com.mrv.yangtools.maven.gen.swagger.MavenSwaggerGenerator</codeGeneratorClass>
-                            <outputBaseDir>${swaggerGeneratorPath}</outputBaseDir>
+		                      <codeGeneratorClass>com.mrv.yangtools.maven.gen.swagger.MavenSwaggerGenerator</codeGeneratorClass>
+		                          <outputBaseDir>${project.build.directory}/generated-sources/swagger-maven-api-gen</outputBaseDir>
+		                          <resourceBaseDir>${project.basedir}/src/main/yang</resourceBaseDir>
+		                          <additionalConfiguration>
+		                              <api-version>${project.version}</api-version>
+		                              <base-module>${yangName}</base-module>
+		                              <swagger-format>yaml</swagger-format>
+		                          </additionalConfiguration>
                         </generator>
                     </codeGenerators>
                     <inspectDependencies>true</inspectDependencies>

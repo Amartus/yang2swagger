@@ -253,6 +253,14 @@ public class SwaggerGenerator {
 
         ArrayList<String> mNames = new ArrayList<>();
 
+        if(ctx.getModules().isEmpty() || modules.isEmpty()) {
+            log.info("No modules found to be transformed into swagger definition");
+            return target;
+        }
+
+        log.info("Generating swagger for yang modules: {}",
+                modules.stream().map(ModuleIdentifier::getName).collect(Collectors.joining(",","[", "]")));
+
         modules.forEach(m -> {
             mNames.add(m.getName());
             dataObjectsBuilder.processModule(m);
@@ -280,6 +288,10 @@ public class SwaggerGenerator {
      * @param target to work on
      */
     protected void postProcessSwagger(Swagger target) {
+        if(target.getDefinitions() == null || target.getDefinitions().isEmpty()) {
+            log.warn("Generated swagger has no definitions");
+            return;
+        }
         replaceEmptyWithParent(target);
         sortDefinitions(target);
     }
