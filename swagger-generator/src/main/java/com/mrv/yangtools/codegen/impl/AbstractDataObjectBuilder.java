@@ -17,6 +17,7 @@ import io.swagger.models.ModelImpl;
 import io.swagger.models.Swagger;
 import io.swagger.models.properties.AbstractProperty;
 import io.swagger.models.properties.ArrayProperty;
+import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.Property;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
@@ -295,12 +296,19 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
      * @param <T> type of the node
      */
     @Override
-    public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
+    public <T extends SchemaNode & DataNodeContainer> void addModel(T node, String tagName) {
 
 
         Model model = build(node);
 
         String modelName = getName(node);
+
+        if(tagName != null) {
+            final ModelImpl wrapper = new ModelImpl();
+            wrapper.addProperty(tagName, new ObjectProperty(model.getProperties()));
+            model = wrapper;
+        }
+
         if(swagger.getDefinitions() != null && swagger.getDefinitions().containsKey(modelName)) {
             if(model.equals(swagger.getDefinitions().get(modelName))) {
                 return;
@@ -309,6 +317,11 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         }
 
         swagger.addDefinition(modelName, model);
+    }
+
+    @Override
+    public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
+        addModel(node, null);
     }
 
     @Override
