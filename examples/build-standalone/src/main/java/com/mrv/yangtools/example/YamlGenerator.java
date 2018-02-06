@@ -13,6 +13,7 @@ package com.mrv.yangtools.example;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 
 import java.io.*;
 
@@ -31,7 +32,11 @@ public class YamlGenerator {
             generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }
 
-        generator.tagGenerator(new SegmentTagGenerator());
+        generator
+                .tagGenerator(new SegmentTagGenerator())
+                .elements(SwaggerGenerator.Elements.RCP)
+                .appendPostProcessor(new SingleParentInheritenceModel());
+
 
         generator.generate(new FileWriter("swagger.yaml"));
 //        generator.generate(new OutputStreamWriter(System.out));

@@ -183,8 +183,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         RefProperty prop = new RefProperty(definitionId);
 
         if(treeAugmented && ! existingModels.containsKey(effectiveNode)) {
-            log.debug("adding referenced model {} for node {} ", definitionId, node);
-            addModel(node);
+            log.debug("adding referenced model {} for node {} ", definitionId, effectiveNode);
+            addModel(effectiveNode);
 
         } else if(existingModel(node) == null) {
             log.debug("adding referenced model {} for node {} ", definitionId, node);

@@ -15,14 +15,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.mrv.yangtools.codegen.impl.*;
-import com.mrv.yangtools.common.Tuple;
-import io.swagger.models.*;
-import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.RefProperty;
+import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
+import com.mrv.yangtools.codegen.impl.ModuleUtils;
+import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
+import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
+import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
+import com.mrv.yangtools.codegen.impl.postprocessor.SortDefinitions;
+import io.swagger.models.Info;
+import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -56,6 +58,7 @@ public class SwaggerGenerator {
     private final Swagger target;
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
+    private Consumer<Swagger> postprocessor;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
 
@@ -115,6 +118,8 @@ public class SwaggerGenerator {
         target.info(new Info());
 
         pathHandlerBuilder = new com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder();
+        //default postprocessors
+        postprocessor = new ReplaceEmptyWithParent().andThen(new SortDefinitions());
     }
 
     /**
@@ -134,6 +139,12 @@ public class SwaggerGenerator {
      */
     public SwaggerGenerator tagGenerator(TagGenerator generator) {
         pathHandlerBuilder.addTagGenerator(generator);
+        return this;
+    }
+
+    public SwaggerGenerator appendPostProcessor(Consumer<Swagger> swaggerPostprocessor) {
+        Objects.requireNonNull(swaggerPostprocessor);
+        postprocessor = postprocessor.andThen(swaggerPostprocessor);
         return this;
     }
 
@@ -292,160 +303,8 @@ public class SwaggerGenerator {
             log.warn("Generated swagger has no definitions");
             return;
         }
-        replaceEmptyWithParent(target);
-        sortDefinitions(target);
+        postprocessor.accept(target);
     }
-
-    private void sortDefinitions(Swagger target) {
-        target.getDefinitions().values().stream()
-                .filter(d -> d instanceof ComposedModel)
-                .forEach(d -> {
-                    ComposedModel m = (ComposedModel) d;
-
-                    m.getAllOf().sort((a,b) -> {
-                        if(a instanceof RefModel) {
-                            if(b instanceof RefModel) {
-                                return ((RefModel) a).getSimpleRef().compareTo(((RefModel) b).getSimpleRef());
-                            }
-
-                        }
-                        if(b instanceof RefModel) return 1;
-                        //preserve the order for others
-                        return -1;
-                    });
-
-        });
-    }
-
-    private void replaceEmptyWithParent(Swagger target) {
-        Map<String, String> replacements = target.getDefinitions().entrySet()
-                .stream().filter(e -> {
-                    Model model = e.getValue();
-                    if (model instanceof ComposedModel) {
-                        List<Model> allOf = ((ComposedModel) model).getAllOf();
-                        return allOf.size() == 1 && allOf.get(0) instanceof RefModel;
-                    }
-                    return false;
-                }).map(e -> {
-                    RefModel ref = (RefModel) ((ComposedModel) e.getValue()).getAllOf().get(0);
-
-                    return new Tuple<>(e.getKey(), ref.getSimpleRef());
-
-                }).collect(Collectors.toMap(Tuple::first, Tuple::second));
-
-        log.debug("{} replacement found for definitions", replacements.size());
-        log.trace("replacing paths");
-        target.getPaths().values().stream().flatMap(p -> p.getOperations().stream())
-                .forEach(o -> fixOperation(o, replacements));
-
-        target.getDefinitions().entrySet().stream()
-                .forEach(m -> fixModel(m.getKey(), m.getValue(), replacements));
-        replacements.keySet().forEach(r -> {
-            log.debug("removing {} model from swagger definitions", r);
-            target.getDefinitions().remove(r);
-        });
-    }
-
-    private void fixModel(String name, Model m, Map<String, String> replacements) {
-        ModelImpl fixProperties = null;
-        if(m instanceof ModelImpl) {
-            fixProperties = (ModelImpl) m;
-        }
-
-        if(m instanceof ComposedModel) {
-            ComposedModel cm = (ComposedModel) m;
-            fixComposedModel(name, cm, replacements);
-            fixProperties =  cm.getAllOf().stream()
-                   .filter(c -> c instanceof ModelImpl).map(c -> (ModelImpl)c)
-                   .findFirst().orElse(fixProperties);
-        }
-
-        if(fixProperties == null) return;
-        if(fixProperties.getProperties() == null) {
-            //TODO we might also remove this one from definitions
-            log.warn("Empty model in {}", name);
-            return;
-        }
-        fixProperties.getProperties().entrySet()
-                .forEach(e -> {
-                    if(e.getValue() instanceof RefProperty) {
-                        if(fixProperty((RefProperty) e.getValue(), replacements)) {
-                            log.debug("fixing property {} of {}", e.getKey(), name);
-                        }
-                    } else if(e.getValue() instanceof ArrayProperty){
-                        Property items = ((ArrayProperty) e.getValue()).getItems();
-                        if(items instanceof RefProperty) {
-                            if(fixProperty((RefProperty) items, replacements)) {
-                                log.debug("fixing property {} of {}", e.getKey(), name);
-                            }
-                        }
-                    }
-                });
-
-    }
-    private boolean fixProperty(RefProperty p, Map<String, String> replacements) {
-        if(replacements.containsKey(p.getSimpleRef())) {
-            p.set$ref(replacements.get(p.getSimpleRef()));
-            return true;
-        }
-        return false;
-    }
-
-    private void fixComposedModel(String name, ComposedModel m, Map<String, String> replacements) {
-        Set<RefModel> toReplace = m.getAllOf().stream().filter(c -> c instanceof RefModel).map(cm -> (RefModel) cm)
-                .filter(rm -> replacements.containsKey(rm.getSimpleRef())).collect(Collectors.toSet());
-        toReplace.forEach(r -> {
-            int idx = m.getAllOf().indexOf(r);
-            RefModel newRef = new RefModel(replacements.get(r.getSimpleRef()));
-            m.getAllOf().set(idx, newRef);
-            if(m.getInterfaces().remove(r)) {
-                m.getInterfaces().add(newRef);
-            }
-        });
-    }
-
-
-    private void fixOperation(Operation operation, Map<String, String> replacements) {
-        operation.getResponses().values()
-                .forEach(r -> fixResponse(r, replacements));
-        operation.getParameters().forEach(p -> fixParameter(p, replacements));
-        Optional<Map.Entry<String, String>> rep = replacements.entrySet().stream()
-                .filter(r -> operation.getDescription() != null && operation.getDescription().contains(r.getKey()))
-                .findFirst();
-        if(rep.isPresent()) {
-            log.debug("fixing description for '{}'", rep.get().getKey());
-            Map.Entry<String, String> entry = rep.get();
-            operation.setDescription(operation.getDescription().replace(entry.getKey(), entry.getValue()));
-        }
-
-    }
-
-    private void fixParameter(Parameter p, Map<String, String> replacements) {
-        if(!(p instanceof BodyParameter)) return;
-        BodyParameter bp = (BodyParameter) p;
-        if(!(bp.getSchema() instanceof RefModel)) return;
-        RefModel ref = (RefModel) bp.getSchema();
-        if(replacements.containsKey(ref.getSimpleRef())) {
-            String replacement = replacements.get(ref.getSimpleRef());
-            bp.setDescription(bp.getDescription().replace(ref.getSimpleRef(), replacement));
-            bp.setSchema(new RefModel(replacement));
-        }
-
-    }
-
-    private void fixResponse(Response r, Map<String, String> replacements) {
-        if(! (r.getSchema() instanceof RefProperty)) return;
-            RefProperty schema = (RefProperty) r.getSchema();
-            if(replacements.containsKey(schema.getSimpleRef())) {
-                String replacement = replacements.get(schema.getSimpleRef());
-                if(r.getDescription() != null)
-                    r.setDescription(r.getDescription().replace(schema.getSimpleRef(), replacement));
-                schema.setDescription(replacement);
-                r.setSchema(new RefProperty(replacement));
-            }
-
-    }
-
 
     private class ModuleGenerator {
         private final Module module;
