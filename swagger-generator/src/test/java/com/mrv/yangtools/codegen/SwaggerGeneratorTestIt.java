@@ -80,6 +80,21 @@ public class SwaggerGeneratorTestIt {
 
         assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}/"));
     }
+    
+    @org.junit.Test
+    public void testGenerateSimpleModuleWithLimitedDepth() throws Exception {
+        //given
+    	SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
+        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig().maxDepth(2);
+        
+        //when
+        swagger = generator.generate();
+
+        //then
+        assertEquals(3, swagger.getPaths().keySet().size());
+        assertEquals(3, swagger.getDefinitions().keySet().size());  
+        assertThat(swagger.getPaths().keySet(), hasItems("/data/simple-root/", "/data/simple-root/children1/", "/data/simple-root/children1={id}/"));
+    }    
 
     private void checkLeafrefAreFollowed(String modelName, String propertyName, String type) {
         Model model = swagger.getDefinitions().get(modelName);

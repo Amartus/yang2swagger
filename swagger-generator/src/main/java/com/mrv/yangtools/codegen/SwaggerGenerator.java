@@ -61,6 +61,7 @@ public class SwaggerGenerator {
     private Consumer<Swagger> postprocessor;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
+    private int maxDepth = Integer.MAX_VALUE;
 
 
     private Set<Elements> toGenerate;
@@ -241,6 +242,16 @@ public class SwaggerGenerator {
         target.produces(produces);
         return this;
     }
+    
+    /**
+     * Add max depth level during walk through module node tree
+     * @param produces type header
+     * @return this
+     */
+    public SwaggerGenerator maxDepth(int maxDepth) {
+    	this.maxDepth = maxDepth;
+        return this;
+    }    
 
     /**
      * Run Swagger generation for configured modules. Write result to target. The file format
@@ -323,7 +334,7 @@ public class SwaggerGenerator {
             if(toGenerate.contains(Elements.DATA)) {
                 pathCtx = new PathSegment(ctx)
                         .withModule(module.getName());
-                module.getChildNodes().forEach(this::generate);
+                module.getChildNodes().forEach(n -> generate(n, maxDepth));
             }
 
             if(toGenerate.contains(Elements.RCP)) {
@@ -345,7 +356,12 @@ public class SwaggerGenerator {
             pathCtx = pathCtx.drop();
         }
 
-        private void generate(DataSchemaNode node) {
+        private void generate(DataSchemaNode node, final int depth) {
+        	if(depth == 0) {
+        		log.debug("Maxmium depth level reached, skipping {} and it's childs", node.getPath());
+        		return;
+        	}
+        	
             if(!moduleNames.contains(moduleUtils.toModuleName(node))) {
                 log.debug("skipping {} as it is from {} module", node.getPath(), moduleUtils.toModuleName(node));
                 return;
@@ -361,7 +377,7 @@ public class SwaggerGenerator {
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
-                cN.getChildNodes().forEach(this::generate);
+                cN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(cN);
 
                 pathCtx = pathCtx.drop();
@@ -376,7 +392,7 @@ public class SwaggerGenerator {
                         .withListNode(lN);
 
                 handler.path(lN, pathCtx);
-                lN.getChildNodes().forEach(this::generate);
+                lN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(lN);
 
                 pathCtx = pathCtx.drop();
@@ -384,7 +400,7 @@ public class SwaggerGenerator {
                 //choice node and cases are invisible from the perspective of generating path
                 log.info("inlining choice statement {}", node.getQName().getLocalName() );
                 ((ChoiceSchemaNode) node).getCases().stream()
-                        .flatMap(_case -> _case.getChildNodes().stream()).forEach(this::generate);
+                        .flatMap(_case -> _case.getChildNodes().stream()).forEach(n -> generate(n, depth-1));
             }
         }
     }

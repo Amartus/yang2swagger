@@ -93,6 +93,27 @@ public class SwaggerGeneratorWithOdlPathHandlerTest {
         assertThat(swagger.getPaths().keySet(), hasItem("/config/simplest:simple-root/simplest:children1/id/simplest:children2/children2-id/"));
         assertThat(swagger.getPaths().keySet(), hasItem("/operational/simplest:simple-root/simplest:children1/id/simplest:children2/children2-id/"));
     }
+    
+    @org.junit.Test
+    public void testGenerateSimpleModuleWithLimitedDepth() throws Exception {
+        //given
+    	SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
+		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
+				.pathHandler(new ODLPathHandlerBuilder()).maxDepth(2);       
+        //when
+        swagger = generator.generate();
+
+        //then
+        assertEquals(5, swagger.getPaths().keySet().size());
+        assertEquals(3, swagger.getDefinitions().keySet().size());  
+		assertThat(swagger.getPaths().keySet(),
+				hasItems("/config/simplest:simple-root/",
+						"/config/simplest:simple-root/simplest:children1/",
+						"/config/simplest:simple-root/simplest:children1/id/",
+						"/operational/simplest:simple-root/simplest:children1/id/",
+						"/operational/simplest:simple-root/"));
+    }    
+
 
     private void checkLeafrefAreFollowed(String modelName, String propertyName, String type) {
         Model model = swagger.getDefinitions().get(modelName);
