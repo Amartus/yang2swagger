@@ -46,6 +46,7 @@ Argument "module ..." is required
                        directory (default: )
  -api-version string : The current version of your API (default: 1.0)
  -format enum        : The output format (options: YAML, JSON) (default: YAML)
+ -content-type string: Content type the API generates / consumes (default: application/yang-data+json)
 ```
 
 For example:
