@@ -34,6 +34,7 @@
         <swagger.version>1.5.9</swagger.version>
         <swagger.codegen.version>2.2.1</swagger.codegen.version>
         <yangtools.version>1.0.0-Boron</yangtools.version>
+        <guice.version>4.1.0</guice.version>
     </properties>
 
     <dependencyManagement>
@@ -44,6 +45,18 @@
                 <artifactId>guava</artifactId>
                 <version>19.0</version>
             </dependency>
+            
+			<!-- IoC Google Guice -->		
+			<dependency>
+				<groupId>com.google.inject</groupId>
+				<artifactId>guice</artifactId>
+				<version>${guice.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.inject.extensions</groupId>
+				<artifactId>guice-assistedinject</artifactId>
+				<version>${guice.version}</version>
+			</dependency>
 
             <!-- odl -->
 

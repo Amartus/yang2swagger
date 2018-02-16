@@ -31,5 +31,9 @@
             <groupId>com.mrv.yangtools</groupId>
             <artifactId>swagger-codegen-jaxrs</artifactId>
         </dependency>
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+		</dependency>        
     </dependencies>
 </project>
