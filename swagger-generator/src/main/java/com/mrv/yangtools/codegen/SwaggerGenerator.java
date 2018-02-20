@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
 public class SwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
     private final SchemaContext ctx;
-    private final Set<Module> modules;
+    private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
@@ -101,7 +101,7 @@ public class SwaggerGenerator {
      * @param ctx context for generation
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
-    public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
+    public SwaggerGenerator(SchemaContext ctx, Set<org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
         if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");
@@ -307,11 +307,11 @@ public class SwaggerGenerator {
     }
 
     private class ModuleGenerator {
-        private final Module module;
+        private final org.opendaylight.yangtools.yang.model.api.Module module;
         private PathSegment pathCtx;
         private PathHandler handler;
 
-        private ModuleGenerator(Module module) {
+        private ModuleGenerator(org.opendaylight.yangtools.yang.model.api.Module module) {
             if(module == null) throw new NullPointerException("module is null");
             this.module = module;
             handler = pathHandlerBuilder.forModule(module);

@@ -18,6 +18,10 @@ module rpc-augmentations {
         uses addition;
     }
 
+    augment "/rb:rock-the-house/rb:output/rb:response" {
+        uses addition;
+    }
+
     augment "aug-root/a" {
         container ab {
             uses addition;
