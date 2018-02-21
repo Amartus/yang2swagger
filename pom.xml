@@ -33,7 +33,7 @@
         <logback.version>1.1.6</logback.version>
         <swagger.version>1.5.9</swagger.version>
         <swagger.codegen.version>2.2.1</swagger.codegen.version>
-        <yangtools.version>1.0.0-Boron</yangtools.version>
+        <yangtools.version>1.2.1</yangtools.version>
     </properties>
 
     <dependencyManagement>
@@ -42,7 +42,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>19.0</version>
+                <version>22.0</version>
             </dependency>
 
             <!-- odl -->
