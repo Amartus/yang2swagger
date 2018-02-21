@@ -1,42 +1,42 @@
 /*
- * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ * Copyright (c) 2018 Amartus. All rights reserved.
  *  This program and the accompanying materials are made available under the
  *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
  *  and is available at http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *      Christopher Murch <cmurch@mrv.com>
- *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
 
-package com.mrv.yangtools.example;
+package com.mrv.yangtools.example.ioc;
 
-import com.mrv.yangtools.codegen.SwaggerGenerator;
+import java.io.File;
+import java.io.FileWriter;
+
+import com.google.inject.Guice;
+import com.mrv.yangtools.codegen.IoCSwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
 import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 
-import java.io.*;
-
 /**
- * Simple example of swagger generation for TAPI modules
  * @author cmurch@mrv.com
- * @author bartosz.michalik@amartus.com
+ * @author damian.mrozowicz@amartus.com
  */
-public class YamlGenerator {
+public class IoCYamlGenerator {
 
     public static void main(String[] args) throws Exception {
-        SwaggerGenerator generator;
+    	Guice.createInjector(new GeneratorInjector());
+    	
+        IoCSwaggerGenerator generator;
         if(args.length == 1) {
-            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> !m.getName().contains("path-computation"));
+            generator = IoCGeneratorHelper.getGenerator(new File(args[0]),m -> true);
         } else {
-            generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
+            generator = IoCGeneratorHelper.getGenerator(m -> m.getName().startsWith("Tapi"));
         }
 
-
-
         generator
-                .tagGenerator(new SegmentTagGenerator())
-                .elements(SwaggerGenerator.Elements.RCP)
+        		.tagGenerator(new SegmentTagGenerator())
+                .elements(IoCSwaggerGenerator.Elements.RCP)
                 .appendPostProcessor(new SingleParentInheritenceModel());
 
 

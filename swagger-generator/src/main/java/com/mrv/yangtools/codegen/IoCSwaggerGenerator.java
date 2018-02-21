@@ -7,31 +7,44 @@
  *  Contributors:
  *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
-
 package com.mrv.yangtools.codegen;
+
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import org.opendaylight.yangtools.yang.model.api.ChoiceSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.ModuleIdentifier;
+import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
+import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
-import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortDefinitions;
+
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
-import org.opendaylight.yangtools.yang.model.api.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * YANG to Swagger generator
@@ -47,12 +60,12 @@ import java.util.stream.Collectors;
  * </ul>
  *
  *
- * @author damian.mrozowicz@amartus.com>
+ * @author damian.mrozowicz@amartus.com
  */
-public class SwaggerGenerator {
-    private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
+public class IoCSwaggerGenerator {
+    private static final Logger log = LoggerFactory.getLogger(IoCSwaggerGenerator.class);
     private final SchemaContext ctx;
-    private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
+    private final Set<Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
@@ -64,9 +77,10 @@ public class SwaggerGenerator {
 
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
+    
     private PathHandlerBuilder pathHandlerBuilder;
 
-    public SwaggerGenerator defaultConfig() {
+    public IoCSwaggerGenerator defaultConfig() {
         //setting defaults
         this
                 .host("localhost:8080")
@@ -100,7 +114,8 @@ public class SwaggerGenerator {
      * @param ctx context for generation
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
-    public SwaggerGenerator(SchemaContext ctx, Set<org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
+    @Inject
+    public IoCSwaggerGenerator(@Assisted SchemaContext ctx, @Assisted Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
         if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");
@@ -116,7 +131,6 @@ public class SwaggerGenerator {
         //no exposed swagger API
         target.info(new Info());
 
-        pathHandlerBuilder = new com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder();
         //default postprocessors
         postprocessor = new ReplaceEmptyWithParent().andThen(new SortDefinitions());
     }
@@ -126,7 +140,7 @@ public class SwaggerGenerator {
      * @param version of swagger interface
      * @return itself
      */
-    public SwaggerGenerator version(String version) {
+    public IoCSwaggerGenerator version(String version) {
         target.getInfo().version(version);
         return this;
     }
@@ -136,12 +150,12 @@ public class SwaggerGenerator {
      * @param generator to be added
      * @return this
      */
-    public SwaggerGenerator tagGenerator(TagGenerator generator) {
+    public IoCSwaggerGenerator tagGenerator(TagGenerator generator) {
         pathHandlerBuilder.addTagGenerator(generator);
         return this;
     }
 
-    public SwaggerGenerator appendPostProcessor(Consumer<Swagger> swaggerPostprocessor) {
+    public IoCSwaggerGenerator appendPostProcessor(Consumer<Swagger> swaggerPostprocessor) {
         Objects.requireNonNull(swaggerPostprocessor);
         postprocessor = postprocessor.andThen(swaggerPostprocessor);
         return this;
@@ -152,7 +166,7 @@ public class SwaggerGenerator {
      * @param strategy to be used
      * @return this
      */
-    public SwaggerGenerator strategy(Strategy strategy) {
+    public IoCSwaggerGenerator strategy(Strategy strategy) {
         Objects.requireNonNull(strategy);
 
         switch (strategy) {
@@ -165,7 +179,8 @@ public class SwaggerGenerator {
         return this;
     }
 
-    public SwaggerGenerator pathHandler(PathHandlerBuilder handlerBuilder) {
+    @Inject
+    public IoCSwaggerGenerator pathHandler(PathHandlerBuilder handlerBuilder) {
         Objects.requireNonNull(handlerBuilder);
         this.pathHandlerBuilder = handlerBuilder;
         return this;
@@ -175,7 +190,7 @@ public class SwaggerGenerator {
      * YANG elements that are taken into account during generation
      * @return this
      */
-    public SwaggerGenerator elements(Elements... elements) {
+    public IoCSwaggerGenerator elements(Elements... elements) {
         toGenerate = new HashSet<>(Arrays.asList(elements));
         return this;
     }
@@ -185,7 +200,7 @@ public class SwaggerGenerator {
      * @param f YAML or JSON
      * @return itself
      */
-    public SwaggerGenerator format(Format f) {
+    public IoCSwaggerGenerator format(Format f) {
         switch(f) {
             case YAML:
                 mapper = new ObjectMapper(new YAMLFactory());
@@ -203,7 +218,7 @@ public class SwaggerGenerator {
      * @param host general host to bind Swagger definition
      * @return this
      */
-    public SwaggerGenerator host(String host) {
+    public IoCSwaggerGenerator host(String host) {
         target.host(host);
         return this;
     }
@@ -214,7 +229,7 @@ public class SwaggerGenerator {
      * @param basePath '/restconf' by default
      * @return this
      */
-    public SwaggerGenerator basePath(String basePath) {
+    public IoCSwaggerGenerator basePath(String basePath) {
         target.basePath(basePath);
         return this;
     }
@@ -224,7 +239,7 @@ public class SwaggerGenerator {
      * @param consumes type header
      * @return this
      */
-    public SwaggerGenerator consumes(String consumes) {
+    public IoCSwaggerGenerator consumes(String consumes) {
         Objects.requireNonNull(consumes);
         target.consumes(consumes);
         return this;
@@ -235,7 +250,7 @@ public class SwaggerGenerator {
      * @param produces type header
      * @return this
      */
-    public SwaggerGenerator produces(String produces) {
+    public IoCSwaggerGenerator produces(String produces) {
         Objects.requireNonNull(produces);
         target.produces(produces);
         return this;
@@ -246,14 +261,14 @@ public class SwaggerGenerator {
      * @param produces type header
      * @return this
      */
-    public SwaggerGenerator maxDepth(int maxDepth) {
+    public IoCSwaggerGenerator maxDepth(int maxDepth) {
     	this.maxDepth = maxDepth;
         return this;
     }    
 
     /**
      * Run Swagger generation for configured modules. Write result to target. The file format
-     * depends on configured {@link SwaggerGenerator.Format}
+     * depends on configured {@link IoCSwaggerGenerator.Format}
      * @param target writer
      * @throws IOException when problem with writing
      */
@@ -316,11 +331,11 @@ public class SwaggerGenerator {
     }
 
     private class ModuleGenerator {
-        private final org.opendaylight.yangtools.yang.model.api.Module module;
+        private final Module module;
         private PathSegment pathCtx;
         private PathHandler handler;
 
-        private ModuleGenerator(org.opendaylight.yangtools.yang.model.api.Module module) {
+        private ModuleGenerator(Module module) {
             if(module == null) throw new NullPointerException("module is null");
             this.module = module;
             handler = pathHandlerBuilder.forModule(module);
