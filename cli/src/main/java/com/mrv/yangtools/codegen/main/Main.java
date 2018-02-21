@@ -38,13 +38,17 @@ public class Main {
 
     @Argument(multiValued = true, usage = "List of YANG module names to generate in swagger output", metaVar = "module ...")
     List<String> modules;
-    
+
     @Option(name = "-format", usage = "Output format of generated file - defaults to yaml with options of json or yaml", metaVar = "enum")
     public SwaggerGenerator.Format outputFormat = SwaggerGenerator.Format.YAML;
-    
+
     @Option(name = "-api-version", usage = "Version of api generated - default 1.0", metaVar = "file")
     public String apiVersion = "1.0";
-    
+	
+	// RESTCONF uses yang-data+json or yang-data+xml as the content type.
+	@Option(name= "-content-type", usage = "Content type the API generates / consumes - default application/yang-data+json")
+	public String contentType = "application/yang-data+json";
+	
     OutputStream out = System.out;
 
     public static void main(String[] args) {
@@ -79,7 +83,7 @@ public class Main {
 
         final SwaggerGenerator generator = new SwaggerGenerator(context, toGenerate)
         		.version(apiVersion)
-                .format(outputFormat).consumes("application/xml").produces("application/xml")
+                .format(outputFormat).consumes(contentType).produces(contentType)
                 .host("localhost:1234").elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP);
 
         generator.generate(new OutputStreamWriter(out));
