@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static org.junit.Assert.assertEquals;
@@ -43,7 +44,7 @@ public abstract class AbstractItTest {
     }
 
 
-    protected SchemaContext ctxFor(Predicate<Path> cond) {
+    private SchemaContext ctxFor(Predicate<Path> cond) {
         try {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
@@ -53,13 +54,24 @@ public abstract class AbstractItTest {
     }
 
     protected void swaggerFor(String fileName) {
-        swaggerFor(p -> p.getFileName().toString().equals(fileName));
+        swaggerFor(fileName, null);
     }
 
-    protected void swaggerFor(Predicate<Path> cond) throws IllegalArgumentException {
+    protected void swaggerFor(String fileName, Consumer<SwaggerGenerator> extraConfig) {
+        swaggerFor(p -> p.getFileName().toString().equals(fileName), extraConfig);
+    }
+
+    protected void swaggerFor(Predicate<Path> cond) {
+        swaggerFor(cond, null);
+    }
+
+    protected void swaggerFor(Predicate<Path> cond, Consumer<SwaggerGenerator> extraConfig) throws IllegalArgumentException {
         SchemaContext ctx = ctxFor(cond);
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
+        if(extraConfig != null) {
+            extraConfig.accept(generator);
+        }
         swagger = generator.generate();
     }
 

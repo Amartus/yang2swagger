@@ -70,7 +70,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
 
 
     @org.junit.Test
-    public void testGenerateReadOnlyModule() throws Exception {
+    public void testGenerateReadOnlyModule() {
 
         final Consumer<Path> onlyGetOperationExists = p -> {
             assertEquals(1, p.getOperations().size());
@@ -87,7 +87,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateGroupingsModuleOptimizing() throws Exception {
+    public void testGenerateGroupingsModuleOptimizing() {
         //when
         swaggerFor(p -> p.getFileName().toString().equals("with-groupings.yang"));
 
@@ -102,13 +102,10 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
 
 
     @org.junit.Test
-    public void testGenerateGroupingsModuleUnpacking() throws Exception {
-        SchemaContext ctx = ctxFor(p -> p.getFileName().toString().equals("with-groupings.yang"));
-
+    public void testGenerateGroupingsModuleUnpacking() {
         //when
-        SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
-        generator.strategy(SwaggerGenerator.Strategy.unpacking);
-        swagger = generator.generate();
+        swaggerFor(p -> p.getFileName().toString().equals("with-groupings.yang"),
+                g -> g.strategy(SwaggerGenerator.Strategy.unpacking));
 
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
@@ -122,7 +119,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateRCPModule() throws Exception {
+    public void testGenerateRCPModule() {
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -136,14 +133,14 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
         //then
         Map<String, Path> paths = swagger.getPaths().entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith("/operations"))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         assertEquals(3, paths.keySet().size());
         paths.values().forEach(singlePostOperation);
     }
 
     @org.junit.Test
-    public void testGenerateChoice() throws Exception {
+    public void testGenerateChoice() {
         swaggerFor("choice.yang");
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -159,7 +156,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateEnum() throws Exception {
+    public void testGenerateEnum() {
         swaggerFor("enum-module.yang");
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -171,7 +168,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     }
 
     @Test
-    public void testDuplicatedNames() throws ReactorException {
+    public void testDuplicatedNames() {
         swaggerFor("duplicated-names.yang");
 
 

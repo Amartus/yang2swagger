@@ -19,7 +19,6 @@ import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
-import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortDefinitions;
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
@@ -46,8 +45,8 @@ import java.util.stream.Collectors;
  *     <li>config flag - for operational data only GET operations are generated</li>
  * </ul>
  *
+ * @author damian.mrozowicz@amartus.com
  *
- * @author damian.mrozowicz@amartus.com>
  */
 public class SwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
@@ -243,7 +242,7 @@ public class SwaggerGenerator {
     
     /**
      * Add max depth level during walk through module node tree
-     * @param produces type header
+     * @param maxDepth to which paths should be generated
      * @return this
      */
     public SwaggerGenerator maxDepth(int maxDepth) {
@@ -371,7 +370,7 @@ public class SwaggerGenerator {
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(cN.getQName().getLocalName())
-                        .withModule(module.getName())
+                        .withModule(moduleUtils.toModuleName(node))
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
@@ -385,7 +384,7 @@ public class SwaggerGenerator {
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(lN.getQName().getLocalName())
-                        .withModule(module.getName())
+                        .withModule(moduleUtils.toModuleName(node))
                         .asReadOnly(!lN.isConfiguration())
                         .withListNode(lN);
 

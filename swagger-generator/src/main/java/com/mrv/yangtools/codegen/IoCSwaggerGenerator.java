@@ -65,7 +65,7 @@ import io.swagger.models.Swagger;
 public class IoCSwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(IoCSwaggerGenerator.class);
     private final SchemaContext ctx;
-    private final Set<Module> modules;
+    private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
@@ -77,7 +77,6 @@ public class IoCSwaggerGenerator {
 
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
-    
     private PathHandlerBuilder pathHandlerBuilder;
 
     public IoCSwaggerGenerator defaultConfig() {
@@ -258,7 +257,7 @@ public class IoCSwaggerGenerator {
     
     /**
      * Add max depth level during walk through module node tree
-     * @param produces type header
+     * @param maxDepth to which paths should be generated
      * @return this
      */
     public IoCSwaggerGenerator maxDepth(int maxDepth) {
@@ -331,11 +330,11 @@ public class IoCSwaggerGenerator {
     }
 
     private class ModuleGenerator {
-        private final Module module;
+        private final org.opendaylight.yangtools.yang.model.api.Module module;
         private PathSegment pathCtx;
         private PathHandler handler;
 
-        private ModuleGenerator(Module module) {
+        private ModuleGenerator(org.opendaylight.yangtools.yang.model.api.Module module) {
             if(module == null) throw new NullPointerException("module is null");
             this.module = module;
             handler = pathHandlerBuilder.forModule(module);
@@ -386,7 +385,7 @@ public class IoCSwaggerGenerator {
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(cN.getQName().getLocalName())
-                        .withModule(module.getName())
+                        .withModule(moduleUtils.toModuleName(node))
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
@@ -400,7 +399,7 @@ public class IoCSwaggerGenerator {
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(lN.getQName().getLocalName())
-                        .withModule(module.getName())
+                        .withModule(moduleUtils.toModuleName(node))
                         .asReadOnly(!lN.isConfiguration())
                         .withListNode(lN);
 

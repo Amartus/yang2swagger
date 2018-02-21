@@ -51,34 +51,17 @@ import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 /**
- * @author cmurch@mrv.com
+ * @author damian.mrozowicz@amartus.com
  * @author bartosz.michalik@amartus.com
  */
-public class SwaggerGeneratorWithOdlPathHandlerTest {
-
-    private static final Logger log = LoggerFactory.getLogger(SwaggerGeneratorWithOdlPathHandlerTest.class);
-
-
-    private Swagger swagger;
-
-    @After
-    public void printSwagger() throws IOException {
-        if(log.isDebugEnabled() && swagger != null) {
-            StringWriter writer = new StringWriter();
-            ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-            mapper.writeValue(writer, swagger);
-            log.debug(writer.toString());
-        }
-    }
+public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
     @org.junit.Test
-    public void testGenerateSimpleModule() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
-
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        swagger = generator.generate();
+    public void testGenerateSimpleModule() {
+        //when
+        swaggerFor("simplest.yang", generator -> {
+            generator.pathHandler(new ODLPathHandlerBuilder());
+        });
         
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -89,18 +72,20 @@ public class SwaggerGeneratorWithOdlPathHandlerTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
 
-        assertThat(swagger.getPaths().keySet(), hasItem("/config/simplest:simple-root/simplest:children1/id/simplest:children2/children2-id/"));
-        assertThat(swagger.getPaths().keySet(), hasItem("/operational/simplest:simple-root/simplest:children1/id/simplest:children2/children2-id/"));
+        final String resUri = "/simplest:simple-root/simplest:children1/id/simplest:children2/children2-id/";
+
+        assertThat(swagger.getPaths().keySet(), hasItem("/config" + resUri));
+        assertThat(swagger.getPaths().keySet(), hasItem("/operational" + resUri));
+        assertEquals(8, swagger.getPaths().keySet().size());
+        assertEquals(3, swagger.getPaths().keySet().stream().filter(p -> p.startsWith("/operational")).count());
     }
-    
+
     @org.junit.Test
-    public void testGenerateSimpleModuleWithLimitedDepth() throws Exception {
-        //given
-    	SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder()).maxDepth(2);       
+    public void testGenerateSimpleModuleWithLimitedDepth() {
         //when
-        swagger = generator.generate();
+        swaggerFor("simplest.yang", generator -> {
+            generator.pathHandler(new ODLPathHandlerBuilder()).maxDepth(2);
+        });
 
         //then
         assertEquals(5, swagger.getPaths().keySet().size());
@@ -111,26 +96,14 @@ public class SwaggerGeneratorWithOdlPathHandlerTest {
 						"/config/simplest:simple-root/simplest:children1/id/",
 						"/operational/simplest:simple-root/simplest:children1/id/",
 						"/operational/simplest:simple-root/"));
-    }    
-
-
-    private void checkLeafrefAreFollowed(String modelName, String propertyName, String type) {
-        Model model = swagger.getDefinitions().get(modelName);
-        Property parentId = model.getProperties().get(propertyName);
-        assertEquals(type, parentId.getType());
-        assertFalse(parentId.getVendorExtensions().isEmpty());
-        assertTrue(parentId.getVendorExtensions().containsKey("x-path"));
     }
 
     @org.junit.Test
-    public void testGenerateReadOnlyModule() throws Exception {
-
-        //having
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("read-only.yang"));
+    public void testGenerateReadOnlyModule() {
         //when
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        swagger = generator.generate();
+        swaggerFor("read-only.yang", generator -> {
+            generator.pathHandler(new ODLPathHandlerBuilder());
+        });
 
         //then
         // c2 element is read only, there should be only get with operational prefix for this element
@@ -140,81 +113,22 @@ public class SwaggerGeneratorWithOdlPathHandlerTest {
         final Consumer<Path> onlyGetOperationExists = p -> {
             assertEquals(1, p.getOperations().size());
             assertNotNull(p.getGet());
-        };        
-        System.out.println(swagger.getPaths().keySet());
+        };
 
 		assertThat(swagger.getPaths().get("/config/read-only:simple-root/read-only:c1/id/read-only:c2/c2-id/"), nullValue());
-		
+
+        final String resUri = "/read-only:simple-root/";
+
+        assertThat(swagger.getPaths().keySet(), hasItem("/config" + resUri));
+        assertThat(swagger.getPaths().keySet(), hasItem("/operational" + resUri));
+
 		swagger.getPaths().entrySet().stream().filter(e -> e.getKey().startsWith("/operational/read-only:simple-root/read-only:c1/id/read-only:c2/c2-id")).map(Map.Entry::getValue)
 				.forEach(onlyGetOperationExists);
-        
-        
-        
-    }
-
-    @org.junit.Test
-    public void testGenerateGroupingsModuleOptimizing() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
-
-        //when
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        generator.strategy(SwaggerGenerator.Strategy.optimizing);
-        swagger = generator.generate();
-
-        //then
-        assertEquals(6, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
-        assertEquals(7, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G1", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
-        Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
-        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("with.groupings.G2", groupingChild2.getSimpleRef());
-    }
-
-    @org.junit.Test
-    public void testGenerateAugmentedGroupingsModuleOptimizing() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().endsWith("groupings.yang"));
-
-        //when
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        generator.strategy(SwaggerGenerator.Strategy.optimizing);
-        swagger = generator.generate();
-
-        //then
-        assertEquals(6, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
-        assertEquals(3, swagger.getDefinitions().keySet().stream().filter(e -> e.contains("augmenting")).count());
-        assertEquals(11, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G1", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
-        Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
-        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("with.groupings.groupingroot.GroupingChild2", groupingChild2.getSimpleRef());
-    }
-    
-    @org.junit.Test
-    public void testGenerateGroupingsModuleUnpacking() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("with-groupings.yang"));
-
-        //when
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        generator.strategy(SwaggerGenerator.Strategy.unpacking);
-        swagger = generator.generate();
-
-        //then
-        assertEquals(6, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
-        assertEquals(8, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), not(hasItems("G1", "G2", "G3")));
-
-        Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
-        RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
-        assertEquals("with.groupings.groupingroot.GroupingChild2", groupingChild2.getSimpleRef());
 
     }
 
     @org.junit.Test
-    public void testGenerateRCPModule() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rpc-basic.yang"));
+    public void testGenerateRCPModule() {
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -222,26 +136,21 @@ public class SwaggerGeneratorWithOdlPathHandlerTest {
         };
 
         //when
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        swagger = generator.generate();
+        swaggerFor("rpc-basic.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder()));
 
         //then
         Map<String, Path> paths = swagger.getPaths().entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith("/operations"))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         assertEquals(3, paths.keySet().size());
         paths.values().forEach(singlePostOperation);
     }
 
     @org.junit.Test
-    public void testGenerateAugmentation() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().startsWith("simple"));
-
-		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
-        swagger = generator.generate();
+    public void testGenerateAugmentation() {
+        //when
+        swaggerFor(p -> p.getFileName().toString().startsWith("simple"), generator -> generator.pathHandler(new ODLPathHandlerBuilder()));
 
         Set<String> defNames = swagger.getDefinitions().keySet();
 
@@ -253,7 +162,9 @@ public class SwaggerGeneratorWithOdlPathHandlerTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
         checkLeafrefAreFollowed("simpleaugmentation.simpleroot.AddedA", "a1", "string");
-        assertThat(swagger.getPaths().keySet(), hasItem("/operational/simplest:simple-root/simplest:added-a/simplest:children1/"));
+        assertThat(swagger.getPaths().keySet(), hasItem("/operational/simplest:simple-root/simpleAugmentation:added-a/simpleAugmentation:children1/"));
+        //as augmented container is config false
+        assertThat(swagger.getPaths().keySet(), not(hasItem("/config/simplest:simple-root/simpleAugmentation:added-a/simpleAugmentation:children1/")));
     }
 
     @org.junit.Test
