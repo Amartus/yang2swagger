@@ -348,6 +348,9 @@ public class SwaggerGenerator {
 
             ContainerSchemaNode input = rcp.getInput();
             ContainerSchemaNode output = rcp.getOutput();
+
+            input = input.getChildNodes().isEmpty() ? null : input;
+            output = output.getChildNodes().isEmpty() ? null : output;
             handler.path(input, output, pathCtx);
 
             pathCtx = pathCtx.drop();
@@ -358,7 +361,7 @@ public class SwaggerGenerator {
         		log.debug("Maxmium depth level reached, skipping {} and it's childs", node.getPath());
         		return;
         	}
-        	
+
             if(!moduleNames.contains(moduleUtils.toModuleName(node))) {
                 log.debug("skipping {} as it is from {} module", node.getPath(), moduleUtils.toModuleName(node));
                 return;

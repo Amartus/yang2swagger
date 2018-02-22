@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.common.ContextHelper;
-import io.swagger.models.Model;
-import io.swagger.models.Swagger;
+import io.swagger.models.*;
+import io.swagger.models.parameters.BodyParameter;
+import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
+import io.swagger.models.properties.RefProperty;
 import org.junit.After;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
@@ -16,12 +18,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * @author bartosz.michalik@amartus.com
@@ -42,6 +44,34 @@ public abstract class AbstractItTest {
             log.debug(writer.toString());
         }
     }
+
+    protected final Consumer<io.swagger.models.Path> singlePostOperation = p -> {
+        assertEquals(1, p.getOperations().size());
+        assertNotNull(p.getPost());
+    };
+
+    protected final Consumer<io.swagger.models.Path> correctRPCOperationModels = p -> {
+        Operation post = p.getPost();
+        if(post.getParameters() != null) {
+            Optional<Parameter> body = post.getParameters().stream().filter(par -> "body".equals(par.getIn())).findFirst();
+            if(body.isPresent()) {
+                String ref = ((RefModel) ((BodyParameter) body.get()).getSchema()).getSimpleRef();
+                Property input = swagger.getDefinitions().get(ref).getProperties().get("input");
+                assertNotNull("Incorrect structure in " + ref, input);
+            }
+        }
+
+        Response response = post.getResponses().get("200");
+        if(response != null) {
+            RefProperty schema = (RefProperty) response.getSchema();
+            if(schema != null) {
+                String ref = schema.getSimpleRef();
+
+                Property output = swagger.getDefinitions().get(ref).getProperties().get("output");
+                assertNotNull("Incorrect structure in " + ref, output);
+            }
+        }
+    };
 
 
     private SchemaContext ctxFor(Predicate<Path> cond) {

@@ -137,7 +137,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
 
         post.tag(module.getName());
         if(input != null) {
-            dataObjectBuilder.addModel(input);
+            dataObjectBuilder.addModel(input, "input");
 
             post.parameter(new BodyParameter()
                     .name("body-param")
@@ -152,7 +152,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
                 description = "Correct response";
             }
 
-            dataObjectBuilder.addModel(output);
+            dataObjectBuilder.addModel(output, "output");
             post.response(200, new Response()
                     .schema(new RefProperty(dataObjectBuilder.getDefinitionId(output)))
                     .description(description));

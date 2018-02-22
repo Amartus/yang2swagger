@@ -12,15 +12,11 @@
 package com.mrv.yangtools.codegen;
 
 import com.mrv.yangtools.common.ContextHelper;
-import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;
 import io.swagger.models.Path;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
-import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -121,10 +117,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     @org.junit.Test
     public void testGenerateRCPModule() {
 
-        final Consumer<Path> singlePostOperation = p -> {
-            assertEquals(1, p.getOperations().size());
-            assertNotNull(p.getPost());
-        };
+
         //when
 
         swaggerFor("rpc-basic.yang");
@@ -136,7 +129,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         assertEquals(3, paths.keySet().size());
-        paths.values().forEach(singlePostOperation);
+        paths.values().forEach(singlePostOperation.andThen(correctRPCOperationModels));
     }
 
     @org.junit.Test
