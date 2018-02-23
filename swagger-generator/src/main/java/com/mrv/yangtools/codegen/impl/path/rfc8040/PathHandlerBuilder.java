@@ -9,7 +9,7 @@
  *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.rfc8040;
+package com.mrv.yangtools.codegen.impl.path.rfc8040;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import com.mrv.yangtools.codegen.PathHandler;
@@ -34,7 +34,7 @@ public class PathHandlerBuilder implements com.mrv.yangtools.codegen.PathHandler
 
     @Override
     public PathHandler forModule(Module module) {
-        return new com.mrv.yangtools.codegen.rfc8040.PathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud);
+        return new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud);
     }
 
     public PathHandlerBuilder withoutFullCrud() {

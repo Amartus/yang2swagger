@@ -10,7 +10,7 @@
 
 package com.mrv.yangtools.codegen;
 
-import com.mrv.yangtools.codegen.odl.ODLPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;

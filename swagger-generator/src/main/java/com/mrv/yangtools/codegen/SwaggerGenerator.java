@@ -115,7 +115,7 @@ public class SwaggerGenerator {
         //no exposed swagger API
         target.info(new Info());
 
-        pathHandlerBuilder = new com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder();
+        pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
         //default postprocessors
         postprocessor = new ReplaceEmptyWithParent().andThen(new SortDefinitions());
     }

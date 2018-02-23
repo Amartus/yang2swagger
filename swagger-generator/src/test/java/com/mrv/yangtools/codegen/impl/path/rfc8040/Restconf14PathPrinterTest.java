@@ -9,10 +9,10 @@
  *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.rfc8040;
+package com.mrv.yangtools.codegen.impl.path.rfc8040;
 
 import com.mrv.yangtools.codegen.PathSegment;
-import com.mrv.yangtools.codegen.rfc8040.Restconf14PathPrinter;
+import com.mrv.yangtools.codegen.impl.path.rfc8040.Restconf14PathPrinter;
 import com.mrv.yangtools.test.utils.MockNodeBuilder;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;

@@ -8,7 +8,7 @@
  *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.odl;
+package com.mrv.yangtools.codegen.impl.path.odl;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,10 +25,10 @@ import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.codegen.TagGenerator;
-import com.mrv.yangtools.codegen.impl.DeleteOperationGenerator;
-import com.mrv.yangtools.codegen.impl.GetOperationGenerator;
-import com.mrv.yangtools.codegen.impl.PostOperationGenerator;
-import com.mrv.yangtools.codegen.impl.PutOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.DeleteOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.GetOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.PostOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.PutOperationGenerator;
 
 import io.swagger.models.Operation;
 import io.swagger.models.Path;

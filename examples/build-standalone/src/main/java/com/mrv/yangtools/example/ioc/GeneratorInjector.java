@@ -22,7 +22,7 @@ public class GeneratorInjector extends AbstractModule {
 		
 		requestStaticInjection(IoCGeneratorHelper.class);
 
-		bind(PathHandlerBuilder.class).to(com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder.class);
+		bind(PathHandlerBuilder.class).to(com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder.class);
 
 	}
 }
