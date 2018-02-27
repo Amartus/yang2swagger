@@ -261,7 +261,21 @@ public class SwaggerGenerator {
 
         Swagger result = generate();
 
+        result.setDefinitions(sortMap(result.getDefinitions()));
+        result.setPaths(sortMap(result.getPaths()));
+
         mapper.writeValue(target, result);
+    }
+
+
+    private <T> Map<String, T> sortMap(Map<String, T> toSort) {
+        return toSort.entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getKey))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (u, v) -> {
+                            throw new IllegalStateException(String.format("Duplicate key %s", u));
+                        },
+                        LinkedHashMap::new));
     }
 
     /**

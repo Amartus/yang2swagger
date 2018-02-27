@@ -53,6 +53,7 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
 
             if (references.size() != toUnpack.size()) {
                 log.warn("Cannot unpack references for {}. Only simple models supported. Skipping", e.getKey());
+                return;
             }
 
             log.debug("Unpacking {} models of {}", toUnpack.size(),  e.getKey());
@@ -66,6 +67,7 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
 
     private void copyAttributes(ModelImpl target, ModelImpl source) {
         //TODO may require property copying and moving x- extensions down to properties
-        source.getProperties().forEach((k,v) -> target.addProperty(k, v));
+        if(source.getProperties() != null)
+            source.getProperties().forEach(target::addProperty);
     }
 }
