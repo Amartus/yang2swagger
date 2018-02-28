@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
-import com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
 import com.mrv.yangutils.codegen.JerseyServerCodegen;
 import io.swagger.codegen.*;
 import io.swagger.models.Swagger;

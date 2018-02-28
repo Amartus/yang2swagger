@@ -21,8 +21,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Guice;
 import com.mrv.yangtools.codegen.IoCSwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
-import com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder;
-import com.mrv.yangtools.example.GeneratorHelper;
 import com.mrv.yangutils.codegen.JerseyServerCodegen;
 
 import io.swagger.codegen.ClientOptInput;

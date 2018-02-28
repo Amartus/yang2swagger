@@ -8,10 +8,10 @@
  *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.odl;
+package com.mrv.yangtools.codegen.impl.path.odl;
 
 import com.mrv.yangtools.codegen.PathSegment;
-import com.mrv.yangtools.codegen.odl.ODLRestconfPathPrinter;
+import com.mrv.yangtools.codegen.impl.path.odl.ODLRestconfPathPrinter;
 import com.mrv.yangtools.test.utils.MockNodeBuilder;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;

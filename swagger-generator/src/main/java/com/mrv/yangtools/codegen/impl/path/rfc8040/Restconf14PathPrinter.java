@@ -9,7 +9,7 @@
  *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.rfc8040;
+package com.mrv.yangtools.codegen.impl.path.rfc8040;
 
 import com.mrv.yangtools.codegen.PathPrinter;
 import com.mrv.yangtools.codegen.PathSegment;

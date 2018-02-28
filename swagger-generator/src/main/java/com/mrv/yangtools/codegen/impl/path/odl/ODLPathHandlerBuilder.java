@@ -7,7 +7,7 @@
  *  Contributors:
  *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
-package com.mrv.yangtools.codegen.odl;
+package com.mrv.yangtools.codegen.impl.path.odl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import com.mrv.yangtools.codegen.PathHandler;

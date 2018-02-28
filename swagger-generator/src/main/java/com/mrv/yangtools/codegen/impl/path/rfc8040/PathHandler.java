@@ -9,15 +9,15 @@
  *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.rfc8040;
+package com.mrv.yangtools.codegen.impl.path.rfc8040;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.codegen.TagGenerator;
-import com.mrv.yangtools.codegen.impl.DeleteOperationGenerator;
-import com.mrv.yangtools.codegen.impl.GetOperationGenerator;
-import com.mrv.yangtools.codegen.impl.PostOperationGenerator;
-import com.mrv.yangtools.codegen.impl.PutOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.DeleteOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.GetOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.PostOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.PutOperationGenerator;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.RefProperty;
