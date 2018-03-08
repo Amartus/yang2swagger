@@ -128,7 +128,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
                 .filter(entry -> entry.getKey().startsWith("/operations"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        assertEquals(3, paths.keySet().size());
+        assertEquals(4, paths.keySet().size());
         paths.values().forEach(singlePostOperation.andThen(correctRPCOperationModels));
     }
 

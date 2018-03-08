@@ -113,7 +113,7 @@ public class PathPrunnerTest {
 
     @Test
     public void pruneParent2() {
-        int orgPathsCnt = swagger.getPaths().size();
+
         int orgDefCnt = swagger.getDefinitions().size();
         new PathPrunner()
                 .withType("Parent1")

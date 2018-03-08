@@ -11,14 +11,10 @@
 
 package com.mrv.yangtools.codegen.impl;
 
+import com.google.common.base.CaseFormat;
 import com.mrv.yangtools.codegen.DataObjectBuilder;
-import io.swagger.models.Model;
-import io.swagger.models.ModelImpl;
-import io.swagger.models.Swagger;
-import io.swagger.models.properties.AbstractProperty;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.ObjectProperty;
-import io.swagger.models.properties.Property;
+import io.swagger.models.*;
+import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.model.api.Module;
@@ -294,6 +290,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     /**
      * Add model to referenced swagger for given node. All related models are added as well if needed.
      * @param node for which build a node
+     * @param tagName wrapping model name
      * @param <T> type of the node
      */
     @Override
@@ -306,7 +303,16 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
         if(tagName != null) {
             final ModelImpl wrapper = new ModelImpl();
-            wrapper.addProperty(tagName, new ObjectProperty(model.getProperties()));
+            if(model instanceof ModelImpl) {
+                wrapper.addProperty(tagName, new ObjectProperty(model.getProperties()));
+            }
+
+            if(model instanceof ComposedModel) {
+                String internal = modelName  + Character.toUpperCase(tagName.charAt(0)) + tagName.substring(1).toLowerCase();
+                swagger.addDefinition(internal, model);
+                wrapper.addProperty(tagName, new RefProperty(DEF_PREFIX + internal));
+            }
+
             model = wrapper;
         }
 

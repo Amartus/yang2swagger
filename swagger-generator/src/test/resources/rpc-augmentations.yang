@@ -7,7 +7,31 @@ module rpc-augmentations {
         container a-container {
             leaf abcd { type string; }
         }
+    }
 
+
+    grouping aug1 {
+        leaf leaf11 {type string;}
+        leaf leaf12 {type string;}
+        leaf leaf13 {type string;}
+    }
+
+    grouping aug2 {
+        container con2 {
+            leaf leaf21 { type string; }
+        }
+        list list2 {
+           uses aug1;
+           key 'leaf11';
+        }
+    }
+
+    augment "/rb:with-multiple-elements/rb:input" {
+        uses aug1;
+    }
+
+    augment "/rb:with-multiple-elements/rb:input" {
+        uses aug2;
     }
 
     augment "/rb:root/rb:c-res" {

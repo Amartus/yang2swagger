@@ -7,6 +7,7 @@ import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
+import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
@@ -57,6 +58,8 @@ public abstract class AbstractItTest {
             if(body.isPresent()) {
                 String ref = ((RefModel) ((BodyParameter) body.get()).getSchema()).getSimpleRef();
                 Property input = swagger.getDefinitions().get(ref).getProperties().get("input");
+                assertTrue(input instanceof ObjectProperty);
+                assertFalse(((ObjectProperty)input).getProperties().isEmpty());
                 assertNotNull("Incorrect structure in " + ref, input);
             }
         }
@@ -68,6 +71,8 @@ public abstract class AbstractItTest {
                 String ref = schema.getSimpleRef();
 
                 Property output = swagger.getDefinitions().get(ref).getProperties().get("output");
+                assertTrue(output instanceof ObjectProperty);
+                assertFalse(((ObjectProperty)output).getProperties().isEmpty());
                 assertNotNull("Incorrect structure in " + ref, output);
             }
         }

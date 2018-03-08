@@ -74,7 +74,7 @@ public class PathPrunner implements Consumer<Swagger> {
         if(swagger.getPaths() == null) return;
         prunePaths(swagger);
 
-        if(swagger.getDefinitions() == null) return;
+        if(swagger.getDefinitions() == null || types.isEmpty()) return;
         pruneByType(swagger);
     }
 

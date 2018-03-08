@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
  */
 public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
     @org.junit.Test
-    public void testGenerateAugmentedGroupingsModuleOptimizing() throws Exception {
+    public void testGenerateAugmentedGroupingsModuleOptimizing() {
         //when
         swaggerFor(p -> p.getFileName().toString().endsWith("groupings.yang"));
 
@@ -35,7 +35,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateAugmentation() throws Exception {
+    public void testGenerateAugmentation() {
         swaggerFor(p -> p.getFileName().toString().startsWith("simple"));
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -52,7 +52,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testAugGroupEx() throws Exception {
+    public void testAugGroupEx() {
         swaggerFor(p -> p.getParent().getFileName().toString().equals("aug-group-ex"));
 
         Model base = swagger.getDefinitions().get("base.Base");
@@ -65,7 +65,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testInheritenceWithAugmentation() throws Exception {
+    public void testInheritenceWithAugmentation() {
         swaggerFor(p -> p.getParent().getFileName().toString().equals("inheritence-with-augmentation"));
 
 
@@ -86,7 +86,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateRCPModule() throws Exception {
+    public void testGenerateRCPModule() {
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());
@@ -101,7 +101,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
                 .filter(entry -> entry.getKey().startsWith("/operations"))
                 .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
 
-        assertEquals(3, paths.keySet().size());
+        assertEquals(4, paths.keySet().size());
         paths.values().forEach(singlePostOperation);
 
         Map<String, Model> rockTheHouseDefinitions = swagger.getDefinitions().entrySet().stream()
