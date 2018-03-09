@@ -53,6 +53,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
     private final DataObjectBuilder dataObjectBuilder;
     private final Set<TagGenerator> tagGenerators;
     private final  boolean fullCrud;
+    private boolean useModuleName = false;
 
     ODLPathHandler(SchemaContext ctx, Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
         this.swagger = target;
@@ -67,15 +68,20 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
     }
 
 
+    public ODLPathHandler useModuleName(boolean use) {
+        this.useModuleName = use;
+        return this;
+    }
+
     @Override
     public void path(ContainerSchemaNode cN, PathSegment pathCtx) {
     	final Path operationalPath = operationalOperations(cN, pathCtx);
-    	ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, false);
+    	ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
     	swagger.path(operational + operationalPathPrinter.path(), operationalPath);
     	
 		if (!pathCtx.isReadOnly()) {
 			final Path configPath = operations(cN, pathCtx);
-	    	ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, false);
+	    	ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
 	    	swagger.path(data + configPathPrinter.path(), configPath);
 		}        
     }
@@ -109,12 +115,12 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
     @Override
     public void path(ListSchemaNode lN, PathSegment pathCtx) {
     	final Path operationalPath = operationalOperations(lN, pathCtx);
-    	ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, false);
+    	ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
     	swagger.path(operational + operationalPathPrinter.path(), operationalPath);
     	
 		if (!pathCtx.isReadOnly()) {
 			final Path configPath = operations(lN, pathCtx);
-	    	ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, false);
+	    	ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
 	    	swagger.path(data + configPathPrinter.path(), configPath);
 	    	
 	    	if(fullCrud) {
@@ -123,7 +129,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
 	            list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN));
 
 
-	            ODLRestconfPathPrinter postPrinter = new ODLRestconfPathPrinter(pathCtx, true);
+	            ODLRestconfPathPrinter postPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName, true);
 	            swagger.path(data + postPrinter.path(), list);
 	    	}
 		}   
@@ -131,7 +137,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
 
     @Override
     public void path(ContainerSchemaNode input, ContainerSchemaNode output, PathSegment pathCtx) {
-        final ODLRestconfPathPrinter printer = new ODLRestconfPathPrinter(pathCtx, false);
+        final ODLRestconfPathPrinter printer = new ODLRestconfPathPrinter(pathCtx, useModuleName);
 
         Operation post = defaultOperation(pathCtx);
 

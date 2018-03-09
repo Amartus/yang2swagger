@@ -44,7 +44,7 @@ class PathHandler implements com.mrv.yangtools.codegen.PathHandler {
     private final DataObjectBuilder dataObjectBuilder;
     private final Set<TagGenerator> tagGenerators;
     private final  boolean fullCrud;
-    private final boolean useModuleName;
+    private boolean useModuleName;
 
     PathHandler(SchemaContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
         this.swagger = target;
@@ -59,12 +59,17 @@ class PathHandler implements com.mrv.yangtools.codegen.PathHandler {
         this.useModuleName = false;
     }
 
+    public PathHandler useModuleName(boolean use) {
+        this.useModuleName = use;
+        return this;
+    }
+
 
     @Override
     public void path(ContainerSchemaNode cN, PathSegment pathCtx) {
         final Path path = operations(cN, pathCtx);
         //TODO pluggable PathPrinter
-        Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, false);
+        RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
 
         swagger.path(data + printer.path(), path);
     }
@@ -91,7 +96,7 @@ class PathHandler implements com.mrv.yangtools.codegen.PathHandler {
         List<String> tags = tags(pathCtx);
         tags.add(module.getName());
 
-        Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, useModuleName);
+        RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
         swagger.path(data + printer.path(), path);
 
         //yes I know it can be written in previous 'if statement' but at some point it is to be refactored
@@ -103,13 +108,13 @@ class PathHandler implements com.mrv.yangtools.codegen.PathHandler {
         list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN));
 
 
-        Restconf14PathPrinter postPrinter = new Restconf14PathPrinter(pathCtx, useModuleName, true);
+        RestconfPathPrinter postPrinter = new RestconfPathPrinter(pathCtx, useModuleName, true);
         swagger.path(data + postPrinter.path(), list);
     }
 
     @Override
     public void path(ContainerSchemaNode input, ContainerSchemaNode output, PathSegment pathCtx) {
-        final Restconf14PathPrinter printer = new Restconf14PathPrinter(pathCtx, useModuleName);
+        final RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
 
         Operation post = defaultOperation(pathCtx);
 

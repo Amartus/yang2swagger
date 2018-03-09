@@ -42,7 +42,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     public void testGenerateSimpleModule() {
         //when
         swaggerFor("simplest.yang", generator -> {
-            generator.pathHandler(new ODLPathHandlerBuilder());
+            generator.pathHandler(new ODLPathHandlerBuilder().useModuleName());
         });
         
 
@@ -54,7 +54,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
 
-        final String resUri = "/simplest:simple-root/simplest:children1/id/simplest:children2/children2-id/";
+        final String resUri = "/simplest:simple-root/simplest:children1/{id}/simplest:children2/{children2-id}/";
 
         assertThat(swagger.getPaths().keySet(), hasItem("/config" + resUri));
         assertThat(swagger.getPaths().keySet(), hasItem("/operational" + resUri));
@@ -66,7 +66,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     public void testGenerateSimpleModuleWithLimitedDepth() {
         //when
         swaggerFor("simplest.yang", generator -> {
-            generator.pathHandler(new ODLPathHandlerBuilder()).maxDepth(2);
+            generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()).maxDepth(2);
         });
 
         //then
@@ -75,8 +75,8 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 		assertThat(swagger.getPaths().keySet(),
 				hasItems("/config/simplest:simple-root/",
 						"/config/simplest:simple-root/simplest:children1/",
-						"/config/simplest:simple-root/simplest:children1/id/",
-						"/operational/simplest:simple-root/simplest:children1/id/",
+						"/config/simplest:simple-root/simplest:children1/{id}/",
+						"/operational/simplest:simple-root/simplest:children1/{id}/",
 						"/operational/simplest:simple-root/"));
     }
 
@@ -84,7 +84,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     public void testGenerateReadOnlyModule() {
         //when
         swaggerFor("read-only.yang", generator -> {
-            generator.pathHandler(new ODLPathHandlerBuilder());
+            generator.pathHandler(new ODLPathHandlerBuilder().useModuleName());
         });
 
         //then
@@ -112,7 +112,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     @org.junit.Test
     public void testGenerateRCPModule() {
         //when
-        swaggerFor("rpc-basic.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder()));
+        swaggerFor("rpc-basic.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()));
 
         //then
         Map<String, Path> paths = swagger.getPaths().entrySet().stream()
@@ -126,7 +126,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     @org.junit.Test
     public void testGenerateAugmentation() {
         //when
-        swaggerFor(p -> p.getFileName().toString().startsWith("simple"), generator -> generator.pathHandler(new ODLPathHandlerBuilder()));
+        swaggerFor(p -> p.getFileName().toString().startsWith("simple"), generator -> generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()));
 
         Set<String> defNames = swagger.getDefinitions().keySet();
 
@@ -148,7 +148,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
         SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
 
 		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
-				.pathHandler(new ODLPathHandlerBuilder());
+				.pathHandler(new ODLPathHandlerBuilder().useModuleName());
         swagger = generator.generate();
 
         Set<String> defNames = swagger.getDefinitions().keySet();

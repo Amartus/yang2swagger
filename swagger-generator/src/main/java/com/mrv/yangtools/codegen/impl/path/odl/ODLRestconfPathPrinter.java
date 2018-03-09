@@ -26,14 +26,17 @@ import java.util.stream.Collectors;
 public class ODLRestconfPathPrinter extends PathPrinter {
 
     private static final Function<Collection<? extends Parameter>, String> param =
-			params -> params.isEmpty() ? "/" : "/" + params.stream().map(p -> p.getName()).collect(Collectors.joining("/")) + "/";
+        params -> params.isEmpty() ? "/" : "/" + params.stream().map(p -> "{" + p.getName() + "}").collect(Collectors.joining("/")) + "/";
 
-    public ODLRestconfPathPrinter(PathSegment path) {
-        this(path, false);
+    private final boolean useModuleName;
+
+    public ODLRestconfPathPrinter(PathSegment path, boolean useModuleName) {
+        this(path, useModuleName, false);
     }
 
-    public ODLRestconfPathPrinter(PathSegment path, boolean dropLastParams) {
+    public ODLRestconfPathPrinter(PathSegment path, boolean useModuleName, boolean dropLastParams) {
         super(path, param, dropLastParams ? x -> "/" : param);
+        this.useModuleName = useModuleName;
     }
 
     @Override
@@ -44,7 +47,7 @@ public class ODLRestconfPathPrinter extends PathPrinter {
 
     protected String segment(Function<Collection<? extends Parameter>, String> paramWriter, String moduleName, PathSegment seg) {
         if(seg.getName() == null) return "";
-        return (moduleName != null && !moduleName.isEmpty() ? moduleName + ":" : "") + seg.getName() + paramWriter.apply(seg.getParam());
+        return (useModuleName && moduleName != null && !moduleName.isEmpty() ? moduleName + ":" : "") + seg.getName() + paramWriter.apply(seg.getParam());
     }
 
     /**

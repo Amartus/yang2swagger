@@ -31,14 +31,21 @@ public class PathHandlerBuilder implements com.mrv.yangtools.codegen.PathHandler
     private DataObjectBuilder objBuilder;
     private Set<TagGenerator> tagGenerators = new HashSet<>();
     private boolean fullCrud = true;
+    private boolean useModuleName = false;
 
     @Override
     public PathHandler forModule(Module module) {
-        return new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud);
+        return new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud).useModuleName(useModuleName);
     }
 
     public PathHandlerBuilder withoutFullCrud() {
         fullCrud = false;
+        return this;
+    }
+
+
+    public PathHandlerBuilder useModuleName() {
+        useModuleName = true;
         return this;
     }
 

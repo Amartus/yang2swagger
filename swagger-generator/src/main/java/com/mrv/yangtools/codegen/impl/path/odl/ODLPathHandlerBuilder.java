@@ -29,10 +29,16 @@ public class ODLPathHandlerBuilder implements com.mrv.yangtools.codegen.PathHand
     private DataObjectBuilder objBuilder;
     private Set<TagGenerator> tagGenerators = new HashSet<>();
     private boolean fullCrud = true;
+    private boolean useModuleName;
 
     @Override
     public PathHandler forModule(Module module) {
-        return new ODLPathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud);
+        return new ODLPathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud).useModuleName(useModuleName);
+    }
+
+    public ODLPathHandlerBuilder useModuleName() {
+        useModuleName = true;
+        return this;
     }
 
     public ODLPathHandlerBuilder withoutFullCrud() {
