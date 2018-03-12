@@ -53,7 +53,7 @@ public class CodeGenerator {
 
         JerseyServerCodegen codegenConfig = new JerseyServerCodegen();
 
-        // add handler for x-path annotation
+        // referencing handler for x-path annotation
 //        codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
 //                "@com.mrv.provision.di.rest.jersey.metadata.Leafref(\"" + v + "\")"
 //        );

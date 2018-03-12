@@ -10,9 +10,6 @@
 package com.mrv.yangtools.codegen.impl.postprocessor;
 
 import io.swagger.models.*;
-import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.RefProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,9 +19,11 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.mrv.yangtools.codegen.impl.postprocessor.SwaggerRefHelper.*;
+
 /**
- * Leave only data paths to given type hierarchies
- * or prune using path definitions.
+ * Leave only data pathMatchers to given type hierarchies
+ * or prune referencing path definitions.
  * If nothing is specified swagger model remains intact.
  * @author bartosz.michalik@amartus.com
  */
@@ -34,7 +33,7 @@ public class PathPrunner implements Consumer<Swagger> {
 
     private final List<String> exclude;
     private Set<String> types;
-    private Set<String> paths;
+    private Set<String> pathMatchers;
 
     /**
      * @param excludePrefixes excluded from analysis
@@ -42,17 +41,17 @@ public class PathPrunner implements Consumer<Swagger> {
     public PathPrunner(String... excludePrefixes) {
         this.exclude = Arrays.asList(excludePrefixes);
         this.types = new HashSet<>();
-        this.paths = new HashSet<>();
+        this.pathMatchers = new HashSet<>();
     }
 
-    Predicate<String> startsWith(Collection<String> prefixes) {
+    private Predicate<String> startsWith(Collection<String> prefixes) {
         return candidate -> prefixes.stream().anyMatch(candidate::startsWith);
     }
 
     /**
-     * Keep path refereing to type
-     * @param type
-     * @return
+     * Keep path referencing to type
+     * @param type type referenced by path operations
+     * @return this
      */
     public PathPrunner withType(String type) {
         types.add(type);
@@ -61,11 +60,11 @@ public class PathPrunner implements Consumer<Swagger> {
 
     /**
      * Add path to be pruned. All path starting with parameter are pruned
-     * @param startingWith
-     * @return
+     * @param startingWith prefix for path
+     * @return this
      */
     public PathPrunner prunePath(String startingWith) {
-        paths.add(startingWith);
+        pathMatchers.add(startingWith);
         return this;
     }
 
@@ -75,103 +74,86 @@ public class PathPrunner implements Consumer<Swagger> {
         prunePaths(swagger);
 
         if(swagger.getDefinitions() == null || types.isEmpty()) return;
-        pruneByType(swagger);
+        new TypePruner(swagger).prune();
     }
 
-    void pruneByType(Swagger swagger) {
-        Predicate<String> excludedPaths = startsWith(exclude);
-        final Map<String, Set<String>> hierarchy = buildTypeHierarchy(swagger);
-
-        final Set<String> toRemove = swagger.getPaths().entrySet().stream()
-                .filter(e -> !excludedPaths.test(e.getKey()))
-                .filter(e -> removeByType(e.getKey(), e.getValue(), hierarchy))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-
-        swagger.setPaths(swagger.getPaths().entrySet().stream().filter(p -> {
-            boolean remove = toRemove.stream().anyMatch(tR -> p.getKey().startsWith(tR));
-            if(remove) log.debug("Removing path based on type {}", p.getKey());
-            return !remove;
-        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    private static Stream<String> inheritenceStructure(String type, Map<String, TypeNode> hierarchy) {
+        return Stream.concat(Stream.of(type),
+            hierarchy.get(type).getReferencing().stream().flatMap(tn -> inheritenceStructure(tn.type, hierarchy)));
     }
 
-    private static Stream<String> inheritenceStructure(String type, Map<String, Set<String>> hierarchy) {
-        return Stream.concat(Stream.of(type), hierarchy.get(type).stream().flatMap(p -> inheritenceStructure(p, hierarchy)));
-    }
+    private class TypePruner {
+        private final Swagger swagger;
+        private final Predicate<String> excludedPaths;
+        private final Map<String, TypeNode> hierarchy;
 
-    /**
-     * Remove all path referring types that are not conforming to the configured types {@link PathPrunner#withType(String)}
-     * @param path path to examine
-     * @param hierarchy type hierarchy
-     * @return true if path should be pruned
-     */
-    private boolean removeByType(String pathName, Path path, final Map<String, Set<String>> hierarchy) {
-
-        Operation get = path.getGet();
-        if(get != null) {
-           return toRemoveByResponse(pathName, get, hierarchy);
-        }
-        Operation post = path.getPost();
-        if(post != null) {
-           return toRemoveByBody(pathName, "POST", post, hierarchy);
+        private TypePruner(Swagger swagger) {
+            this.swagger = swagger;
+            excludedPaths = startsWith(exclude);
+            hierarchy = buildTypeHierarchy(swagger);
         }
 
-        Operation put = path.getPut();
-        if(put != null) {
-            return toRemoveByBody(pathName, "PUT", put, hierarchy);
+        void prune() {
+            final Set<String> toRemove = swagger.getPaths().entrySet().stream()
+                    .filter(e -> !excludedPaths.test(e.getKey()))
+                    .filter(e -> removeByType(e.getKey(), e.getValue()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toSet());
+
+            swagger.setPaths(swagger.getPaths().entrySet().stream().filter(p -> {
+                boolean remove = toRemove.stream().anyMatch(tR -> p.getKey().startsWith(tR));
+                if(remove) log.debug("Removing path based on type {}", p.getKey());
+                return !remove;
+            }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         }
 
-        return false;
-    }
+        /**
+         * Remove all path referring types that are not conforming to the configured types {@link PathPrunner#withType(String)}
+         * @param path path to examine
+         * @return true if path should be pruned
+         */
+        private boolean removeByType(String pathName, Path path) {
 
-    private boolean toRemoveByBody(String pathName, String operationName, Operation o, final Map<String, Set<String>> hierarchy) {
-        String modelId = getFromBody(o);
-        if(modelId == null) {
-            log.warn("not recognized {} path {}. Skipping.", operationName, pathName);
-            return false;
-        }
-        return ! inheritenceStructure(modelId, hierarchy).anyMatch(m -> types.contains(m));
-    }
-
-    private boolean toRemoveByResponse(String pathName, Operation o, final Map<String, Set<String>> hierarchy) {
-        String modelId = getFromResponse(o, "200");
-        if(modelId == null) {
-            log.warn("not recognized GET path {}. Skipping.", pathName);
-            return false;
-        }
-
-        return ! inheritenceStructure(modelId, hierarchy).anyMatch(m -> types.contains(m));
-    }
-
-
-
-    private String getFromResponse(Operation oper, String responseCode) {
-        Response response = oper.getResponses().get(responseCode);
-        if(response == null || ! (response.getSchema() instanceof RefProperty)) {
-            return null;
-        }
-        RefProperty schema = (RefProperty) response.getSchema();
-        return schema.getSimpleRef();
-    }
-
-    private String getFromBody(Operation oper) {
-        Optional<Parameter> bodyParam =
-                oper.getParameters().stream().filter(p -> p instanceof BodyParameter).findFirst();
-        if(bodyParam.isPresent()) {
-            Model schema = ((BodyParameter) bodyParam.get()).getSchema();
-            if(schema instanceof RefModel) {
-                return ((RefModel) schema).getSimpleRef();
+            Operation get = path.getGet();
+            if (get != null) {
+                return toRemoveByResponse(pathName, get);
             }
+            Operation post = path.getPost();
+            if (post != null) {
+                return toRemoveByBody(pathName, "POST", post);
+            }
+
+            Operation put = path.getPut();
+
+            return put != null && toRemoveByBody(pathName, "PUT", put);
+
         }
 
-        return null;
+        private boolean toRemoveByBody(String pathName, String operationName, Operation o) {
+            String modelId = getFromBody(o);
+            if(modelId == null) {
+                log.warn("not recognized {} path {}. Skipping.", operationName, pathName);
+                return false;
+            }
+            return inheritenceStructure(modelId, hierarchy).noneMatch(m -> types.contains(m));
+        }
+
+        private boolean toRemoveByResponse(String pathName, Operation o) {
+            String modelId = getFromResponse(o, "200");
+            if(modelId == null) {
+                log.warn("not recognized GET path {}. Skipping.", pathName);
+                return false;
+            }
+
+            return inheritenceStructure(modelId, hierarchy).noneMatch(m -> types.contains(m));
+        }
     }
 
     private void prunePaths(Swagger swagger) {
-        Predicate<String> match = startsWith(paths);
+        Predicate<String> match = startsWith(pathMatchers);
         Predicate<String> excluded = startsWith(exclude);
 
-        if(paths.isEmpty()) return;
+        if(pathMatchers.isEmpty()) return;
 
         Map<String, Path> paths = swagger.getPaths();
         Set<String> toRemove = paths.entrySet().stream()
@@ -185,22 +167,13 @@ public class PathPrunner implements Consumer<Swagger> {
         swagger.setPaths(paths);
     }
 
-    private Map<String, Set<String>> buildTypeHierarchy(Swagger swagger) {
+    private Map<String, TypeNode> buildTypeHierarchy(Swagger swagger) {
 
-        return swagger.getDefinitions().entrySet().stream().map(e -> {
-            Model m = e.getValue();
-            if (m instanceof ComposedModel) {
-                Set<String> parents = ((ComposedModel) m).getAllOf().stream()
-                        .filter(c -> c instanceof RefModel)
-                        .map(c -> ((RefModel) c).getSimpleRef()).collect(Collectors.toSet());
-                return e(e.getKey(), parents);
-            } else return e(e.getKey(), Collections.emptySet());
-
-        }).collect(Collectors.toMap(Map.Entry::getKey, e -> (Set<String>) e.getValue()));
-
-    }
-
-    static <K, V> Map.Entry<K, V> e(K key, V value) {
-        return new AbstractMap.SimpleEntry<>(key, value);
+        TypesUsageTreeBuilder builder = new TypesUsageTreeBuilder();
+        swagger.getDefinitions().forEach((type, value) -> {
+            Stream<String> references = getReferences(type, value);
+            builder.referencing(type, references);
+        });
+        return builder.build();
     }
 }

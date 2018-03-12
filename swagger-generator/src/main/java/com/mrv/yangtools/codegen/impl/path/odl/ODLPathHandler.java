@@ -124,7 +124,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
 	    	swagger.path(data + configPathPrinter.path(), configPath);
 	    	
 	    	if(fullCrud) {
-	            //add list path
+	            //referencing list path
 	            final Path list = new Path();
 	            list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN));
 

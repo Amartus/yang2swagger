@@ -19,7 +19,6 @@ import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
-import com.mrv.yangtools.codegen.impl.postprocessor.SortDefinitions;
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.*;
@@ -117,7 +116,7 @@ public class SwaggerGenerator {
 
         pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
         //default postprocessors
-        postprocessor = new ReplaceEmptyWithParent().andThen(new SortDefinitions());
+        postprocessor = new ReplaceEmptyWithParent();
     }
 
     /**

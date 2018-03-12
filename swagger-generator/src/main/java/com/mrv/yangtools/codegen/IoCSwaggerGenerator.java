@@ -41,7 +41,6 @@ import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
-import com.mrv.yangtools.codegen.impl.postprocessor.SortDefinitions;
 
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
@@ -131,7 +130,7 @@ public class IoCSwaggerGenerator {
         target.info(new Info());
 
         //default postprocessors
-        postprocessor = new ReplaceEmptyWithParent().andThen(new SortDefinitions());
+        postprocessor = new ReplaceEmptyWithParent();
     }
 
     /**

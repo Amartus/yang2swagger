@@ -83,7 +83,7 @@ public abstract class AbstractItTest {
         try {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
-            log.error("Cannot load context using {}", cond);
+            log.error("Cannot load context referencing {}", cond);
             throw new IllegalArgumentException("Invalid precodintion for context loader");
         }
     }

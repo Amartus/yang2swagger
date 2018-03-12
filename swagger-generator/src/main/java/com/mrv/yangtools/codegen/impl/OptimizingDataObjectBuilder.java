@@ -107,7 +107,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     /**
      * Is node that has no attributes only single grouping.
      * @param node to check
-     * @return <code>true</code> if node is using single grouping and has no attributes
+     * @return <code>true</code> if node is referencing single grouping and has no attributes
      */
     @SuppressWarnings("unchecked")
     private <T extends SchemaNode & DataNodeContainer> boolean isDirectGrouping(DataNodeContainer node) {
@@ -464,7 +464,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(!models.isEmpty())
             newModel.parent(models.get(0));
 
-        // because of for swagger model order matters we need to add attributes at the end
+        // because of for swagger model order matters we need to referencing attributes at the end
         final ModelImpl attributes = new ModelImpl();
         if(doc != null)
             attributes.description(desc(doc));
