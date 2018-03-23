@@ -19,7 +19,10 @@ import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
+import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
+import io.swagger.models.ComposedModel;
 import io.swagger.models.Info;
+import io.swagger.models.RefModel;
 import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
@@ -259,6 +262,8 @@ public class SwaggerGenerator {
         if(target == null) throw new NullPointerException();
 
         Swagger result = generate();
+
+        new SortComplexModels().accept(result);
 
         result.setDefinitions(sortMap(result.getDefinitions()));
         result.setPaths(sortMap(result.getPaths()));
