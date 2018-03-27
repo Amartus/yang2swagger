@@ -20,9 +20,8 @@ import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
-import io.swagger.models.ComposedModel;
+import com.mrv.yangtools.common.SwaggerUtils;
 import io.swagger.models.Info;
-import io.swagger.models.RefModel;
 import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
@@ -265,22 +264,14 @@ public class SwaggerGenerator {
 
         new SortComplexModels().accept(result);
 
-        result.setDefinitions(sortMap(result.getDefinitions()));
-        result.setPaths(sortMap(result.getPaths()));
+        result.setDefinitions(SwaggerUtils.sortMap(result.getDefinitions()));
+        result.setPaths(SwaggerUtils.sortMap(result.getPaths()));
 
         mapper.writeValue(target, result);
     }
 
 
-    private <T> Map<String, T> sortMap(Map<String, T> toSort) {
-        return toSort.entrySet().stream()
-                .sorted(Comparator.comparing(Map.Entry::getKey))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-                        (u, v) -> {
-                            throw new IllegalStateException(String.format("Duplicate key %s", u));
-                        },
-                        LinkedHashMap::new));
-    }
+
 
     /**
      * Run Swagger generation for configured modules.

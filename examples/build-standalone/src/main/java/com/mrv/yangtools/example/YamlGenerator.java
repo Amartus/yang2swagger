@@ -13,6 +13,10 @@ package com.mrv.yangtools.example;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.PathPrunner;
+import com.mrv.yangtools.codegen.impl.postprocessor.RemoveUnusedDefinitions;
 import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 
 import java.io.*;
@@ -26,8 +30,11 @@ public class YamlGenerator {
 
     public static void main(String[] args) throws Exception {
         SwaggerGenerator generator;
+        String outputName = "swagger.swagger";
         if(args.length == 1) {
-            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> !m.getName().contains("path-computation"));
+            File file = new File(args[0]);
+            outputName = args[0] + ".swagger";
+            generator = GeneratorHelper.getGenerator(file, m -> true);
         } else {
             generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }
@@ -36,12 +43,21 @@ public class YamlGenerator {
 
         generator
                 .tagGenerator(new SegmentTagGenerator())
-                .elements(SwaggerGenerator.Elements.RCP)
-                .appendPostProcessor(new SingleParentInheritenceModel());
+                //if you wish to generate only to specific tree depth
+//                .maxDepth(3)
+                //define element type
+//                .elements(SwaggerGenerator.Elements.RCP);
+                //define path handling type
+//                .pathHandler(new ODLPathHandlerBuilder().withoutFullCrud())
+                .pathHandler(new PathHandlerBuilder().withoutFullCrud())
+                //define path pruninng strategy
+//                .appendPostProcessor(new PathPrunner("/operations").withType("tapi.common.GlobalClass"))
+                //and single inheritence model
+//                .appendPostProcessor(new SingleParentInheritenceModel())
+                .appendPostProcessor(new RemoveUnusedDefinitions());
 
 
-        generator.generate(new FileWriter("swagger.yaml"));
-//        generator.generate(new OutputStreamWriter(System.out));
+        generator.generate(new FileWriter(outputName));
 
     }
 }
