@@ -13,10 +13,7 @@ import io.swagger.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.AbstractMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,15 +28,16 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
     @Override
     public void accept(Swagger swagger) {
 
-        Worker worker = new Worker(buildHierarchy(swagger));
+        Worker worker = new Worker(buildHierarchy(swagger), swagger);
 
         swagger.getDefinitions().entrySet().stream()
-                .filter(e -> worker.getReferencing(e.getKey()).size() > 2)
+                .filter(e -> worker.getReferencing(e.getKey()).size() > 1)
                 .map(e -> {
 
                     worker.compute(e.getKey());
                     String parent = worker.getParent();
                     Set<String> toUnpack = worker.getToUnpack();
+
 
                     ComposedModel model = new ComposedModel();
 
@@ -53,9 +51,9 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
                         if(m instanceof ModelImpl) {
                             copyAttributes(impl, (ModelImpl) m);
                         } else if(m instanceof ComposedModel) {
-                            ModelImpl s = ((ComposedModel) m).getAllOf().stream().filter(x -> x instanceof ModelImpl).map(x -> (ModelImpl) x)
-                                    .findFirst().get();
-                            copyAttributes(impl, s);
+                            Optional<ModelImpl> tU = ((ComposedModel) m).getAllOf().stream().filter(x -> x instanceof ModelImpl).map(x -> (ModelImpl) x)
+                                    .findFirst();
+                            tU.ifPresent(model1 -> copyAttributes(impl, model1));
                         }
                     });
 
@@ -71,11 +69,13 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
 
     private class Worker {
         private final Map<String, TypeNode> hierarchy;
+        private final Swagger swagger;
         private Set<String> toUnpack;
         private String parent;
 
-        private Worker(Map<String, TypeNode> hierarchy) {
+        private Worker(Map<String, TypeNode> hierarchy, Swagger swagger) {
             this.hierarchy = hierarchy;
+            this.swagger = swagger;
         }
 
         private Set<TypeNode> getReferencing(String type) {
@@ -101,8 +101,31 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
         }
 
         Stream<TypeNode> getAllInHierarchy(TypeNode node) {
-            if(node.getReferencing().size() > 0) return Stream.concat(Stream.of(node), node.getReferencing().stream().flatMap(this::getAllInHierarchy));
+            if(node.getReferencing().size() > 0) return Stream.concat(Stream.of(node), sorted(node.getReferencing()).flatMap(this::getAllInHierarchy));
             return Stream.of(node);
+        }
+
+        private Stream<TypeNode> sorted(Set<TypeNode> referencing) {
+            TreeSet<TypeNode> sorted = new TreeSet<>((a, b) -> {
+                Model modelA = swagger.getDefinitions().get(a.type);
+                Model modelB = swagger.getDefinitions().get(b.type);
+                boolean aAugmentation = isAugmentation(modelA);
+                boolean bAugmentation = isAugmentation(modelB);
+
+                if(aAugmentation) {
+                    if(bAugmentation) return a.type.compareTo(b.type);
+                    return 1;
+                }
+                if(bAugmentation) return -1;
+                return a.type.compareTo(b.type);
+            });
+            sorted.addAll(referencing);
+            return sorted.stream();
+        }
+
+        private boolean isAugmentation(Model model) {
+            if(model.getVendorExtensions() != null) return false;
+            return model.getVendorExtensions().get("prefix") != null;
         }
 
         private Set<String> getToUnpack() {

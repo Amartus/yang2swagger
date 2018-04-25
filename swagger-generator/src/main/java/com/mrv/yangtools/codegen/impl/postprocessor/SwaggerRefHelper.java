@@ -80,10 +80,21 @@ public class SwaggerRefHelper {
 
     public static String getFromResponse(Operation oper, String responseCode) {
         Response response = oper.getResponses().get(responseCode);
-        if(response == null || ! (response.getSchema() instanceof RefProperty)) {
-            return null;
+        if(response == null) return null;
+
+        Property prop = response.getSchema();
+
+        if(prop instanceof ObjectProperty) {
+            prop = ((ObjectProperty) prop).getProperties().get("output");
         }
-        RefProperty schema = (RefProperty) response.getSchema();
+
+        if(prop instanceof RefProperty) {
+            return ((RefProperty)prop).getSimpleRef();
+        }
+
+        if(prop == null) return null;
+
+        RefProperty schema = (RefProperty) prop;
         return schema.getSimpleRef();
     }
 
@@ -94,6 +105,11 @@ public class SwaggerRefHelper {
             Model schema = ((BodyParameter) bodyParam.get()).getSchema();
             if(schema instanceof RefModel) {
                 return ((RefModel) schema).getSimpleRef();
+            }
+            if(schema instanceof ModelImpl) {
+                Property input = schema.getProperties().get("input");
+                if(input instanceof RefProperty)
+                    return ((RefProperty) input).getSimpleRef();
             }
         }
 

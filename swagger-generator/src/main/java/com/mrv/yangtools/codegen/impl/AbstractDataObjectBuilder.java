@@ -11,7 +11,6 @@
 
 package com.mrv.yangtools.codegen.impl;
 
-import com.google.common.base.CaseFormat;
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.*;
 import io.swagger.models.properties.*;
@@ -312,6 +311,8 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                 swagger.addDefinition(internal, model);
                 wrapper.addProperty(tagName, new RefProperty(DEF_PREFIX + internal));
             }
+
+            modelName = modelName + tagName.substring(0,1).toUpperCase() + tagName.substring(1);
 
             model = wrapper;
         }

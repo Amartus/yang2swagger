@@ -12,51 +12,25 @@
 package com.mrv.yangtools.codegen.impl.path.rfc8040;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
+import com.mrv.yangtools.codegen.PathPrinter;
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.codegen.TagGenerator;
-import com.mrv.yangtools.codegen.impl.path.DeleteOperationGenerator;
-import com.mrv.yangtools.codegen.impl.path.GetOperationGenerator;
-import com.mrv.yangtools.codegen.impl.path.PostOperationGenerator;
-import com.mrv.yangtools.codegen.impl.path.PutOperationGenerator;
+import com.mrv.yangtools.codegen.impl.path.*;
 import io.swagger.models.*;
-import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * REST path handler compliant with RESTCONF spec RFC 8040
  * @author cmurch@mrv.com
  * @author bartosz.michalik@amartus.com
  */
-class PathHandler implements com.mrv.yangtools.codegen.PathHandler {
-    private final Swagger swagger;
-    private final SchemaContext ctx;
-
-    private final String data;
-    private final String operations;
-    private final org.opendaylight.yangtools.yang.model.api.Module module;
-    private final DataObjectBuilder dataObjectBuilder;
-    private final Set<TagGenerator> tagGenerators;
-    private final  boolean fullCrud;
-    private boolean useModuleName;
+class PathHandler extends AbstractPathHandler {
 
     PathHandler(SchemaContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
-        this.swagger = target;
-        this.ctx = ctx;
-        this.module = modules;
-        data = "/data/";
-        operations = "/operations/";
-        this.dataObjectBuilder = objBuilder;
-        this.tagGenerators = generators;
-        this.fullCrud = fullCrud;
-
-        this.useModuleName = false;
+        super(ctx, modules, target, objBuilder, generators, fullCrud);
     }
 
     public PathHandler useModuleName(boolean use) {
@@ -113,48 +87,11 @@ class PathHandler implements com.mrv.yangtools.codegen.PathHandler {
     }
 
     @Override
-    public void path(ContainerSchemaNode input, ContainerSchemaNode output, PathSegment pathCtx) {
-        final RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
-
-        Operation post = defaultOperation(pathCtx);
-
-        post.tag(module.getName());
-        if(input != null) {
-            dataObjectBuilder.addModel(input, "input");
-
-            post.parameter(new BodyParameter()
-                    .name("body-param")
-                    .schema(new RefModel(dataObjectBuilder.getDefinitionId(input)))
-                    .description(input.getDescription())
-            );
-        }
-
-        if(output != null) {
-            String description = output.getDescription();
-            if(description == null) {
-                description = "Correct response";
-            }
-
-            dataObjectBuilder.addModel(output, "output");
-            post.response(200, new Response()
-                    .schema(new RefProperty(dataObjectBuilder.getDefinitionId(output)))
-                    .description(description));
-        }
-        post.response(201, new Response().description("No response")); //no output body
-        swagger.path(operations + printer.path(), new Path().post(post));
+    protected PathPrinter getPrinter(PathSegment pathCtx) {
+        return new RestconfPathPrinter(pathCtx, useModuleName);
     }
 
-    private List<String> tags(PathSegment pathCtx) {
-        List<String> tags = new ArrayList<>(tagGenerators.stream().flatMap(g -> g.tags(pathCtx).stream())
-                .collect(Collectors.toSet()));
-        Collections.sort(tags);
-        return tags;
-    }
 
-    private Operation defaultOperation(PathSegment pathCtx) {
-        final Operation operation = new Operation();
-        operation.response(400, new Response().description("Internal error"));
-        operation.setParameters(pathCtx.params());
-        return operation;
-    }
+
+
 }

@@ -127,6 +127,7 @@ public final class BindingMapping {
     }
 
     public static String normalize(String name) {
+        if(name.isEmpty()) return name;
         if(Character.isDigit(name.charAt(0)) || JAVA_RESERVED_WORDS.contains(name)) {
             return "_" + name;
         }

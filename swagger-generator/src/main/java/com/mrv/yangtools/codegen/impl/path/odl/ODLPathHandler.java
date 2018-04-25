@@ -10,61 +10,30 @@
 
 package com.mrv.yangtools.codegen.impl.path.odl;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
-
 import com.mrv.yangtools.codegen.DataObjectBuilder;
+import com.mrv.yangtools.codegen.PathPrinter;
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.codegen.TagGenerator;
-import com.mrv.yangtools.codegen.impl.path.DeleteOperationGenerator;
-import com.mrv.yangtools.codegen.impl.path.GetOperationGenerator;
-import com.mrv.yangtools.codegen.impl.path.PostOperationGenerator;
-import com.mrv.yangtools.codegen.impl.path.PutOperationGenerator;
-
-import io.swagger.models.Operation;
+import com.mrv.yangtools.codegen.impl.path.*;
 import io.swagger.models.Path;
-import io.swagger.models.RefModel;
-import io.swagger.models.Response;
 import io.swagger.models.Swagger;
-import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.properties.RefProperty;
+import org.opendaylight.yangtools.yang.model.api.*;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * REST path handler compliant with ODL RESTCONF https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Restconf#Identifier_in_URI
  * @author damian.mrozowicz@amartus.com
  */
-class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
-    private final Swagger swagger;
-    private final SchemaContext ctx;
+class ODLPathHandler extends AbstractPathHandler {
 
-    private final String data;
-    private final String operations;
     private final String operational;
-    private final Module module;
-    private final DataObjectBuilder dataObjectBuilder;
-    private final Set<TagGenerator> tagGenerators;
-    private final  boolean fullCrud;
-    private boolean useModuleName = false;
 
     ODLPathHandler(SchemaContext ctx, Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
-        this.swagger = target;
-        this.ctx = ctx;
-        this.module = modules;
-        data = "/config/";
+        super(ctx, modules, target, objBuilder, generators, fullCrud);
         operational = "/operational/";
-        operations = "/operations/";
-        this.dataObjectBuilder = objBuilder;
-        this.tagGenerators = generators;
-        this.fullCrud = fullCrud;
+        data = "/config/";
     }
 
 
@@ -136,48 +105,7 @@ class ODLPathHandler implements com.mrv.yangtools.codegen.PathHandler {
     }
 
     @Override
-    public void path(ContainerSchemaNode input, ContainerSchemaNode output, PathSegment pathCtx) {
-        final ODLRestconfPathPrinter printer = new ODLRestconfPathPrinter(pathCtx, useModuleName);
-
-        Operation post = defaultOperation(pathCtx);
-
-        post.tag(module.getName());
-        if(input != null) {
-            dataObjectBuilder.addModel(input, "input");
-
-            post.parameter(new BodyParameter()
-                    .name("body-param")
-                    .schema(new RefModel(dataObjectBuilder.getDefinitionId(input)))
-                    .description(input.getDescription())
-            );
-        }
-
-        if(output != null) {
-            String description = output.getDescription();
-            if(description == null) {
-                description = "Correct response";
-            }
-
-            dataObjectBuilder.addModel(output, "output");
-            post.response(200, new Response()
-                    .schema(new RefProperty(dataObjectBuilder.getDefinitionId(output)))
-                    .description(description));
-        }
-        post.response(201, new Response().description("No response")); //no output body
-        swagger.path(operations + printer.path(), new Path().post(post));
-    }
-
-    private List<String> tags(PathSegment pathCtx) {
-        List<String> tags = new ArrayList<>(tagGenerators.stream().flatMap(g -> g.tags(pathCtx).stream())
-                .collect(Collectors.toSet()));
-        Collections.sort(tags);
-        return tags;
-    }
-
-    private Operation defaultOperation(PathSegment pathCtx) {
-        final Operation operation = new Operation();
-        operation.response(400, new Response().description("Internal error"));
-        operation.setParameters(pathCtx.params());
-        return operation;
+    protected PathPrinter getPrinter(PathSegment pathCtx) {
+        return new ODLRestconfPathPrinter(pathCtx, useModuleName);
     }
 }

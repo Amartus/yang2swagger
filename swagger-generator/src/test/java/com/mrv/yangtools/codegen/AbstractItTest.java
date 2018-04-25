@@ -56,24 +56,20 @@ public abstract class AbstractItTest {
         if(post.getParameters() != null) {
             Optional<Parameter> body = post.getParameters().stream().filter(par -> "body".equals(par.getIn())).findFirst();
             if(body.isPresent()) {
-                String ref = ((RefModel) ((BodyParameter) body.get()).getSchema()).getSimpleRef();
-                Property input = swagger.getDefinitions().get(ref).getProperties().get("input");
-                assertTrue(input instanceof ObjectProperty);
-                assertFalse(((ObjectProperty)input).getProperties().isEmpty());
-                assertNotNull("Incorrect structure in " + ref, input);
+                Property input = ((BodyParameter) body.get()).getSchema().getProperties().get("input");
+                assertTrue(input instanceof RefProperty);
+                assertNotNull("Incorrect structure in ", swagger.getDefinitions().get(((RefProperty)input).getSimpleRef()));
             }
         }
 
         Response response = post.getResponses().get("200");
         if(response != null) {
-            RefProperty schema = (RefProperty) response.getSchema();
+            ObjectProperty schema = (ObjectProperty) response.getSchema();
             if(schema != null) {
-                String ref = schema.getSimpleRef();
+                Property output = schema.getProperties().get("output");
+                assertTrue(output instanceof RefProperty);
+                assertNotNull("Incorrect structure in ",swagger.getDefinitions().get(((RefProperty)output).getSimpleRef()));
 
-                Property output = swagger.getDefinitions().get(ref).getProperties().get("output");
-                assertTrue(output instanceof ObjectProperty);
-                assertFalse(((ObjectProperty)output).getProperties().isEmpty());
-                assertNotNull("Incorrect structure in " + ref, output);
             }
         }
     };
@@ -84,7 +80,7 @@ public abstract class AbstractItTest {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
             log.error("Cannot load context referencing {}", cond);
-            throw new IllegalArgumentException("Invalid precodintion for context loader");
+            throw new IllegalArgumentException("Invalid precondition for context loader");
         }
     }
 
