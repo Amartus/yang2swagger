@@ -15,6 +15,7 @@ import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.CollapseTypes;
 import com.mrv.yangtools.codegen.impl.postprocessor.PathPrunner;
 import com.mrv.yangtools.codegen.impl.postprocessor.RemoveUnusedDefinitions;
 import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
@@ -52,6 +53,8 @@ public class YamlGenerator {
                 .pathHandler(new PathHandlerBuilder().withoutFullCrud())
                 //define path pruninng strategy
 //                .appendPostProcessor(new PathPrunner("/operations").withType("tapi.common.GlobalClass"))
+                //define collapse types with the same structure
+                .appendPostProcessor(new CollapseTypes())
                 //and single inheritence model
 //                .appendPostProcessor(new SingleParentInheritenceModel())
                 .appendPostProcessor(new RemoveUnusedDefinitions());

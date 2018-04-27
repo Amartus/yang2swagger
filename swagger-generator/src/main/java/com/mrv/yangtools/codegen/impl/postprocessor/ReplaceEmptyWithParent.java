@@ -10,152 +10,36 @@
 package com.mrv.yangtools.codegen.impl.postprocessor;
 
 import com.mrv.yangtools.common.Tuple;
-import io.swagger.models.*;
-import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.RefProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.swagger.models.ComposedModel;
+import io.swagger.models.Model;
+import io.swagger.models.RefModel;
+import io.swagger.models.Swagger;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
+ * Replace empty definitions with definition parent
  * @author bartosz.michalik@amartus.com
  */
-public class ReplaceEmptyWithParent implements Consumer<Swagger> {
-    private final Logger log = LoggerFactory.getLogger(ReplaceEmptyWithParent.class);
+public class ReplaceEmptyWithParent extends  ReplaceDefinitionsProcessor {
+
     @Override
-    public void accept(Swagger target) {
-        Map<String, String> replacements = target.getDefinitions().entrySet()
+    protected Map<String, String> prepareForReplacement(Swagger swagger) {
+        return swagger.getDefinitions().entrySet()
                 .stream().filter(e -> {
-                    Model model = e.getValue();
-                    if (model instanceof ComposedModel) {
-                        List<Model> allOf = ((ComposedModel) model).getAllOf();
-                        return allOf.size() == 1 && allOf.get(0) instanceof RefModel;
-                    }
-                    return false;
-                }).map(e -> {
-                    RefModel ref = (RefModel) ((ComposedModel) e.getValue()).getAllOf().get(0);
-
-                    return new Tuple<>(e.getKey(), ref.getSimpleRef());
-
-                }).collect(Collectors.toMap(Tuple::first, Tuple::second));
-
-        log.debug("{} replacement found for definitions", replacements.size());
-        log.trace("replacing paths");
-        target.getPaths().values().stream().flatMap(p -> p.getOperations().stream())
-                .forEach(o -> fixOperation(o, replacements));
-
-        target.getDefinitions().forEach((key, value) -> fixModel(key, value, replacements));
-        replacements.keySet().forEach(r -> {
-            log.debug("removing {} model from swagger definitions", r);
-            target.getDefinitions().remove(r);
-        });
-    }
-
-    private void fixModel(String name, Model m, Map<String, String> replacements) {
-        ModelImpl fixProperties = null;
-        if(m instanceof ModelImpl) {
-            fixProperties = (ModelImpl) m;
-        }
-
-        if(m instanceof ComposedModel) {
-            ComposedModel cm = (ComposedModel) m;
-            fixComposedModel(name, cm, replacements);
-            fixProperties =  cm.getAllOf().stream()
-                    .filter(c -> c instanceof ModelImpl).map(c -> (ModelImpl)c)
-                    .findFirst().orElse(null);
-        }
-
-        if(fixProperties == null) return;
-        if(fixProperties.getProperties() == null) {
-            //TODO we might also remove this one from definitions
-            log.warn("Empty model in {}", name);
-            return;
-        }
-        fixProperties.getProperties().forEach((key, value) -> {
-            if (value instanceof RefProperty) {
-                if (fixProperty((RefProperty) value, replacements)) {
-                    log.debug("fixing property {} of {}", key, name);
-                }
-            } else if (value instanceof ArrayProperty) {
-                Property items = ((ArrayProperty) value).getItems();
-                if (items instanceof RefProperty) {
-                    if (fixProperty((RefProperty) items, replacements)) {
-                        log.debug("fixing property {} of {}", key, name);
-                    }
-                }
+            Model model = e.getValue();
+            if (model instanceof ComposedModel) {
+                List<Model> allOf = ((ComposedModel) model).getAllOf();
+                return allOf.size() == 1 && allOf.get(0) instanceof RefModel;
             }
-        });
+            return false;
+        }).map(e -> {
+            RefModel ref = (RefModel) ((ComposedModel) e.getValue()).getAllOf().get(0);
 
-    }
-    private boolean fixProperty(RefProperty p, Map<String, String> replacements) {
-        if(replacements.containsKey(p.getSimpleRef())) {
-            p.set$ref(replacements.get(p.getSimpleRef()));
-            return true;
-        }
-        return false;
-    }
+            return new Tuple<>(e.getKey(), ref.getSimpleRef());
 
-    private void fixComposedModel(String name, ComposedModel m, Map<String, String> replacements) {
-        Set<RefModel> toReplace = m.getAllOf().stream().filter(c -> c instanceof RefModel).map(cm -> (RefModel) cm)
-                .filter(rm -> replacements.containsKey(rm.getSimpleRef())).collect(Collectors.toSet());
-        toReplace.forEach(r -> {
-            int idx = m.getAllOf().indexOf(r);
-            RefModel newRef = new RefModel(replacements.get(r.getSimpleRef()));
-            m.getAllOf().set(idx, newRef);
-            if(m.getInterfaces().remove(r)) {
-                m.getInterfaces().add(newRef);
-            }
-        });
-    }
-
-
-    private void fixOperation(Operation operation, Map<String, String> replacements) {
-        operation.getResponses().values()
-                .forEach(r -> fixResponse(r, replacements));
-        operation.getParameters().forEach(p -> fixParameter(p, replacements));
-        Optional<Map.Entry<String, String>> rep = replacements.entrySet().stream()
-                .filter(r -> operation.getDescription() != null && operation.getDescription().contains(r.getKey()))
-                .findFirst();
-        if(rep.isPresent()) {
-            log.debug("fixing description for '{}'", rep.get().getKey());
-            Map.Entry<String, String> entry = rep.get();
-            operation.setDescription(operation.getDescription().replace(entry.getKey(), entry.getValue()));
-        }
-
-    }
-
-    private void fixParameter(Parameter p, Map<String, String> replacements) {
-        if(!(p instanceof BodyParameter)) return;
-        BodyParameter bp = (BodyParameter) p;
-        if(!(bp.getSchema() instanceof RefModel)) return;
-        RefModel ref = (RefModel) bp.getSchema();
-        if(replacements.containsKey(ref.getSimpleRef())) {
-            String replacement = replacements.get(ref.getSimpleRef());
-            bp.setDescription(bp.getDescription().replace(ref.getSimpleRef(), replacement));
-            bp.setSchema(new RefModel(replacement));
-        }
-
-    }
-
-    private void fixResponse(Response r, Map<String, String> replacements) {
-        if(! (r.getSchema() instanceof RefProperty)) return;
-        RefProperty schema = (RefProperty) r.getSchema();
-        if(replacements.containsKey(schema.getSimpleRef())) {
-            String replacement = replacements.get(schema.getSimpleRef());
-            if(r.getDescription() != null)
-                r.setDescription(r.getDescription().replace(schema.getSimpleRef(), replacement));
-            schema.setDescription(replacement);
-            r.setSchema(new RefProperty(replacement));
-        }
-
+        }).collect(Collectors.toMap(Tuple::first, Tuple::second));
     }
 }

@@ -5,11 +5,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
+ * Type usage builder. There are two types of relations supported
+ * <ul>
+ *     <li>uses</li> - poitned by properties of a given definition
+ *     <li>references</li> - part of composition of a hgiven definition
+ * </ul>
  * @author bartosz.michalik@amartus.com
  */
 class TypesUsageTreeBuilder {

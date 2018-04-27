@@ -32,8 +32,8 @@ public class SwaggerRefHelper {
     /**
      * Get all references from model
      * @param type name
-     * @param model representing type
-     * @return all references
+     * @param model definition
+     * @return a stream with all other definitions that are part of composite
      */
     public static Stream<String> getReferences(String type, Model model) {
         if(model instanceof RefModel) return Stream.of(((RefModel)model).getSimpleRef());
@@ -41,10 +41,16 @@ public class SwaggerRefHelper {
             return ((ComposedModel) model).getAllOf().stream().flatMap(of -> getReferences(type, of));
         }
 
-        log.debug("Empty references for type {}", type);
+        log.trace("Empty references for type {}", type);
         return Stream.empty();
     }
 
+    /**
+     * Get uses of of a set of properties in the model
+     * @param type type name
+     * @param model definition
+     * @return a stream with all other definitions refrerenced via properties
+     */
     public static Stream<String> getUses(String type, Model model) {
         if(model instanceof ModelImpl) {
             if(model.getProperties() == null) {
@@ -58,7 +64,7 @@ public class SwaggerRefHelper {
             return ((ComposedModel) model).getAllOf().stream().flatMap(of -> getUses(type, of));
         }
 
-        log.debug("Empty uses for type {}", type);
+        log.trace("Empty uses for type {}", type);
         return Stream.empty();
     }
 
