@@ -11,57 +11,22 @@
 
 package com.mrv.yangtools.codegen.impl.path.rfc8040;
 
-import com.mrv.yangtools.codegen.DataObjectBuilder;
 import com.mrv.yangtools.codegen.PathHandler;
-import com.mrv.yangtools.codegen.TagGenerator;
-import io.swagger.models.Swagger;
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
-
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 
 /**
  * @author bartosz.michalik@amartus.com
  */
-public class PathHandlerBuilder implements com.mrv.yangtools.codegen.PathHandlerBuilder {
-    private SchemaContext ctx;
-    private Swagger target;
-    private DataObjectBuilder objBuilder;
-    private Set<TagGenerator> tagGenerators = new HashSet<>();
-    private boolean fullCrud = true;
-    private boolean useModuleName = false;
+public class PathHandlerBuilder extends AbstractPathHandlerBuilder {
 
     @Override
     public PathHandler forModule(Module module) {
         return new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandler(ctx, module, target, objBuilder, tagGenerators,fullCrud).useModuleName(useModuleName);
     }
 
-    public PathHandlerBuilder withoutFullCrud() {
-        fullCrud = false;
-        return this;
-    }
-
-
-    public PathHandlerBuilder useModuleName() {
-        useModuleName = true;
-        return this;
-    }
-
     @Override
-    public void configure(SchemaContext ctx, Swagger target, DataObjectBuilder builder) {
-        Objects.requireNonNull(ctx);
-        Objects.requireNonNull(target);
-        Objects.requireNonNull(builder);
-        objBuilder = builder;
-        this.ctx = ctx;
-        this.target = target;
-    }
-
-    @Override
-    public void addTagGenerator(TagGenerator generator) {
-        Objects.requireNonNull(generator);
-        this.tagGenerators.add(generator);
+    protected PathHandlerBuilder thiz() {
+        return this;
     }
 }

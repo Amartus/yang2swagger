@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Guice;
 import com.mrv.yangtools.codegen.IoCSwaggerGenerator;
-import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
 import com.mrv.yangutils.codegen.JerseyServerCodegen;
 
 import io.swagger.codegen.ClientOptInput;
@@ -35,8 +35,7 @@ import io.swagger.models.Swagger;
  */
 public class IoCCodeGenerator {
     public static void main(String[] args) throws Exception {
-    	Guice.createInjector(new GeneratorInjector());
-    	
+        Guice.createInjector(new GeneratorInjector());
         IoCSwaggerGenerator generator;
         if(args.length == 1) {
             // prepare a default generator for a given directory with YANG modules and accept all of them for path

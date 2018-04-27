@@ -12,7 +12,7 @@
 package com.mrv.yangtools.example;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
-import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.CollapseTypes;

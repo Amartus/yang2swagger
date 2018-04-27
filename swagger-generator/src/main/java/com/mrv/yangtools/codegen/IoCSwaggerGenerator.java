@@ -180,6 +180,11 @@ public class IoCSwaggerGenerator {
     @Inject
     public IoCSwaggerGenerator pathHandler(PathHandlerBuilder handlerBuilder) {
         Objects.requireNonNull(handlerBuilder);
+
+        if(this.pathHandlerBuilder != null) {
+            pathHandlerBuilder.getTagGenerators().forEach(handlerBuilder::addTagGenerator);
+        }
+
         this.pathHandlerBuilder = handlerBuilder;
         return this;
     }
@@ -260,7 +265,7 @@ public class IoCSwaggerGenerator {
      * @return this
      */
     public IoCSwaggerGenerator maxDepth(int maxDepth) {
-    	this.maxDepth = maxDepth;
+        this.maxDepth = maxDepth;
         return this;
     }    
 

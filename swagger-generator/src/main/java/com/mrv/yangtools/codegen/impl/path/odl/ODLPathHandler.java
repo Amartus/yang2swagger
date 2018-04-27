@@ -44,24 +44,20 @@ class ODLPathHandler extends AbstractPathHandler {
 
     @Override
     public void path(ContainerSchemaNode cN, PathSegment pathCtx) {
-    	final Path operationalPath = operationalOperations(cN, pathCtx);
-    	ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
-    	swagger.path(operational + operationalPathPrinter.path(), operationalPath);
-    	
-		if (!pathCtx.isReadOnly()) {
-			final Path configPath = operations(cN, pathCtx);
-	    	ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
-	    	swagger.path(data + configPathPrinter.path(), configPath);
-		}        
+        final Path operationalPath = operationalOperations(cN, pathCtx);
+        ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
+        swagger.path(operational + operationalPathPrinter.path(), operationalPath);
+
+        if (!pathCtx.isReadOnly()) {
+            final Path configPath = operations(cN, pathCtx);
+            ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
+            swagger.path(data + configPathPrinter.path(), configPath);
+        }
     }
 
     protected Path operationalOperations(DataSchemaNode node, PathSegment pathCtx) {
         final Path path = new Path();
-        List<String> tags = tags(pathCtx);
-        tags.add(module.getName());
-
-        path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-
+        path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags(pathCtx)));
         return path;
     }
 
@@ -69,7 +65,6 @@ class ODLPathHandler extends AbstractPathHandler {
     protected Path operations(DataSchemaNode node, PathSegment pathCtx) {
         final Path path = new Path();
         List<String> tags = tags(pathCtx);
-        tags.add(module.getName());
 
         path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
         if(fullCrud) {
@@ -83,25 +78,25 @@ class ODLPathHandler extends AbstractPathHandler {
 
     @Override
     public void path(ListSchemaNode lN, PathSegment pathCtx) {
-    	final Path operationalPath = operationalOperations(lN, pathCtx);
-    	ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
-    	swagger.path(operational + operationalPathPrinter.path(), operationalPath);
-    	
-		if (!pathCtx.isReadOnly()) {
-			final Path configPath = operations(lN, pathCtx);
-	    	ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
-	    	swagger.path(data + configPathPrinter.path(), configPath);
-	    	
-	    	if(fullCrud) {
-	            //referencing list path
-	            final Path list = new Path();
-	            list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN));
+        final Path operationalPath = operationalOperations(lN, pathCtx);
+        ODLRestconfPathPrinter operationalPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
+        swagger.path(operational + operationalPathPrinter.path(), operationalPath);
+
+        if (!pathCtx.isReadOnly()) {
+            final Path configPath = operations(lN, pathCtx);
+            ODLRestconfPathPrinter configPathPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName);
+            swagger.path(data + configPathPrinter.path(), configPath);
+
+            if(fullCrud) {
+                //referencing list path
+                final Path list = new Path();
+                list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN));
 
 
-	            ODLRestconfPathPrinter postPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName, true);
-	            swagger.path(data + postPrinter.path(), list);
-	    	}
-		}   
+                ODLRestconfPathPrinter postPrinter = new ODLRestconfPathPrinter(pathCtx, useModuleName, true);
+                swagger.path(data + postPrinter.path(), list);
+            }
+        }
     }
 
     @Override

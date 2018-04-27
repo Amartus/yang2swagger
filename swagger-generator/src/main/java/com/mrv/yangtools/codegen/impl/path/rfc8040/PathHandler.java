@@ -51,7 +51,6 @@ class PathHandler extends AbstractPathHandler {
     protected Path operations(DataSchemaNode node, PathSegment pathCtx) {
         final Path path = new Path();
         List<String> tags = tags(pathCtx);
-        tags.add(module.getName());
 
         path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
         if(fullCrud && !pathCtx.isReadOnly()) {
@@ -67,9 +66,6 @@ class PathHandler extends AbstractPathHandler {
     public void path(ListSchemaNode lN, PathSegment pathCtx) {
         final Path path = operations(lN, pathCtx);
 
-        List<String> tags = tags(pathCtx);
-        tags.add(module.getName());
-
         RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
         swagger.path(data + printer.path(), path);
 
@@ -79,7 +75,7 @@ class PathHandler extends AbstractPathHandler {
 
         //referencing list path
         final Path list = new Path();
-        list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN));
+        list.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, true).execute(lN).tags(tags(pathCtx)));
 
 
         RestconfPathPrinter postPrinter = new RestconfPathPrinter(pathCtx, useModuleName, true);

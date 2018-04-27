@@ -15,7 +15,7 @@ import java.io.FileWriter;
 
 import com.google.inject.Guice;
 import com.mrv.yangtools.codegen.IoCSwaggerGenerator;
-import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
 import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 
 /**
@@ -25,8 +25,7 @@ import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel
 public class IoCYamlGenerator {
 
     public static void main(String[] args) throws Exception {
-    	Guice.createInjector(new GeneratorInjector());
-    	
+        Guice.createInjector(new GeneratorInjector());
         IoCSwaggerGenerator generator;
         if(args.length == 1) {
             generator = IoCGeneratorHelper.getGenerator(new File(args[0]),m -> true);
@@ -35,7 +34,7 @@ public class IoCYamlGenerator {
         }
 
         generator
-        		.tagGenerator(new SegmentTagGenerator())
+                .tagGenerator(new SegmentTagGenerator())
                 .elements(IoCSwaggerGenerator.Elements.RCP)
                 .appendPostProcessor(new SingleParentInheritenceModel());
 

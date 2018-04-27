@@ -8,10 +8,7 @@ import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -98,6 +95,8 @@ public abstract class AbstractPathHandler implements PathHandler {
         List<String> tags = new ArrayList<>(tagGenerators.stream().flatMap(g -> g.tags(pathCtx).stream())
                 .collect(Collectors.toSet()));
         Collections.sort(tags);
+        String moduleName = pathCtx.stream().filter(p -> p.getModuleName() != null).map(PathSegment::getModuleName).findFirst().orElse(module.getName());
+        tags.add(moduleName);
         return tags;
     }
 }
