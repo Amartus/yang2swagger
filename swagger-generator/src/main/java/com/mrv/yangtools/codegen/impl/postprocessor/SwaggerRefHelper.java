@@ -55,7 +55,7 @@ public class SwaggerRefHelper {
         if(model instanceof ModelImpl) {
             if(model.getProperties() == null) {
                 if( ((ModelImpl) model).getEnum() == null)
-                    log.warn("Emtpy properties while resolving {}", type);
+                    log.warn("Empty properties while resolving {}", type);
                 return Stream.empty();
             }
             return model.getProperties().values().stream().flatMap(SwaggerRefHelper::toUses);

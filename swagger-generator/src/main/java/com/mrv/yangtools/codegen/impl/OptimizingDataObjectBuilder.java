@@ -340,6 +340,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             model = augmented;
         }
 
+        verifyModel(node, model);
+
         existingModels.put(toModel, model);
         existingModels.put(node, model);
 
@@ -350,6 +352,20 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         toRemove.ifPresent(effectiveNode::remove);
 
         return model;
+    }
+
+    private <T extends SchemaNode & DataNodeContainer> void verifyModel(T node, Model model) {
+        if(model instanceof ComposedModel) {
+            if( ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof RefModel)
+                    .count() <= 1) {
+                boolean emptyAttributes = ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof ModelImpl)
+                        .map(m -> m.getProperties().isEmpty()).findFirst().orElse(false);
+
+                if(emptyAttributes) {
+                    log.warn("Incorrectly constructed model {}, hierarchy can be flattened with postprocessor", node.getQName());
+                }
+            }
+        }
     }
 
     private Set<UsesNode> uses(DataNodeContainer toModel) {
@@ -474,10 +490,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
         if(! noAttributes) {
             newModel.child(attributes);
-        }
-
-        if(models.size() == 1 && noAttributes) {
-            log.warn("should not happen to have such object for node {}", node);
         }
 
         return newModel;
