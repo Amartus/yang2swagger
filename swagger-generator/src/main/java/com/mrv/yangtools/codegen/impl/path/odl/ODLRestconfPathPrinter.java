@@ -1,15 +1,14 @@
 /*
- * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ * Copyright (c) 2018 Amartus. All rights reserved.
  *  This program and the accompanying materials are made available under the
  *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
  *  and is available at http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *      Christopher Murch <cmurch@mrv.com>
- *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.rfc8040;
+package com.mrv.yangtools.codegen.impl.path.odl;
 
 import com.mrv.yangtools.codegen.PathPrinter;
 import com.mrv.yangtools.codegen.PathSegment;
@@ -21,23 +20,21 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * {@link PathPrinter} compliant with https://tools.ietf.org/html/draft-ietf-netconf-restconf-14#section-3.3
- * @author cmurch@mrv.com
- * @author bartosz.michalik@amartus.com
+ * {@link PathPrinter} compliant with https://tools.ietf.org/html/draft-bierman-netconf-restconf-02#section-5.3.1
+ * use by Open https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Restconf#Identifier_in_URI
  */
-public class Restconf14PathPrinter extends PathPrinter {
+public class ODLRestconfPathPrinter extends PathPrinter {
 
     private static final Function<Collection<? extends Parameter>, String> param =
-            params -> params.isEmpty() ? "/" :
-                    "=" + params.stream().map(p -> "{" + p.getName() + "}").collect(Collectors.joining(",")) + "/";
+        params -> params.isEmpty() ? "/" : "/" + params.stream().map(p -> "{" + p.getName() + "}").collect(Collectors.joining("/")) + "/";
 
     private final boolean useModuleName;
 
-    public Restconf14PathPrinter(PathSegment path, boolean useModuleName) {
+    public ODLRestconfPathPrinter(PathSegment path, boolean useModuleName) {
         this(path, useModuleName, false);
     }
 
-    public Restconf14PathPrinter(PathSegment path, boolean useModuleName, boolean dropLastParams) {
+    public ODLRestconfPathPrinter(PathSegment path, boolean useModuleName, boolean dropLastParams) {
         super(path, param, dropLastParams ? x -> "/" : param);
         this.useModuleName = useModuleName;
     }

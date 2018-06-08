@@ -15,7 +15,7 @@ import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * @author bartosz.michalik@amartus.com
@@ -26,4 +26,6 @@ public interface PathHandlerBuilder {
     void configure(SchemaContext ctx, Swagger target, DataObjectBuilder builder);
 
     void addTagGenerator(TagGenerator generator);
+
+    Collection<TagGenerator> getTagGenerators();
 }

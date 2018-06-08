@@ -71,9 +71,9 @@ public class GroupingHierarchyHandler {
                 .collect(Collectors.toMap(Tuple::first, Tuple::second));
 
         ctx.getGroupings().forEach(g -> {
-            HierarchyNode node = result.get(g.getPath());
+            HierarchyNode node = result.get(g.getPath().getLastComponent());
             g.getUses().forEach(u -> {
-                HierarchyNode parent = result.get(u.getGroupingPath());
+                HierarchyNode parent = result.get(u.getGroupingPath().getLastComponent());
                 if (parent == null) {
                     log.warn("Hierarchy creation problem. No grouping with name {} found. Ignoring hierarchy relation.", u.getGroupingPath().getLastComponent());
                 } else {

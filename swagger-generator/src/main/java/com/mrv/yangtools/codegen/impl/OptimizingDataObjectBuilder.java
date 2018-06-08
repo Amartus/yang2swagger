@@ -18,6 +18,7 @@ import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.GroupingEffectiveStatementImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +107,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     /**
      * Is node that has no attributes only single grouping.
      * @param node to check
-     * @return <code>true</code> if node is using single grouping and has no attributes
+     * @return <code>true</code> if node is referencing single grouping and has no attributes
      */
     @SuppressWarnings("unchecked")
     private <T extends SchemaNode & DataNodeContainer> boolean isDirectGrouping(DataNodeContainer node) {
@@ -172,14 +173,21 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     protected <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
         String definitionId = getDefinitionId(node);
         T effectiveNode = (T) getEffectiveChild(node.getQName());
-        if(isTreeAugmented.test(effectiveNode)) {
+
+        boolean treeAugmented = isTreeAugmented.test(effectiveNode);
+
+        if(treeAugmented) {
             definitionId = getDefinitionId(effectiveNode);
         }
 
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
 
-        if(existingModel(node) == null) {
+        if(treeAugmented && ! existingModels.containsKey(effectiveNode)) {
+            log.debug("adding referenced model {} for node {} ", definitionId, effectiveNode);
+            addModel(effectiveNode);
+
+        } else if(existingModel(node) == null) {
             log.debug("adding referenced model {} for node {} ", definitionId, node);
             addModel(node);
         }
@@ -332,6 +340,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             model = augmented;
         }
 
+        verifyModel(node, model);
+
         existingModels.put(toModel, model);
         existingModels.put(node, model);
 
@@ -342,6 +352,20 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         toRemove.ifPresent(effectiveNode::remove);
 
         return model;
+    }
+
+    private <T extends SchemaNode & DataNodeContainer> void verifyModel(T node, Model model) {
+        if(model instanceof ComposedModel) {
+            if( ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof RefModel)
+                    .count() <= 1) {
+                boolean emptyAttributes = ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof ModelImpl)
+                        .map(m -> m.getProperties().isEmpty()).findFirst().orElse(false);
+
+                if(emptyAttributes) {
+                    log.warn("Incorrectly constructed model {}, hierarchy can be flattened with postprocessor", node.getQName());
+                }
+            }
+        }
     }
 
     private Set<UsesNode> uses(DataNodeContainer toModel) {
@@ -456,7 +480,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(!models.isEmpty())
             newModel.parent(models.get(0));
 
-        // because of for swagger model order matters we need to add attributes at the end
+        // because of for swagger model order matters we need to referencing attributes at the end
         final ModelImpl attributes = new ModelImpl();
         if(doc != null)
             attributes.description(desc(doc));
@@ -466,10 +490,6 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
         if(! noAttributes) {
             newModel.child(attributes);
-        }
-
-        if(models.size() == 1 && noAttributes) {
-            log.warn("should not happen to have such object for node {}", node);
         }
 
         return newModel;

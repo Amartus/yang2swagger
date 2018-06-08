@@ -12,7 +12,11 @@
 package com.mrv.yangtools.example;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
-import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.*;
+import io.swagger.models.auth.BasicAuthDefinition;
 
 import java.io.*;
 
@@ -25,16 +29,38 @@ public class YamlGenerator {
 
     public static void main(String[] args) throws Exception {
         SwaggerGenerator generator;
+        String outputName = "swagger.swagger";
         if(args.length == 1) {
-            generator = GeneratorHelper.getGenerator(new File(args[0]),m -> true);
+            File file = new File(args[0]);
+            outputName = args[0] + ".swagger";
+            generator = GeneratorHelper.getGenerator(file, m -> true);
         } else {
             generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }
 
-        generator.tagGenerator(new SegmentTagGenerator());
 
-        generator.generate(new FileWriter("swagger.yaml"));
-//        generator.generate(new OutputStreamWriter(System.out));
+
+        generator
+                .tagGenerator(new SegmentTagGenerator())
+                //if you wish to generate only to specific tree depth
+//                .maxDepth(3)
+                //define element type
+//                .elements(SwaggerGenerator.Elements.RCP);
+                //define path handling type
+//                .pathHandler(new ODLPathHandlerBuilder().withoutFullCrud())
+                .pathHandler(new PathHandlerBuilder().withoutFullCrud())
+                //define path pruninng strategy
+//                .appendPostProcessor(new PathPrunner("/operations").withType("tapi.common.GlobalClass"))
+                //define collapse types with the same structure
+                .appendPostProcessor(new CollapseTypes())
+                // add basic auth definition
+//                .appendPostProcessor(new AddSecurityDefinitions().withSecurityDefinition("api_sec", new BasicAuthDefinition()))
+                //and single inheritence model
+//                .appendPostProcessor(new SingleParentInheritenceModel())
+                .appendPostProcessor(new RemoveUnusedDefinitions());
+
+
+        generator.generate(new FileWriter(outputName));
 
     }
 }

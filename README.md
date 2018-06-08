@@ -2,14 +2,13 @@
 
 Project is a YANG to Swagger ([OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md)) generator tool. OpenAPI describes and documents RESTful APIs. The Swagger definition generated with our tool is meant to be compliant with [RESTCONF specification](https://tools.ietf.org/html/draft-ietf-netconf-restconf-16). 
 Having the definition you are able to build live documentation services, and generate client or server code using Swagger tools.
-Current stable release is [1.1.0](https://github.com/UltimateDogg/yang2swagger-generator/tree/1.1.0) version. 
 
 Our tool supports:
 
  * rpc - which are translated into POST operations 
  * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
  * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
- * leafrefs - which are represented as model attributes with types of the referred leafs
+ * leafrefs - which are represented as model attributes with typesUsageTreeBuilder of the referred leafs
  * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * YANG modules documentation - which is added to generated swagger API specification
@@ -47,11 +46,15 @@ Argument "module ..." is required
                        directory (default: )
  -api-version string : The current version of your API (default: 1.0)
  -format enum        : The output format (options: YAML, JSON) (default: YAML)
+ -content-type string: Content type the API generates / consumes (default: application/yang-data+json)
 ```
 
 For example:
 ```
-java -jar swagger-generator-cli-1.0.0-executable.jar -yang-dir presto_yang_dir -output swagger.yaml
+java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar \
+ -yang-dir examples/build-standalone/src/main/resources \
+ -output swagger.yaml \
+ mef-services
 ```
 
 ### Maven integration ###
@@ -120,7 +123,7 @@ You might also consider to plug-in code generator into your model definition:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
-                <version>1.1.3</version>
+                <version>1.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
         <executions>

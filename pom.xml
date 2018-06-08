@@ -17,7 +17,7 @@
 
     <groupId>com.mrv.yangtools</groupId>
     <artifactId>yangtools</artifactId>
-    <version>1.1.3</version>
+   <version>1.1.9-SNAPSHOT</version>
     <modules>
         <module>swagger-generator</module>
         <module>common</module>
@@ -33,7 +33,8 @@
         <logback.version>1.1.6</logback.version>
         <swagger.version>1.5.9</swagger.version>
         <swagger.codegen.version>2.2.1</swagger.codegen.version>
-        <yangtools.version>1.0.0-Boron</yangtools.version>
+        <yangtools.version>1.2.1</yangtools.version>
+        <guice.version>4.1.0</guice.version>
     </properties>
 
     <dependencyManagement>
@@ -42,8 +43,20 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>19.0</version>
+                <version>22.0</version>
             </dependency>
+
+			<!-- IoC Google Guice -->
+			<dependency>
+				<groupId>com.google.inject</groupId>
+				<artifactId>guice</artifactId>
+				<version>${guice.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.inject.extensions</groupId>
+				<artifactId>guice-assistedinject</artifactId>
+				<version>${guice.version}</version>
+			</dependency>
 
             <!-- odl -->
 
