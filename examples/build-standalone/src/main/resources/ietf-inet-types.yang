@@ -1,5 +1,5 @@
-module ietf-inet-types {
-  namespace "urn:ietf:params:xml:ns:yang:ietf-inet-types";
+module ietf-inet-typesUsageTreeBuilder {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-inet-typesUsageTreeBuilder";
   prefix "inet";
   organization
    "IETF NETMOD (NETCONF Data Modeling Language) Working Group";
@@ -14,7 +14,7 @@ module ietf-inet-types {
               <mailto:j.schoenwaelder@jacobs-university.de>";
   description
    "This module contains a collection of generally useful derived
-    YANG data types for Internet addresses and related things.
+    YANG data typesUsageTreeBuilder for Internet addresses and related things.
     Copyright (c) 2010 IETF Trust and the persons identified as
     authors of the code.  All rights reserved.
     Redistribution and use in source and binary forms, with or without
@@ -280,7 +280,7 @@ module ietf-inet-types {
       3.5 of RFC 1034 recommends a syntax (modified in Section
       2.1 of RFC 1123).  The pattern above is intended to allow
       for current practice in domain name use, and some possible
-      future expansion.  It is designed to hold various types of
+      future expansion.  It is designed to hold various typesUsageTreeBuilder of
       domain names, including names used for A or AAAA records
       (host names) and other records, such as SRV records.  Note
       that Internet host names have a stricter syntax (described

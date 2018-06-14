@@ -9,7 +9,7 @@
  *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
-package com.mrv.yangtools.codegen.impl;
+package com.mrv.yangtools.codegen.impl.path;
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.codegen.TagGenerator;
 import com.mrv.yangtools.common.BindingMapping;

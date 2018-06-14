@@ -1,5 +1,5 @@
-module ietf-yang-types {
-  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-types";
+module ietf-yang-typesUsageTreeBuilder {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-typesUsageTreeBuilder";
   prefix "yang";
   organization
    "IETF NETMOD (NETCONF Data Modeling Language) Working Group";
@@ -14,7 +14,7 @@ module ietf-yang-types {
               <mailto:j.schoenwaelder@jacobs-university.de>";
   description
    "This module contains a collection of generally useful derived
-    YANG data types.
+    YANG data typesUsageTreeBuilder.
     Copyright (c) 2013 IETF Trust and the persons identified as
     authors of the code.  All rights reserved.
     Redistribution and use in source and binary forms, with or
@@ -27,7 +27,7 @@ module ietf-yang-types {
     the RFC itself for full legal notices.";
   revision 2013-07-15 {
     description
-     "This revision adds the following new data types:
+     "This revision adds the following new data typesUsageTreeBuilder:
       - yang-identifier
       - hex-string
       - uuid

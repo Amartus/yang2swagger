@@ -394,8 +394,11 @@ public class JerseyServerCodegen extends JavaJerseyServerCodegen {
                 }
             }
         }
-
-        objs.put("package", BindingMapping.normalizePackageName(pkgBase + "." + modelPkg));
+        if(modelPkg.isEmpty()) {
+            objs.put("package", BindingMapping.normalizePackageName(pkgBase));
+        } else {
+            objs.put("package", BindingMapping.normalizePackageName(pkgBase + "." + modelPkg));
+        }
         return super.postProcessModels(objs);
     }
 

@@ -55,7 +55,7 @@ public class ContextHelper {
      * @throws ReactorException in case of problem with YANG modules parsing
      */
     public static SchemaContext getFromClasspath(Predicate<Path> accept) throws ReactorException {
-        return getCtx(Arrays.stream(System.getProperty("java.class.path", ".").split(File.pathSeparator)).map(s -> Paths.get(s)), accept);
+        return getCtx(Arrays.stream(System.getProperty("java.class.path", ".").split(File.pathSeparator)).map(s -> Paths.get(s.replaceFirst("^/(.:/)", "$1"))), accept);
     }
 
     /**

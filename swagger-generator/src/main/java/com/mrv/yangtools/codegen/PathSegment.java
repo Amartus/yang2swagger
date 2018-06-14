@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Helper class that help to keep track of current location in YANG module data tree.
@@ -210,6 +212,10 @@ public class PathSegment implements Iterable<PathSegment> {
                 return r;
             }
         };
+    }
+
+    public Stream<PathSegment> stream() {
+        return StreamSupport.stream(this.spliterator(), false);
     }
 
     private static PathSegment NULL = new PathSegment() {

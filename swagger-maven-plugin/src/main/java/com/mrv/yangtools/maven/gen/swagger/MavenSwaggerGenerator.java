@@ -13,7 +13,7 @@ package com.mrv.yangtools.maven.gen.swagger;
 
 import com.google.common.base.Preconditions;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
-import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
 import org.apache.maven.project.MavenProject;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
@@ -122,7 +122,7 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         if(stringFormat.equalsIgnoreCase("json")) {
             return SwaggerGenerator.Format.JSON;
         } else if(stringFormat.equalsIgnoreCase("yaml")) {
-        	return SwaggerGenerator.Format.YAML;
+            return SwaggerGenerator.Format.YAML;
         } else {
             throw new IllegalStateException("cannot output format " + stringFormat);
         }
@@ -142,11 +142,11 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
     }
 
     private String getAdditionalConfigOrDefault(String key, String defaulted) {
-    	String value = additionalConfig.get(key);
-    	if(value != null) {
-    		return value;
-    	} else {
-    		return defaulted;
-    	}
+        String value = additionalConfig.get(key);
+        if(value != null) {
+            return value;
+        } else {
+            return defaulted;
+        }
     }
 }

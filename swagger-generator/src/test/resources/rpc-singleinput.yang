@@ -1,0 +1,26 @@
+module rpc-singleinput {
+    namespace "http://amartus/ns/yang/singlerock";
+    prefix ro;
+    description "read-only test module";
+    organization "test-yang";
+
+    grouping res {
+        container c-res {
+            leaf id {
+                type int32;
+            }
+            leaf status {
+                type string;
+            }
+        }
+    }
+
+    rpc rock-single-input {
+        input {
+            uses res;
+        }
+        output {
+            uses res;
+        }
+    }
+}
