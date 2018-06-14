@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2016 MRV Communications, Inc. All rights reserved.
+ * Copyright (c) 2018 Amartus. All rights reserved.
  *  This program and the accompanying materials are made available under the
  *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
  *  and is available at http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *      Christopher Murch <cmurch@mrv.com>
- *      Bartosz Michalik <bartosz.michalik@amartus.com>
+ *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
  */
 
 package com.mrv.yangtools.codegen;
@@ -15,14 +14,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.mrv.yangtools.codegen.impl.*;
-import com.mrv.yangtools.common.Tuple;
-import io.swagger.models.*;
-import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.RefProperty;
+import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
+import com.mrv.yangtools.codegen.impl.ModuleUtils;
+import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
+import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceDummy;
+import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
+import com.mrv.yangtools.common.SwaggerUtils;
+import io.swagger.models.Info;
+import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -45,19 +46,20 @@ import java.util.stream.Collectors;
  *     <li>config flag - for operational data only GET operations are generated</li>
  * </ul>
  *
+ * @author damian.mrozowicz@amartus.com
  *
- * @author cmurch@mrv.com
- * @author bartosz.michalik@amartus.com
  */
 public class SwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
     private final SchemaContext ctx;
-    private final Set<Module> modules;
+    private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
+    private Consumer<Swagger> postprocessor;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
+    private int maxDepth = Integer.MAX_VALUE;
 
 
     private Set<Elements> toGenerate;
@@ -98,9 +100,10 @@ public class SwaggerGenerator {
      * @param ctx context for generation
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
-    public SwaggerGenerator(SchemaContext ctx, Set<Module> modulesToGenerate) {
+    public SwaggerGenerator(SchemaContext ctx, Set<org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
+        if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");
         this.ctx = ctx;
         this.modules = modulesToGenerate;
         target = new Swagger();
@@ -113,7 +116,9 @@ public class SwaggerGenerator {
         //no exposed swagger API
         target.info(new Info());
 
-        pathHandlerBuilder = new com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder();
+        pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+        //default postprocessors
+        postprocessor = new ReplaceDummy();
     }
 
     /**
@@ -133,6 +138,12 @@ public class SwaggerGenerator {
      */
     public SwaggerGenerator tagGenerator(TagGenerator generator) {
         pathHandlerBuilder.addTagGenerator(generator);
+        return this;
+    }
+
+    public SwaggerGenerator appendPostProcessor(Consumer<Swagger> swaggerPostprocessor) {
+        Objects.requireNonNull(swaggerPostprocessor);
+        postprocessor = postprocessor.andThen(swaggerPostprocessor);
         return this;
     }
 
@@ -229,6 +240,16 @@ public class SwaggerGenerator {
         target.produces(produces);
         return this;
     }
+    
+    /**
+     * Add max depth level during walk through module node tree
+     * @param maxDepth to which paths should be generated
+     * @return this
+     */
+    public SwaggerGenerator maxDepth(int maxDepth) {
+    	this.maxDepth = maxDepth;
+        return this;
+    }    
 
     /**
      * Run Swagger generation for configured modules. Write result to target. The file format
@@ -241,8 +262,16 @@ public class SwaggerGenerator {
 
         Swagger result = generate();
 
+        new SortComplexModels().accept(result);
+
+        result.setDefinitions(SwaggerUtils.sortMap(result.getDefinitions()));
+        result.setPaths(SwaggerUtils.sortMap(result.getPaths()));
+
         mapper.writeValue(target, result);
     }
+
+
+
 
     /**
      * Run Swagger generation for configured modules.
@@ -268,7 +297,6 @@ public class SwaggerGenerator {
         //initialize plugable path handler
         pathHandlerBuilder.configure(ctx, target, dataObjectsBuilder);
 
-
         modules.forEach(m -> new ModuleGenerator(m).generate());
 
         // update info with module names
@@ -283,150 +311,24 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Replace empty definitions with their parents
+     * Replace empty definitions with their parents.
+     * Sort models (ref models first)
      * @param target to work on
      */
     protected void postProcessSwagger(Swagger target) {
         if(target.getDefinitions() == null || target.getDefinitions().isEmpty()) {
-           log.warn("Generated swagger has no definitions");
-           return;
-        }
-        Map<String, String> replacements = target.getDefinitions().entrySet()
-                .stream().filter(e -> {
-                    Model model = e.getValue();
-                    if (model instanceof ComposedModel) {
-                        List<Model> allOf = ((ComposedModel) model).getAllOf();
-                        return allOf.size() == 1 && allOf.get(0) instanceof RefModel;
-                    }
-                    return false;
-                }).map(e -> {
-                    RefModel ref = (RefModel) ((ComposedModel) e.getValue()).getAllOf().get(0);
-
-                    return new Tuple<>(e.getKey(), ref.getSimpleRef());
-
-                }).collect(Collectors.toMap(Tuple::first, Tuple::second));
-
-        log.debug("{} replacement found for definitions", replacements.size());
-        log.trace("replacing paths");
-        target.getPaths().values().stream().flatMap(p -> p.getOperations().stream())
-                .forEach(o -> fixOperation(o, replacements));
-
-        target.getDefinitions().entrySet().stream()
-                .forEach(m -> fixModel(m.getKey(), m.getValue(), replacements));
-        replacements.keySet().forEach(r -> {
-            log.debug("removing {} model from swagger definitions", r);
-            target.getDefinitions().remove(r);
-        });
-
-    }
-
-    private void fixModel(String name, Model m, Map<String, String> replacements) {
-        ModelImpl fixProperties = null;
-        if(m instanceof ModelImpl) {
-            fixProperties = (ModelImpl) m;
-        }
-
-        if(m instanceof ComposedModel) {
-            ComposedModel cm = (ComposedModel) m;
-            fixComposedModel(name, cm, replacements);
-            fixProperties =  cm.getAllOf().stream()
-                   .filter(c -> c instanceof ModelImpl).map(c -> (ModelImpl)c)
-                   .findFirst().orElse(fixProperties);
-        }
-
-        if(fixProperties == null) return;
-        if(fixProperties.getProperties() == null) {
-            //TODO we might also remove this one from definitions
-            log.warn("Empty model in {}", name);
+            log.warn("Generated swagger has no definitions");
             return;
         }
-        fixProperties.getProperties().entrySet()
-                .forEach(e -> {
-                    if(e.getValue() instanceof RefProperty) {
-                        if(fixProperty((RefProperty) e.getValue(), replacements)) {
-                            log.debug("fixing property {} of {}", e.getKey(), name);
-                        }
-                    } else if(e.getValue() instanceof ArrayProperty){
-                        Property items = ((ArrayProperty) e.getValue()).getItems();
-                        if(items instanceof RefProperty) {
-                            if(fixProperty((RefProperty) items, replacements)) {
-                                log.debug("fixing property {} of {}", e.getKey(), name);
-                            }
-                        }
-                    }
-                });
-
+        postprocessor.accept(target);
     }
-    private boolean fixProperty(RefProperty p, Map<String, String> replacements) {
-        if(replacements.containsKey(p.getSimpleRef())) {
-            p.set$ref(replacements.get(p.getSimpleRef()));
-            return true;
-        }
-        return false;
-    }
-
-    private void fixComposedModel(String name, ComposedModel m, Map<String, String> replacements) {
-        Set<RefModel> toReplace = m.getAllOf().stream().filter(c -> c instanceof RefModel).map(cm -> (RefModel) cm)
-                .filter(rm -> replacements.containsKey(rm.getSimpleRef())).collect(Collectors.toSet());
-        toReplace.forEach(r -> {
-            int idx = m.getAllOf().indexOf(r);
-            RefModel newRef = new RefModel(replacements.get(r.getSimpleRef()));
-            m.getAllOf().set(idx, newRef);
-            if(m.getInterfaces().remove(r)) {
-                m.getInterfaces().add(newRef);
-            }
-        });
-    }
-
-
-    private void fixOperation(Operation operation, Map<String, String> replacements) {
-        operation.getResponses().values()
-                .forEach(r -> fixResponse(r, replacements));
-        operation.getParameters().forEach(p -> fixParameter(p, replacements));
-        Optional<Map.Entry<String, String>> rep = replacements.entrySet().stream()
-                .filter(r -> operation.getDescription() != null && operation.getDescription().contains(r.getKey()))
-                .findFirst();
-        if(rep.isPresent()) {
-            log.debug("fixing description for '{}'", rep.get().getKey());
-            Map.Entry<String, String> entry = rep.get();
-            operation.setDescription(operation.getDescription().replace(entry.getKey(), entry.getValue()));
-        }
-
-    }
-
-    private void fixParameter(Parameter p, Map<String, String> replacements) {
-        if(!(p instanceof BodyParameter)) return;
-        BodyParameter bp = (BodyParameter) p;
-        if(!(bp.getSchema() instanceof RefModel)) return;
-        RefModel ref = (RefModel) bp.getSchema();
-        if(replacements.containsKey(ref.getSimpleRef())) {
-            String replacement = replacements.get(ref.getSimpleRef());
-            bp.setDescription(bp.getDescription().replace(ref.getSimpleRef(), replacement));
-            bp.setSchema(new RefModel(replacement));
-        }
-
-    }
-
-    private void fixResponse(Response r, Map<String, String> replacements) {
-        if(! (r.getSchema() instanceof RefProperty)) return;
-            RefProperty schema = (RefProperty) r.getSchema();
-            if(replacements.containsKey(schema.getSimpleRef())) {
-                String replacement = replacements.get(schema.getSimpleRef());
-                if(r.getDescription() != null)
-                    r.setDescription(r.getDescription().replace(schema.getSimpleRef(), replacement));
-                schema.setDescription(replacement);
-                r.setSchema(new RefProperty(replacement));
-            }
-
-    }
-
 
     private class ModuleGenerator {
-        private final Module module;
+        private final org.opendaylight.yangtools.yang.model.api.Module module;
         private PathSegment pathCtx;
         private PathHandler handler;
 
-        private ModuleGenerator(Module module) {
+        private ModuleGenerator(org.opendaylight.yangtools.yang.model.api.Module module) {
             if(module == null) throw new NullPointerException("module is null");
             this.module = module;
             handler = pathHandlerBuilder.forModule(module);
@@ -438,7 +340,7 @@ public class SwaggerGenerator {
             if(toGenerate.contains(Elements.DATA)) {
                 pathCtx = new PathSegment(ctx)
                         .withModule(module.getName());
-                module.getChildNodes().forEach(this::generate);
+                module.getChildNodes().forEach(n -> generate(n, maxDepth));
             }
 
             if(toGenerate.contains(Elements.RCP)) {
@@ -455,12 +357,20 @@ public class SwaggerGenerator {
 
             ContainerSchemaNode input = rcp.getInput();
             ContainerSchemaNode output = rcp.getOutput();
+
+            input = input.getChildNodes().isEmpty() ? null : input;
+            output = output.getChildNodes().isEmpty() ? null : output;
             handler.path(input, output, pathCtx);
 
             pathCtx = pathCtx.drop();
         }
 
-        private void generate(DataSchemaNode node) {
+        private void generate(DataSchemaNode node, final int depth) {
+        	if(depth == 0) {
+        		log.debug("Maxmium depth level reached, skipping {} and it's childs", node.getPath());
+        		return;
+        	}
+
             if(!moduleNames.contains(moduleUtils.toModuleName(node))) {
                 log.debug("skipping {} as it is from {} module", node.getPath(), moduleUtils.toModuleName(node));
                 return;
@@ -472,11 +382,11 @@ public class SwaggerGenerator {
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(cN.getQName().getLocalName())
-                        .withModule(module.getName())
+                        .withModule(moduleUtils.toModuleName(node))
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
-                cN.getChildNodes().forEach(this::generate);
+                cN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(cN);
 
                 pathCtx = pathCtx.drop();
@@ -486,12 +396,12 @@ public class SwaggerGenerator {
 
                 pathCtx = new PathSegment(pathCtx)
                         .withName(lN.getQName().getLocalName())
-                        .withModule(module.getName())
+                        .withModule(moduleUtils.toModuleName(node))
                         .asReadOnly(!lN.isConfiguration())
                         .withListNode(lN);
 
                 handler.path(lN, pathCtx);
-                lN.getChildNodes().forEach(this::generate);
+                lN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(lN);
 
                 pathCtx = pathCtx.drop();
@@ -499,7 +409,7 @@ public class SwaggerGenerator {
                 //choice node and cases are invisible from the perspective of generating path
                 log.info("inlining choice statement {}", node.getQName().getLocalName() );
                 ((ChoiceSchemaNode) node).getCases().stream()
-                        .flatMap(_case -> _case.getChildNodes().stream()).forEach(this::generate);
+                        .flatMap(_case -> _case.getChildNodes().stream()).forEach(n -> generate(n, depth-1));
             }
         }
     }

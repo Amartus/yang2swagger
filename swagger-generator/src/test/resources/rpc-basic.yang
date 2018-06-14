@@ -15,6 +15,30 @@ module rpc-basic {
         }
     }
 
+    grouping b-elem {
+        leaf key {type string; }
+        list values {
+            container embd {
+                leaf xyz {type string;}
+            }
+            leaf idx {type int8;}
+            key 'idx';
+        }
+
+    }
+
+    rpc with-multiple-elements {
+        input {
+            container a {
+                uses res;
+            }
+            list b {
+                uses b-elem;
+                key 'key';
+            }
+        }
+    }
+
     rpc rock-the-house {
         input {
             container xyz {

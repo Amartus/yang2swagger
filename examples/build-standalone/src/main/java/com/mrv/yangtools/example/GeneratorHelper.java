@@ -24,7 +24,6 @@ import java.nio.file.PathMatcher;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -53,6 +52,7 @@ public class GeneratorHelper {
         Predicate<Path> acc = p ->  matcher.matches(p.getFileName());
 
         final SchemaContext ctx = dir == null ? getFromClasspath(acc) : getFromDir(dir.toPath(), acc);
+        if(ctx.getModules().isEmpty()) throw new IllegalArgumentException(String.format("No YANG modules found in %s", dir == null ? "classpath"  : dir.toString()));
         log.info("Context parsed {}", ctx);
 
         final Set<Module> toGenerate = ctx.getModules().stream().filter(toSelect).collect(Collectors.toSet());

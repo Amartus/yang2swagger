@@ -15,8 +15,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
-import com.mrv.yangtools.codegen.impl.SegmentTagGenerator;
-import com.mrv.yangtools.codegen.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
 import com.mrv.yangutils.codegen.JerseyServerCodegen;
 import io.swagger.codegen.*;
 import io.swagger.models.Swagger;
@@ -53,7 +53,7 @@ public class CodeGenerator {
 
         JerseyServerCodegen codegenConfig = new JerseyServerCodegen();
 
-        // add handler for x-path annotation
+        // referencing handler for x-path annotation
 //        codegenConfig.addAnnotation("propAnnotation", "x-path", v ->
 //                "@com.mrv.provision.di.rest.jersey.metadata.Leafref(\"" + v + "\")"
 //        );
