@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>yangtools</artifactId>
-        <groupId>com.mrv.yangtools</groupId>
-       <version>1.1.9-SNAPSHOT</version>
+        <groupId>com.att.sdnctl</groupId>
+        <version>1.1.9-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -18,13 +18,13 @@
     <dependencies>
 
         <dependency>
-            <groupId>com.mrv.yangtools</groupId>
+            <groupId>com.att.sdnctl</groupId>
             <artifactId>swagger-generator</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.mrv.yangtools</groupId>
+            <groupId>com.att.sdnctl</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -52,7 +52,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.mrv.yangtools.codegen.main.Main</mainClass>
+                                    <mainClass>com.att.sdnctl.codegen.main.Main</mainClass>
                                 </transformer>
                             </transformers>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
