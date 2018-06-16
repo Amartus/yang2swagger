@@ -37,7 +37,7 @@ public class PostOperationGenerator extends OperationGenerator {
         final RefModel definition = new RefModel(getDefinitionId(node));
         post.description("creates " + getName(node));
         post.parameter(new BodyParameter()
-                .name("body-param")
+                .name(getName(node) + ".body-param")
                 .schema(definition)
                 .description(getName(node) + " to be added to list"));
 
