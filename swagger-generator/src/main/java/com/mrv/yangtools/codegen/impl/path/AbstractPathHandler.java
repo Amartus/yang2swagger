@@ -57,7 +57,7 @@ public abstract class AbstractPathHandler implements PathHandler {
             inputModel.addProperty("input", new RefProperty(dataObjectBuilder.getDefinitionId(input)));
 
             post.parameter(new BodyParameter()
-                    .name("body-param")
+                    .name(dataObjectBuilder.getName(input) + ".body-param")
                     .schema(inputModel)
                     .description(input.getDescription())
             );

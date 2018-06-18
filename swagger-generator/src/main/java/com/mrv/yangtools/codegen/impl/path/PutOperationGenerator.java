@@ -34,7 +34,7 @@ public class PutOperationGenerator extends OperationGenerator {
         final RefModel definition = new RefModel(getDefinitionId(node));
         put.description("creates or updates " + getName(node));
         put.parameter(new BodyParameter()
-                .name("body-param")
+                .name(getName(node) + ".body-param")
                 .schema(definition)
                 .description(getName(node) + " to be added or updated"));
 
