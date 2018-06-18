@@ -20,8 +20,6 @@ import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.GroupingEffectiveStatementImpl;
-import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.InputEffectiveStatementImpl;
-import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.OutputEffectiveStatementImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,12 +127,9 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         }
 
         if(isAugmented.test(node)) return false;
-        if(node instanceof InputEffectiveStatementImpl || node instanceof OutputEffectiveStatementImpl) return false;
 
         Set<UsesNode> uses = uses(node);
-        boolean directGrouping = uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
-    	log.debug("isDirectGrouping for node: {} is: {}", node.toString(), directGrouping);
-        return directGrouping;
+        return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
     }
 
     @Override
