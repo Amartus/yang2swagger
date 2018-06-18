@@ -233,4 +233,19 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
         assertEquals(2, nsCount);
     }
+    
+    @Test
+    public void testGenerateRPCSingleInputOutputModule() throws ReactorException {
+        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("rpc-singleinput.yang"));
+		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
+				.pathHandler(new ODLPathHandlerBuilder());
+        swagger = generator.generate();
+
+        long nsCount = swagger.getDefinitions().keySet().stream().filter(n -> n.endsWith("RockSingleInputInput")).count();
+        assertEquals(1, nsCount);
+        
+        nsCount = swagger.getDefinitions().keySet().stream().filter(n -> n.endsWith("RockSingleInputOutput")).count();
+        assertEquals(1, nsCount);
+    }
+    
 }

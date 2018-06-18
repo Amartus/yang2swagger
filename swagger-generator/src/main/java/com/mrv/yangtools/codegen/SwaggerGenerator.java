@@ -18,7 +18,7 @@ import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
-import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
+import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceDummy;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
 import com.mrv.yangtools.common.SwaggerUtils;
 import io.swagger.models.Info;
@@ -118,7 +118,7 @@ public class SwaggerGenerator {
 
         pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
         //default postprocessors
-        postprocessor = new ReplaceEmptyWithParent();
+        postprocessor = new ReplaceDummy();
     }
 
     /**
