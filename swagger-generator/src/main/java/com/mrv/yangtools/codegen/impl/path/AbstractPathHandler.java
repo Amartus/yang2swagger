@@ -1,11 +1,14 @@
 package com.mrv.yangtools.codegen.impl.path;
 
 import com.mrv.yangtools.codegen.*;
+import com.mrv.yangtools.codegen.impl.RpcContainerSchemaNode;
+
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
-import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.RefProperty;
+
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
 import java.util.*;
@@ -44,7 +47,14 @@ public abstract class AbstractPathHandler implements PathHandler {
     }
 
     @Override
-    public void path(ContainerSchemaNode input, ContainerSchemaNode output, PathSegment pathCtx) {
+    public void path(RpcDefinition rcp, PathSegment pathCtx) {
+        ContainerSchemaNode input = rcp.getInput();
+        ContainerSchemaNode output = rcp.getOutput();
+        ContainerSchemaNode root = new RpcContainerSchemaNode(rcp);
+        
+        input = input.getChildNodes().isEmpty() ? null : input;
+        output = output.getChildNodes().isEmpty() ? null : output;
+    	
         PathPrinter printer = getPrinter(pathCtx);
 
         Operation post = defaultOperation(pathCtx);
@@ -69,12 +79,12 @@ public abstract class AbstractPathHandler implements PathHandler {
                 description = "Correct response";
             }
 
-            ObjectProperty outputModel = new ObjectProperty();
-            outputModel.property("output", new RefProperty(dataObjectBuilder.getDefinitionId(output)));
-
-            dataObjectBuilder.addModel(output);
+            RefProperty refProperty = new RefProperty();
+            refProperty.set$ref(dataObjectBuilder.getDefinitionId(root));
+            
+            dataObjectBuilder.addModel(root);
             post.response(200, new Response()
-                    .schema(outputModel)
+                    .schema(refProperty)
                     .description(description));
         }
         post.response(201, new Response().description("No response")); //no output body
