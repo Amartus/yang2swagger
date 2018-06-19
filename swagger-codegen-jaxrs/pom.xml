@@ -15,8 +15,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>yangtools</artifactId>
-        <groupId>com.att.sdnctl</groupId>
-        <version>1.1.9-SNAPSHOT</version>
+        <groupId>com.mrv.yangtools</groupId>
+       <version>1.1.9-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -35,9 +35,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.att.sdnctl</groupId>
+            <groupId>com.mrv.yangtools</groupId>
             <artifactId>common</artifactId>
-            <version>1.1.9-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
@@ -56,7 +56,7 @@
                         <configuration>
                             <artifactSet>
                                 <includes>
-                                    <include>com.att.sdnctl:common</include>
+                                    <include>com.mrv.yangtools:common</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
