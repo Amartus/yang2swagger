@@ -64,9 +64,10 @@ public abstract class AbstractItTest {
 
         Response response = post.getResponses().get("200");
         if(response != null) {
-            ObjectProperty schema = (ObjectProperty) response.getSchema();
+        	RefProperty schema = (RefProperty) response.getSchema();
             if(schema != null) {
-                Property output = schema.getProperties().get("output");
+                String ref = schema.getSimpleRef();
+                Property output = swagger.getDefinitions().get(ref).getProperties().get("output");
                 assertTrue(output instanceof RefProperty);
                 assertNotNull("Incorrect structure in ",swagger.getDefinitions().get(((RefProperty)output).getSimpleRef()));
 

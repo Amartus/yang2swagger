@@ -355,12 +355,7 @@ public class SwaggerGenerator {
                         .withName(rcp.getQName().getLocalName())
                         .withModule(module.getName());
 
-            ContainerSchemaNode input = rcp.getInput();
-            ContainerSchemaNode output = rcp.getOutput();
-
-            input = input.getChildNodes().isEmpty() ? null : input;
-            output = output.getChildNodes().isEmpty() ? null : output;
-            handler.path(input, output, pathCtx);
+            handler.path(rcp, pathCtx);
 
             pathCtx = pathCtx.drop();
         }

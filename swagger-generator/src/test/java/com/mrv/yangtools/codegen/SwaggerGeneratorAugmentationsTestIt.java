@@ -107,7 +107,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
         Map<String, Model> rockTheHouseDefinitions = swagger.getDefinitions().entrySet().stream()
                 .filter(e -> e.getKey().toLowerCase().startsWith("rpc.basic.rockthe"))
                 .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
-        assertEquals(5, rockTheHouseDefinitions.size());
+        assertEquals(6, rockTheHouseDefinitions.size());
         Model inputAug = getAugmentation(rockTheHouseDefinitions.get("rpc.basic.rockthehouse.input.xyz.CRes"), "rpc-augmentations");
         Model outputAug = getAugmentation(rockTheHouseDefinitions.get("rpc.basic.rockthehouse.output.Response"), "rpc-augmentations");
 

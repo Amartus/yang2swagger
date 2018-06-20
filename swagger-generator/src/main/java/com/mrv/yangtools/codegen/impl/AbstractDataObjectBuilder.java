@@ -96,9 +96,9 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         log.debug("processing rpcs defined in {}", module.getName());
         module.getRpcs().forEach(r -> {
             if(r.getInput() != null)
-                processNode(r.getInput(), r.getQName().getLocalName() + "-input",  cache);
+                processNode(r.getInput(), null,  cache);
             if(r.getOutput() != null)
-                processNode(r.getOutput(),r.getQName().getLocalName() + "-output", cache);
+                processNode(new RpcContainerSchemaNode(r), null, cache);
         });
         log.debug("processing augmentations defined in {}", module.getName());
         module.getAugmentations().forEach(r -> processNode(r, cache));
@@ -106,7 +106,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
     protected  void processNode(ContainerSchemaNode container, String proposedName, Set<String> cache) {
         if(container == null) return;
-        String name = generateName(container, proposedName, cache);
+        String name = generateName(container, null, cache);
         names.put(container, name);
 
         processNode(container, cache);
