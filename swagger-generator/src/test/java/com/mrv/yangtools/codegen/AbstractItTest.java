@@ -81,6 +81,7 @@ public abstract class AbstractItTest {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
             log.error("Cannot load context referencing {}", cond);
+            log.error("Reason:", e);
             throw new IllegalArgumentException("Invalid precondition for context loader");
         }
     }

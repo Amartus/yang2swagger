@@ -1,0 +1,95 @@
+module ext1 {
+    namespace "urn:amartus:ext1";
+    prefix ext1;
+    import base {
+        prefix b;
+    }
+
+    organization "Amartus";
+    contact "";
+    description "deesc";
+    revision 2018-09-14 {
+        description "desc";
+    }
+
+    grouping job {
+        list attributes {
+            key 'local-id';
+            config false;
+            uses attributes;
+            description "";
+        }
+
+        uses b:global-class;
+        description "none";
+    }
+
+    grouping history-attributes {
+        container granularity-period {
+            uses b:time-period;
+            description "none";
+        }
+        leaf suspect-interval-flag {
+            type boolean;
+            config false;
+            description "This attribute indicates that the performance data may not be reliable.";
+        }
+        uses b:local-class;
+        description "none";
+    }
+
+    grouping attributes {
+
+        list history-attributes {
+            key 'local-id';
+            config false;
+            uses history-attributes;
+        }
+        uses b:local-class;
+        description "none";
+    }
+
+    grouping jobs-ext {
+        list jobs {
+            key 'uuid';
+            uses job;
+            description "none";
+        }
+    }
+
+    rpc create-job {
+        description "none";
+        input {
+            leaf job-id {
+                type string;
+                description "none";
+            }
+        }
+        output {
+            container job {
+                uses job;
+                description "none";
+            }
+        }
+    }
+    rpc get-job {
+        description "none";
+        input {
+            leaf job-id {
+                type string;
+                description "none";
+            }
+        }
+        output {
+            container job {
+                uses job;
+                description "none";
+            }
+        }
+    }
+
+    augment "/b:parent-container" {
+        uses jobs-ext;
+        description "Extension of base root";
+    }
+}

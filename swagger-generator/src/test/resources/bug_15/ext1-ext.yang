@@ -1,0 +1,59 @@
+module ext1-ext {
+    namespace "urn:amartus:ext1-ext";
+    prefix ext1-ext;
+    import base {
+        prefix b;
+    }
+    import ext1 {
+        prefix e;
+    }
+
+    organization "Amartus";
+    contact "";
+    description "deesc";
+    revision 2018-09-14 {
+        description "desc";
+    }
+
+    grouping extra-attributes {
+        leaf foo {
+            type string;
+        }
+        leaf bar {
+            type string;
+        }
+    }
+
+    grouping extra-attributes2 {
+        leaf foo2 {
+            type string;
+        }
+        leaf bar2 {
+            type string;
+        }
+    }
+
+    grouping history-attributes {
+        container aaa {
+            leaf bbb {
+                type string;
+            }
+        }
+    }
+
+
+    augment "/b:parent-container/e:jobs/e:attributes" {
+        uses extra-attributes;
+        description "none";
+    }
+
+    augment "/b:parent-container/e:jobs/e:attributes" {
+        uses extra-attributes2;
+        description "none";
+    }
+
+    augment "/b:parent-container/e:jobs/e:attributes/e:history-attributes" {
+        uses history-attributes;
+        description "none";
+    }
+}
