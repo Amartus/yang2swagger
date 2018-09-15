@@ -129,7 +129,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(isAugmented.test(node)) return false;
 
         Set<UsesNode> uses = uses(node);
-        return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
+        return uses.size() == 1 && node.getChildNodes().stream().allMatch(DataSchemaNode::isAddedByUses);
     }
 
     @Override
@@ -183,13 +183,17 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
 
-        if(treeAugmented && ! existingModels.containsKey(effectiveNode)) {
-            log.debug("adding referenced model {} for node {} ", definitionId, effectiveNode);
-            addModel(effectiveNode);
+        if(treeAugmented) {
 
+            if(! existingModels.containsKey(effectiveNode)) {
+                log.debug("adding referenced model {} for node {} ", definitionId, effectiveNode);
+                addModel(effectiveNode, getName(effectiveNode));
+            } else {
+                return prop;
+            }
         } else if(existingModel(node) == null) {
             log.debug("adding referenced model {} for node {} ", definitionId, node);
-            addModel(node);
+            addModel(node, getName(node));
         }
 
         return prop;
@@ -338,12 +342,18 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             }
             augmented.setInterfaces(aModels);
             model = augmented;
+            //add to existing models cache only the augmeted model
+            existingModels.put(node, model);
+        } else {
+            //add to existing models cache mapping between original and used for generation
+            // e.g. to properly support case where model was based on grouping
+            existingModels.put(toModel, model);
+            existingModels.put(node, model);
         }
 
         verifyModel(node, model);
 
-        existingModels.put(toModel, model);
-        existingModels.put(node, model);
+
 
         Optional<DataNodeContainer> toRemove = effectiveNode.stream().filter(
                 n -> n instanceof SchemaNode && ((SchemaNode) n).getQName().equals(node.getQName()))
@@ -392,8 +402,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
     @Override
-    public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
-        super.addModel(node);
+    public <T extends SchemaNode & DataNodeContainer> void addModel(T node, String name) {
+        super.addModel(node, name);
     }
 
 
@@ -457,7 +467,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
                 if (existingModel(def) == null) {
                     log.debug("adding model {} for grouping", groupingIdx);
-                    addModel(def);
+                    addModel(def, getName(def));
                 }
                 models.add(refModel);
             });

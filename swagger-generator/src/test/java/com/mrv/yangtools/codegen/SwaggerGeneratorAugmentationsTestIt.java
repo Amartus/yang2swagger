@@ -1,12 +1,10 @@
 package com.mrv.yangtools.codegen;
 
 
-import com.mrv.yangtools.test.utils.SwaggerWritter;
 import io.swagger.models.*;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.RefProperty;
 
-import java.io.OutputStreamWriter;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -65,18 +63,20 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
         assertEquals("base.base.C2",c2.getSimpleRef());
     }
 
+
     @org.junit.Test
     public void testBug15() {
         swaggerFor(p -> p.getParent().getFileName().toString().equals("bug_15"));
 
-//        Model base = swagger.getDefinitions().get("base.Base");
-//        RefProperty c1 = (RefProperty) base.getProperties().get("c1");
-//        RefProperty c2 = (RefProperty) base.getProperties().get("c2");
-//
-//
-//        assertEquals("base.Coll",c1.getSimpleRef());
-//        assertEquals("base.base.C2",c2.getSimpleRef());
-        SwaggerWritter.writeSwagger(new OutputStreamWriter(System.out), swagger);
+        Map<String, ComposedModel> attributeModels = swagger.getDefinitions().entrySet().stream()
+                .filter(e -> e.getKey().endsWith(".Attributes"))
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> (ComposedModel) e.getValue()));
+
+        assertEquals(2, attributeModels.size());
+        ComposedModel regular = attributeModels.get("ext1.Attributes");
+        ComposedModel augmented = attributeModels.get("ext1.job.Attributes");
+        assertEquals(4, augmented.getAllOf().size());
+        assertEquals(2, regular.getAllOf().size());
     }
 
     @org.junit.Test

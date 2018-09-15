@@ -45,6 +45,8 @@ public interface DataObjectBuilder extends DataObjectRepo {
      */
     <T extends SchemaNode & DataNodeContainer> void addModel(T node);
 
+    <T extends SchemaNode & DataNodeContainer> void addModel(T node, String definitionId);
+
     /**
      * Add model for enum
      * @param enumType enum to build swagger model from
@@ -52,6 +54,4 @@ public interface DataObjectBuilder extends DataObjectRepo {
      */
     String addModel(EnumTypeDefinition enumType);
 
-
-    <T extends SchemaNode & DataNodeContainer> void addModel(T input, String parentTag);
 }
