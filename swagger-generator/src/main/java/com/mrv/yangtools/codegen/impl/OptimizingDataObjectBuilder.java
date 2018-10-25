@@ -84,7 +84,14 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 return names.get(grouping(toCheck));
             }
         }
-        return names.get(node);
+        String name = names.get(node);
+        if(name == null) {
+            name = generateName(node, null, null);
+            names.put(node, name);
+            log.info("generated name on the fly name for node {} is {}", node.getQName(), name);
+
+        }
+        return name;
     }
 
     private <T extends SchemaNode & DataNodeContainer> T getEffectiveChild(QName name) {

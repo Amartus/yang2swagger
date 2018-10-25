@@ -11,7 +11,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.AddSecurityDefinitions;
+import com.mrv.yangtools.codegen.impl.postprocessor.CollapseTypes;
+import com.mrv.yangtools.codegen.impl.postprocessor.RemoveUnusedDefinitions;
+import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
 import com.mrv.yangtools.common.ContextHelper;
+import io.swagger.models.auth.BasicAuthDefinition;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -48,7 +54,31 @@ public class Main {
 	// RESTCONF uses yang-data+json or yang-data+xml as the content type.
 	@Option(name= "-content-type", usage = "Content type the API generates / consumes - default application/yang-data+json")
 	public String contentType = "application/yang-data+json";
-	
+
+    @Option(name = "-simplify-hierarchy", usage = "Use it to generate Swagger which with simplified inheritence model which can be used with standard code generators. Default false")
+    public boolean simplified = false;
+
+    @Option(name = "-use-namespaces", usage="Use namespaces in resource URI")
+    public boolean useNamespaces = false;
+
+    @Option(name = "-fullCrud", usage="If the flag is set to false path are generated for GET operations only. Default true")
+    public boolean fullCrud = true;
+
+    @Option(name="-elements", usage="Define YANG elements to focus on. Defaul DATA + RPC")
+    public ElementType elementType = ElementType.DATA_AND_RPC;
+
+    @Option(name = "-authentication", usage="Authentication definition")
+    public AuthenticationMechanism authenticationMechanism = AuthenticationMechanism.NONE;
+
+
+    public enum ElementType {
+        DATA, RPC, DATA_AND_RPC;
+    }
+
+    public enum AuthenticationMechanism {
+        BASIC, NONE
+    }
+
     OutputStream out = System.out;
 
     public static void main(String[] args) {
@@ -81,20 +111,55 @@ public class Main {
         final Set<Module> toGenerate = context.getModules().stream().filter(m -> modules == null || modules.contains(m.getName()))
                 .collect(Collectors.toSet());
 
+        PathHandlerBuilder pathHandler = new PathHandlerBuilder();
+        if(!fullCrud) {
+            pathHandler.withoutFullCrud();
+        }
+        if(useNamespaces)
+            pathHandler = pathHandler.useModuleName();
+
         final SwaggerGenerator generator = new SwaggerGenerator(context, toGenerate)
         		.version(apiVersion)
                 .format(outputFormat).consumes(contentType).produces(contentType)
-                .host("localhost:1234").elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP);
+                .host("localhost:1234")
+                .pathHandler(pathHandler)
+                .elements(map(elementType));
+
+        generator
+                .appendPostProcessor(new CollapseTypes());
+
+        if(AuthenticationMechanism.BASIC.equals(authenticationMechanism)) {
+            generator.appendPostProcessor(new AddSecurityDefinitions().withSecurityDefinition("api_sec", new BasicAuthDefinition()));
+        }
+
+        if(simplified) {
+            generator.appendPostProcessor(new SingleParentInheritenceModel());
+        }
+
+        generator.appendPostProcessor(new RemoveUnusedDefinitions());
 
         generator.generate(new OutputStreamWriter(out));
     }
 
-    protected SchemaContext buildSchemaContext(String dir, Predicate<Path> accept)
-            throws ReactorException, IOException {
+    private SchemaContext buildSchemaContext(String dir, Predicate<Path> accept)
+            throws ReactorException {
         if(dir.contains(File.pathSeparator)) {
             return ContextHelper.getFromDir(Arrays.stream(dir.split(File.pathSeparator)).map(s -> FileSystems.getDefault().getPath(s)), accept);
         } else {
             return ContextHelper.getFromDir(Stream.of(FileSystems.getDefault().getPath(dir)), accept);
         }
+    }
+
+    private SwaggerGenerator.Elements[] map(ElementType elementType) {
+        switch(elementType) {
+            case DATA:
+                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.DATA};
+            case RPC:
+                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.RCP};
+            case DATA_AND_RPC:
+            default:
+                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP};
+        }
+
     }
 }

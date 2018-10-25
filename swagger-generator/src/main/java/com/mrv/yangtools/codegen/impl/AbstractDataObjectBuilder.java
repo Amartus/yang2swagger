@@ -141,7 +141,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         return result;
     }
 
-    protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
+    protected String generateName(SchemaNode node, String proposedName, Set<String> _cache) {
         if(node instanceof DataNodeContainer) {
             DataNodeContainer original = null;
             if(! isTreeAugmented.test((DataNodeContainer) node)) {
@@ -150,7 +150,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
             if(original != null) {
                 if(! orgNames.containsKey(original)) {
-                    String name = generateName((SchemaNode)original, proposedName, cache);
+                    String name = generateName((SchemaNode)original, proposedName, _cache);
                     orgNames.put(original, name);
                 } else {
                     log.debug("reusing original definition to get name for {}", node.getQName());

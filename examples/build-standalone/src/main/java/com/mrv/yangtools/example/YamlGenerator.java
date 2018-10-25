@@ -33,7 +33,7 @@ public class YamlGenerator {
         if(args.length == 1) {
             File file = new File(args[0]);
             outputName = args[0] + ".swagger";
-            generator = GeneratorHelper.getGenerator(file, m -> true);
+            generator = GeneratorHelper.getGenerator(file, m -> m.getName().equals("org-openroadm-pm"));
         } else {
             generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }

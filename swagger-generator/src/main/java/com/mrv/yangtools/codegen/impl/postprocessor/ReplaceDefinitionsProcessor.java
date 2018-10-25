@@ -65,8 +65,9 @@ public abstract class ReplaceDefinitionsProcessor implements Consumer<Swagger> {
 
         if(fixProperties == null) return;
         if(fixProperties.getProperties() == null) {
-            //TODO we might also remove this one from definitions
-            log.warn("Empty model in {}", name);
+            if(fixProperties.getEnum() == null) {
+                log.warn("Empty model in {}", name);
+            }
             return;
         }
         fixProperties.getProperties().forEach((key, value) -> {
