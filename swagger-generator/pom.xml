@@ -21,7 +21,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <swagger.version>1.5.9</swagger.version>
+        <swagger.version>1.5.21</swagger.version>
     </properties>
 
     <artifactId>swagger-generator</artifactId>
@@ -58,7 +58,7 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-parser</artifactId>
-            <version>1.0.20</version>
+            <version>[1.0.31,1.9.99)</version>
             <scope>test</scope>
         </dependency>
 
