@@ -254,6 +254,9 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             prop = refOrStructure((ContainerSchemaNode) node);
         } else if (node instanceof ListSchemaNode) {
             prop = new ArrayProperty().items(refOrStructure((ListSchemaNode) node));
+        } else if (node instanceof AnyXmlSchemaNode) {
+            log.warn("generating swagger string property for any schema type for {}", node.getQName());
+            prop = new StringProperty();
         }
 
         if (prop != null) {
