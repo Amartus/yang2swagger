@@ -1,0 +1,16 @@
+module base {
+    namespace "urn:amartus:base";
+    prefix base;
+
+    organization "Amartus";
+    contact "";
+    description "desc";
+    revision 2018-09-14 {
+        description "desc";
+    }
+
+    container parent-container {
+        //no attributes
+    }
+
+}

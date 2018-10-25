@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.mrv.yangtools.codegen.impl.ModelUtils.isAugmentation;
 import static com.mrv.yangtools.codegen.impl.postprocessor.SwaggerRefHelper.getReferences;
 
 /**
@@ -121,11 +122,6 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
             });
             sorted.addAll(referencing);
             return sorted.stream();
-        }
-
-        private boolean isAugmentation(Model model) {
-            if(model.getVendorExtensions() != null) return false;
-            return model.getVendorExtensions().get("prefix") != null;
         }
 
         private Set<String> getToUnpack() {

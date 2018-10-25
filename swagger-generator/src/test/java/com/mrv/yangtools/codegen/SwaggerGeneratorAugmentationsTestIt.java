@@ -1,6 +1,7 @@
 package com.mrv.yangtools.codegen;
 
 
+import com.mrv.yangtools.codegen.impl.ModelUtils;
 import io.swagger.models.*;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.RefProperty;
@@ -77,6 +78,18 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
         ComposedModel augmented = attributeModels.get("ext1.job.Attributes");
         assertEquals(4, augmented.getAllOf().size());
         assertEquals(2, regular.getAllOf().size());
+    }
+
+    @org.junit.Test
+    public void testBug17() {
+        swaggerFor(p -> p.getParent().getFileName().toString().equals("bug_17"));
+
+        Map<String, Model> augmented = swagger.getDefinitions().entrySet().stream()
+                .filter(e -> ModelUtils.isAugmentation(e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        assertEquals(3, swagger.getDefinitions().size());
+        assertEquals(1, augmented.size());
     }
 
     @org.junit.Test

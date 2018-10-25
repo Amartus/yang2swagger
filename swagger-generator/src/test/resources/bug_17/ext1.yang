@@ -1,0 +1,35 @@
+module ext1 {
+    namespace "urn:amartus:ext1";
+    prefix ext1;
+    import base {
+        prefix b;
+    }
+
+    organization "Amartus";
+    contact "";
+    description "desc";
+    revision 2018-10-25 {
+        description "desc";
+    }
+
+    grouping job {
+        leaf uuid { type string; }
+        leaf description { type string; }
+        description "none";
+    }
+
+
+
+    grouping jobs-ext {
+        list jobs {
+            key 'uuid';
+            uses job;
+            description "none";
+        }
+    }
+
+    augment "/b:parent-container" {
+        uses jobs-ext;
+        description "Extension of base root";
+    }
+}

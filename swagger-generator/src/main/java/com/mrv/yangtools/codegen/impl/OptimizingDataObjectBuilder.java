@@ -26,9 +26,12 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.*;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.mrv.yangtools.codegen.impl.ModelUtils.isAugmentation;
 
 /**
  * The builder strategy is to reuse grouping wherever possible. Therefore in generated Swagger models, groupings are transformed to models
@@ -45,6 +48,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private Map<Object, Set<UsesNode>> usesCache;
 
     private final Deque<DataNodeContainer> effectiveNode;
+
+    private static final Predicate<Map<?,?>> hasProperties = hm -> hm != null && !hm.isEmpty();
 
     public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
         super(ctx, swagger, converter);
@@ -364,15 +369,23 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return model;
     }
 
+    Function<RefModel, Model> fromReference = ref -> swagger.getDefinitions().get(ref.getSimpleRef());
+
     private <T extends SchemaNode & DataNodeContainer> void verifyModel(T node, Model model) {
         if(model instanceof ComposedModel) {
-            if( ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof RefModel)
-                    .count() <= 1) {
-                boolean emptyAttributes = ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof ModelImpl)
-                        .map(m -> m.getProperties().isEmpty()).findFirst().orElse(false);
+            List<RefModel> refModels = ((ComposedModel) model).getAllOf().stream()
+                    .filter(m -> m instanceof RefModel)
+                    .map(m -> (RefModel)m)
+                    .collect(Collectors.toList());
+            if(refModels.size() <= 1) {
+                if(refModels.isEmpty() || !isAugmentation(fromReference.apply(refModels.get(0)))) {
 
-                if(emptyAttributes) {
-                    log.warn("Incorrectly constructed model {}, hierarchy can be flattened with postprocessor", node.getQName());
+                    boolean emptyAttributes = ((ComposedModel) model).getAllOf().stream().filter(m -> m instanceof ModelImpl)
+                            .map(m -> !hasProperties.test(m.getProperties())).findFirst().orElse(false);
+
+                    if (emptyAttributes) {
+                        log.warn("Incorrectly constructed model {}, hierarchy can be flattened with postprocessor", node.getQName());
+                    }
                 }
             }
         }
@@ -497,8 +510,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         attributes.setProperties(structure(node, n -> fromAugmentedGroupings.contains(n.getQName()) ));
         //attributes.setDiscriminator("objType");
         attributes.setType("object");
-        boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
-        if(! noAttributes) {
+        if(hasProperties.test(attributes.getProperties())) {
             newModel.child(attributes);
         }
 
