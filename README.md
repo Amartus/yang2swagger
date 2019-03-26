@@ -47,6 +47,11 @@ Argument "module ..." is required
  -api-version string : The current version of your API (default: 1.0)
  -format enum        : The output format (options: YAML, JSON) (default: YAML)
  -content-type string: Content type the API generates / consumes (default: application/yang-data+json)
+ -simplify-hierarchy : Use it to generate Swagger which with simplified inheritence model which can be used with standard code generators. (default: false)
+ -use-namespaces     : Use namespaces in resource URI (default: false)
+ -fullCrud           : If the flag is set to false path are generated for GET operations only. (default: true)
+ -elements           : Define YANG elements to focus on. (default: DATA + RPC)
+ -authentication     : Authentication definition (options: BASIC, NONE) (default: NONE)
 ```
 
 For example:
@@ -96,6 +101,8 @@ You can generate ```yaml.swagger``` as part of resource generation step in your 
 		                              <api-version>${project.version}</api-version>
 		                              <base-module>${yangName}</base-module>
 		                              <swagger-format>yaml</swagger-format>
+		                              <use-namespaces>true</use-namespaces>
+		                              <path-format>odl</path-format>
 		                          </additionalConfiguration>
                         </generator>
                     </codeGenerators>

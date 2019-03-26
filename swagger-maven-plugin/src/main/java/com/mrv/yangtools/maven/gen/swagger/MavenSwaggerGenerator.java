@@ -12,8 +12,12 @@
 package com.mrv.yangtools.maven.gen.swagger;
 
 import com.google.common.base.Preconditions;
+import com.mrv.yangtools.codegen.PathHandlerBuilder;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
+import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
+
 import org.apache.maven.project.MavenProject;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
@@ -70,13 +74,27 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         List<SwaggerGenerator.Elements> elements = Arrays.stream(getAdditionalConfigOrDefault("generator-elements", "DATA,RCP").split(","))
                 .filter(e -> {try{ SwaggerGenerator.Elements.valueOf(e); return true;} catch(IllegalArgumentException ex) {return false;}})
                 .map(SwaggerGenerator.Elements::valueOf).collect(Collectors.toList());
+        
+        String pathHandler = getPathHandlerFormat();
+        String useNamespaces = getAdditionalConfigOrDefault("use-namespaces", "false");
 
-
+        AbstractPathHandlerBuilder pathHandlerBuilder;
+        
+        if(pathHandler.equals("odl")) {
+        	pathHandlerBuilder = new ODLPathHandlerBuilder();
+        } else {
+        	pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+        }
+        
+        if(useNamespaces.equals("true")) {
+        	pathHandlerBuilder = pathHandlerBuilder.useModuleName();
+        }
 
         try(FileWriter fileWriter = new FileWriter(output)) {
             SwaggerGenerator generator = new SwaggerGenerator(schemaContext, modules)
                     .format(format())
                     .tagGenerator(new SegmentTagGenerator())
+                    .pathHandler(pathHandlerBuilder)
             		.version(version);
             mimes.forEach(m -> { generator.consumes("application/"+ m); generator.produces("application/"+ m);});
             generator.elements(elements.toArray(new SwaggerGenerator.Elements[elements.size()]));
@@ -106,6 +124,15 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
         this.mavenProject = project;
         this.projectBaseDir = project.getBasedir();
 
+    }
+    
+    private String getPathHandlerFormat() {
+        String stringFormat = getAdditionalConfigOrDefault("path-format", "rfc8040");
+        if(stringFormat.equals("odl")) {
+        	return "odl";
+        } else {
+           return "rfc8040";
+        }
     }
     
     private String getFileExtension() {
