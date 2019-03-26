@@ -1,6 +1,7 @@
 package com.mrv.yangtools.codegen;
 
 
+import com.mrv.yangtools.codegen.impl.ModelUtils;
 import io.swagger.models.*;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.RefProperty;
@@ -8,7 +9,6 @@ import io.swagger.models.properties.RefProperty;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -62,6 +62,34 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
 
         assertEquals("base.Coll",c1.getSimpleRef());
         assertEquals("base.base.C2",c2.getSimpleRef());
+    }
+
+
+    @org.junit.Test
+    public void testBug15() {
+        swaggerFor(p -> p.getParent().getFileName().toString().equals("bug_15"));
+
+        Map<String, ComposedModel> attributeModels = swagger.getDefinitions().entrySet().stream()
+                .filter(e -> e.getKey().endsWith(".Attributes"))
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> (ComposedModel) e.getValue()));
+
+        assertEquals(2, attributeModels.size());
+        ComposedModel regular = attributeModels.get("ext1.Attributes");
+        ComposedModel augmented = attributeModels.get("ext1.job.Attributes");
+        assertEquals(4, augmented.getAllOf().size());
+        assertEquals(2, regular.getAllOf().size());
+    }
+
+    @org.junit.Test
+    public void testBug17() {
+        swaggerFor(p -> p.getParent().getFileName().toString().equals("bug_17"));
+
+        Map<String, Model> augmented = swagger.getDefinitions().entrySet().stream()
+                .filter(e -> ModelUtils.isAugmentation(e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        assertEquals(3, swagger.getDefinitions().size());
+        assertEquals(1, augmented.size());
     }
 
     @org.junit.Test

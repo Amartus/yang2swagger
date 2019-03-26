@@ -141,7 +141,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         return result;
     }
 
-    protected String generateName(SchemaNode node, String proposedName, Set<String> cache) {
+    protected String generateName(SchemaNode node, String proposedName, Set<String> _cache) {
         if(node instanceof DataNodeContainer) {
             DataNodeContainer original = null;
             if(! isTreeAugmented.test((DataNodeContainer) node)) {
@@ -150,7 +150,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
             if(original != null) {
                 if(! orgNames.containsKey(original)) {
-                    String name = generateName((SchemaNode)original, proposedName, cache);
+                    String name = generateName((SchemaNode)original, proposedName, _cache);
                     orgNames.put(original, name);
                 } else {
                     log.debug("reusing original definition to get name for {}", node.getQName());
@@ -254,6 +254,9 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             prop = refOrStructure((ContainerSchemaNode) node);
         } else if (node instanceof ListSchemaNode) {
             prop = new ArrayProperty().items(refOrStructure((ListSchemaNode) node));
+        } else if (node instanceof AnyXmlSchemaNode) {
+            log.warn("generating swagger string property for any schema type for {}", node.getQName());
+            prop = new StringProperty();
         }
 
         if (prop != null) {
@@ -289,33 +292,15 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     /**
      * Add model to referenced swagger for given node. All related models are added as well if needed.
      * @param node for which build a node
-     * @param tagName wrapping model name
+     * @param modelName model name
      * @param <T> type of the node
      */
     @Override
-    public <T extends SchemaNode & DataNodeContainer> void addModel(T node, String tagName) {
+    public <T extends SchemaNode & DataNodeContainer> void addModel(T node, String modelName) {
 
 
         Model model = build(node);
 
-        String modelName = getName(node);
-
-        if(tagName != null) {
-            final ModelImpl wrapper = new ModelImpl();
-            if(model instanceof ModelImpl) {
-                wrapper.addProperty(tagName, new ObjectProperty(model.getProperties()));
-            }
-
-            if(model instanceof ComposedModel) {
-                String internal = modelName  + Character.toUpperCase(tagName.charAt(0)) + tagName.substring(1).toLowerCase();
-                swagger.addDefinition(internal, model);
-                wrapper.addProperty(tagName, new RefProperty(DEF_PREFIX + internal));
-            }
-
-            modelName = modelName + tagName.substring(0,1).toUpperCase() + tagName.substring(1);
-
-            model = wrapper;
-        }
 
         if(swagger.getDefinitions() != null && swagger.getDefinitions().containsKey(modelName)) {
             if(model.equals(swagger.getDefinitions().get(modelName))) {
@@ -327,10 +312,10 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         swagger.addDefinition(modelName, model);
     }
 
-    @Override
     public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
-        addModel(node, null);
+        addModel(node, getName(node));
     }
+
 
     @Override
     public String addModel(EnumTypeDefinition enumType) {

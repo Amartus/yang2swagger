@@ -26,9 +26,12 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.*;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.mrv.yangtools.codegen.impl.ModelUtils.isAugmentation;
 
 /**
  * The builder strategy is to reuse grouping wherever possible. Therefore in generated Swagger models, groupings are transformed to models
@@ -45,6 +48,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private Map<Object, Set<UsesNode>> usesCache;
 
     private final Deque<DataNodeContainer> effectiveNode;
+
+    private static final Predicate<Map<?,?>> hasProperties = hm -> hm != null && !hm.isEmpty();
 
     public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
         super(ctx, swagger, converter);
@@ -79,7 +84,14 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 return names.get(grouping(toCheck));
             }
         }
-        return names.get(node);
+        String name = names.get(node);
+        if(name == null) {
+            name = generateName(node, null, null);
+            names.put(node, name);
+            log.info("generated name on the fly name for node {} is {}", node.getQName(), name);
+
+        }
+        return name;
     }
 
     private <T extends SchemaNode & DataNodeContainer> T getEffectiveChild(QName name) {
@@ -129,7 +141,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         if(isAugmented.test(node)) return false;
 
         Set<UsesNode> uses = uses(node);
-        return uses.size() == 1 && node.getChildNodes().stream().filter(n -> !n.isAddedByUses()).count() == 0;
+        return uses.size() == 1 && node.getChildNodes().stream().allMatch(DataSchemaNode::isAddedByUses);
     }
 
     @Override
@@ -183,13 +195,17 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         log.debug("reference to {}", definitionId);
         RefProperty prop = new RefProperty(definitionId);
 
-        if(treeAugmented && ! existingModels.containsKey(effectiveNode)) {
-            log.debug("adding referenced model {} for node {} ", definitionId, effectiveNode);
-            addModel(effectiveNode);
+        if(treeAugmented) {
 
+            if(! existingModels.containsKey(effectiveNode)) {
+                log.debug("adding referenced model {} for node {} ", definitionId, effectiveNode);
+                addModel(effectiveNode, getName(effectiveNode));
+            } else {
+                return prop;
+            }
         } else if(existingModel(node) == null) {
             log.debug("adding referenced model {} for node {} ", definitionId, node);
-            addModel(node);
+            addModel(node, getName(node));
         }
 
         return prop;
@@ -338,12 +354,18 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             }
             augmented.setInterfaces(aModels);
             model = augmented;
+            //add to existing models cache only the augmeted model
+            existingModels.put(node, model);
+        } else {
+            //add to existing models cache mapping between original and used for generation
+            // e.g. to properly support case where model was based on grouping
+            existingModels.put(toModel, model);
+            existingModels.put(node, model);
         }
 
         verifyModel(node, model);
 
-        existingModels.put(toModel, model);
-        existingModels.put(node, model);
+
 
         Optional<DataNodeContainer> toRemove = effectiveNode.stream().filter(
                 n -> n instanceof SchemaNode && ((SchemaNode) n).getQName().equals(node.getQName()))
@@ -354,15 +376,23 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return model;
     }
 
+    Function<RefModel, Model> fromReference = ref -> swagger.getDefinitions().get(ref.getSimpleRef());
+
     private <T extends SchemaNode & DataNodeContainer> void verifyModel(T node, Model model) {
         if(model instanceof ComposedModel) {
-            if( ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof RefModel)
-                    .count() <= 1) {
-                boolean emptyAttributes = ((ComposedModel)model).getAllOf().stream().filter(m -> m instanceof ModelImpl)
-                        .map(m -> m.getProperties().isEmpty()).findFirst().orElse(false);
+            List<RefModel> refModels = ((ComposedModel) model).getAllOf().stream()
+                    .filter(m -> m instanceof RefModel)
+                    .map(m -> (RefModel)m)
+                    .collect(Collectors.toList());
+            if(refModels.size() <= 1) {
+                if(refModels.isEmpty() || !isAugmentation(fromReference.apply(refModels.get(0)))) {
 
-                if(emptyAttributes) {
-                    log.warn("Incorrectly constructed model {}, hierarchy can be flattened with postprocessor", node.getQName());
+                    boolean emptyAttributes = ((ComposedModel) model).getAllOf().stream().filter(m -> m instanceof ModelImpl)
+                            .map(m -> !hasProperties.test(m.getProperties())).findFirst().orElse(false);
+
+                    if (emptyAttributes) {
+                        log.warn("Incorrectly constructed model {}, hierarchy can be flattened with postprocessor", node.getQName());
+                    }
                 }
             }
         }
@@ -392,8 +422,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     }
 
     @Override
-    public <T extends SchemaNode & DataNodeContainer> void addModel(T node) {
-        super.addModel(node);
+    public <T extends SchemaNode & DataNodeContainer> void addModel(T node, String name) {
+        super.addModel(node, name);
     }
 
 
@@ -457,7 +487,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
                 if (existingModel(def) == null) {
                     log.debug("adding model {} for grouping", groupingIdx);
-                    addModel(def);
+                    addModel(def, getName(def));
                 }
                 models.add(refModel);
             });
@@ -487,8 +517,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         attributes.setProperties(structure(node, n -> fromAugmentedGroupings.contains(n.getQName()) ));
         //attributes.setDiscriminator("objType");
         attributes.setType("object");
-        boolean noAttributes = attributes.getProperties() == null || attributes.getProperties().isEmpty();
-        if(! noAttributes) {
+        if(hasProperties.test(attributes.getProperties())) {
             newModel.child(attributes);
         }
 

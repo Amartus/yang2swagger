@@ -33,7 +33,7 @@ public class YamlGenerator {
         if(args.length == 1) {
             File file = new File(args[0]);
             outputName = args[0] + ".swagger";
-            generator = GeneratorHelper.getGenerator(file, m -> true);
+            generator = GeneratorHelper.getGenerator(file, m -> m.getName().equals("org-openroadm-pm"));
         } else {
             generator = GeneratorHelper.getGenerator(m -> m.getName().startsWith("tapi"));
         }
@@ -43,7 +43,7 @@ public class YamlGenerator {
         generator
                 .tagGenerator(new SegmentTagGenerator())
                 //if you wish to generate only to specific tree depth
-//                .maxDepth(3)
+                .maxDepth(2)
                 //define element type
 //                .elements(SwaggerGenerator.Elements.RCP);
                 //define path handling type
@@ -53,6 +53,7 @@ public class YamlGenerator {
 //                .appendPostProcessor(new PathPrunner("/operations").withType("tapi.common.GlobalClass"))
                 //define collapse types with the same structure
                 .appendPostProcessor(new CollapseTypes())
+                .appendPostProcessor(new ShortenName("mef.sdwan.connectivity"))
                 // add basic auth definition
 //                .appendPostProcessor(new AddSecurityDefinitions().withSecurityDefinition("api_sec", new BasicAuthDefinition()))
                 //and single inheritence model

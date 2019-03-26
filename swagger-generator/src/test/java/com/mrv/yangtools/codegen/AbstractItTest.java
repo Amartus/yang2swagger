@@ -7,7 +7,6 @@ import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
@@ -81,6 +80,7 @@ public abstract class AbstractItTest {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
             log.error("Cannot load context referencing {}", cond);
+            log.error("Reason:", e);
             throw new IllegalArgumentException("Invalid precondition for context loader");
         }
     }

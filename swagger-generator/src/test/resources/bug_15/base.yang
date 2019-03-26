@@ -1,0 +1,40 @@
+module base {
+    namespace "urn:amartus:base";
+    prefix base;
+
+    organization "Amartus";
+    contact "";
+    description "desc";
+    revision 2018-09-14 {
+        description "desc";
+    }
+
+    grouping global-class {
+        leaf uuid {
+            type string;
+        }
+    }
+
+    grouping local-class {
+        leaf local-id {
+            type string;
+        }
+    }
+
+    grouping time-period {
+        leaf value {
+            type uint64;
+            description "none";
+        }
+        leaf unit {
+            type string;
+            description "none";
+        }
+        description "none";
+    }
+
+    container parent-container {
+        uses global-class;
+    }
+
+}
