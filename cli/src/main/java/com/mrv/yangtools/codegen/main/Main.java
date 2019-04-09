@@ -95,6 +95,7 @@ public class Main {
             parser.printUsage(System.err);
         } catch (Throwable t) {
             log.error("Error while generating Swagger", t);
+            System.exit(-1);
         }
     }
 
