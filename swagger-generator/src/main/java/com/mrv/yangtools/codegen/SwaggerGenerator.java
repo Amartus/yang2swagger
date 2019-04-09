@@ -280,6 +280,7 @@ public class SwaggerGenerator {
     public Swagger generate() {
 
         ArrayList<String> mNames = new ArrayList<>();
+        ArrayList<String> mDescs = new ArrayList<>();
 
         if(ctx.getModules().isEmpty() || modules.isEmpty()) {
             log.info("No modules found to be transformed into swagger definition");
@@ -291,6 +292,9 @@ public class SwaggerGenerator {
 
         modules.forEach(m -> {
             mNames.add(m.getName());
+            if(m.getDescription() != null && !m.getDescription().isEmpty()) {
+                mDescs.add(m.getDescription());
+            }
             dataObjectsBuilder.processModule(m);
 
         });
@@ -299,10 +303,15 @@ public class SwaggerGenerator {
 
         modules.forEach(m -> new ModuleGenerator(m).generate());
 
-        // update info with module names
+        // update info with module names and descriptions
         String modules = mNames.stream().collect(Collectors.joining(","));
+        String descriptions = mDescs.stream().collect(Collectors.joining(","));
+        if(descriptions.isEmpty()) {
+            descriptions = modules + " API generated from yang definitions";
+        }
+
         target.getInfo()
-                .description(modules + " API generated from yang definitions")
+                .description(descriptions)
                 .title(modules + " API");
 
         postProcessSwagger(target);
