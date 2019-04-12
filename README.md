@@ -62,6 +62,26 @@ java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/
  mef-services
 ```
 
+#### Running the CLI in a Docker image ####
+
+To run yang2swagger in a Docker image or to build and extract the Jar file, run
+the following in this repo's directory:
+
+```
+docker build -t yang2swagger .
+```
+
+To use the docker image, gather all the YANG files into a single directory and
+from inside that directory run the following:
+
+```
+docker run -it -v $(pwd):/usr/src/yang yang2swagger module_name
+```
+
+For this command, `module_name` can either be the name of the YANG file (Without
+the extention) or `EXTRACT_JAR` if you need to extract the JAR file to the
+mounted docker volume.
+
 ### Maven integration ###
 
 You can generate ```yaml.swagger``` as part of resource generation step in your maven module. You can also choose the name by editing base-module and swagger-format additionalConfigs. To do so please add following plugin configuration to your project:
