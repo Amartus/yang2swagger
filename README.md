@@ -75,12 +75,12 @@ To use the docker image, gather all the YANG files into a single directory and
 from inside that directory run the following:
 
 ```
-docker run -it -v $(pwd):/usr/src/yang yang2swagger module_name
+docker run -it -v $(pwd):/usr/src/yang yang2swagger <arguments>
 ```
 
-For this command, `module_name` can either be the name of the YANG file (Without
-the extention) or `EXTRACT_JAR` if you need to extract the JAR file to the
-mounted docker volume.
+Where `<arguments>` can either be the arguments for the jar file, enclosed in
+quotes, or `EXTRACT_JAR` if you need to extract the JAR file to the mounted
+docker volume.
 
 ### Maven integration ###
 
