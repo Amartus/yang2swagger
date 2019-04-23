@@ -103,7 +103,19 @@ public class SwaggerGenerator {
     public SwaggerGenerator(SchemaContext ctx, Set<org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
-        if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");
+
+        if(ctx.getModules().isEmpty()) {
+            log.error("No modules found in the context.");
+            throw new IllegalStateException("No modules found in the context.");
+        }
+        if(modulesToGenerate.isEmpty()) {
+            log.error("No modules has been specified for swagger generation");
+            if(log.isInfoEnabled()) {
+                String msg = ctx.getModules().stream().map(ModuleIdentifier::getName).collect(Collectors.joining(", "));
+                log.info("Modules in the context are: {}", msg);
+            }
+            throw new IllegalStateException("No modules to generate has been specified");
+        }
         this.ctx = ctx;
         this.modules = modulesToGenerate;
         target = new Swagger();
@@ -282,10 +294,7 @@ public class SwaggerGenerator {
         ArrayList<String> mNames = new ArrayList<>();
         ArrayList<String> mDescs = new ArrayList<>();
 
-        if(ctx.getModules().isEmpty() || modules.isEmpty()) {
-            log.info("No modules found to be transformed into swagger definition");
-            return target;
-        }
+
 
         log.info("Generating swagger for yang modules: {}",
                 modules.stream().map(ModuleIdentifier::getName).collect(Collectors.joining(",","[", "]")));

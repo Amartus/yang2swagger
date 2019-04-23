@@ -23,6 +23,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.ModuleIdentifier;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
@@ -109,6 +110,13 @@ public class Main {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
         final SchemaContext context = buildSchemaContext(yangDir, p -> matcher.matches(p.getFileName()));
+
+        if(log.isInfoEnabled()) {
+            String modulesSting = context.getModules().stream().map(ModuleIdentifier::getName).collect(Collectors.joining(", "));
+
+            log.info("Modules found in the {} are {}", yangDir, modulesSting);
+        }
+
         final Set<Module> toGenerate = context.getModules().stream().filter(m -> modules == null || modules.contains(m.getName()))
                 .collect(Collectors.toSet());
 

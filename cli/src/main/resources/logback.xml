@@ -17,7 +17,7 @@
         </encoder>
     </appender>
 
-    <logger name="root" level="WARN">
+    <logger name="root" level="INFO">
         <appender-ref ref="STDERR" />
     </logger>
 </configuration>
