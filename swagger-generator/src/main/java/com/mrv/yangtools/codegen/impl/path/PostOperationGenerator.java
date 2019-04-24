@@ -35,7 +35,10 @@ public class PostOperationGenerator extends OperationGenerator {
     public Operation execute(DataSchemaNode node) {
         final Operation post = dropLastSegmentParameters ? listOperation() : defaultOperation();
         final RefModel definition = new RefModel(getDefinitionId(node));
-        post.description("creates " + getName(node));
+        post.summary("creates " + getName(node));
+        String description = node.getDescription() == null ? "creates " + getName(node) :
+                node.getDescription();
+        post.description(description);
         post.parameter(new BodyParameter()
                 .name(getName(node) + ".body-param")
                 .schema(definition)

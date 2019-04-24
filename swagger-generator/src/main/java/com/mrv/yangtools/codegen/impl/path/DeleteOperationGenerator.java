@@ -29,7 +29,10 @@ public class DeleteOperationGenerator extends OperationGenerator {
     @Override
     public Operation execute(DataSchemaNode node) {
         final Operation delete = defaultOperation();
-        delete.description("removes " + getName(node));
+        delete.summary("removes " + getName(node));
+        String description = node.getDescription() == null ? "removes " + getName(node) :
+                node.getDescription();
+        delete.description(description);
         delete.response(204, new Response().description("Object deleted"));
         return delete;
     }

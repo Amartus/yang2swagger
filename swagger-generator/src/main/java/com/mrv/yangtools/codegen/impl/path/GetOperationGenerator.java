@@ -30,7 +30,10 @@ public class GetOperationGenerator extends OperationGenerator {
     @Override
     public Operation execute(DataSchemaNode node) {
         final Operation get = defaultOperation();
-        get.description("returns " + getName(node));
+        get.summary("returns " + getName(node));
+        String description = node.getDescription() == null ? "returns " + getName(node) :
+                node.getDescription();
+        get.description(description);
         get.response(200, new Response()
                 .schema(new RefProperty(getDefinitionId(node)))
                 .description(getName(node)));
