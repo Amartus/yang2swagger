@@ -66,6 +66,8 @@ public abstract class AbstractPathHandler implements PathHandler {
             ModelImpl inputModel = new ModelImpl();
             inputModel.addProperty("input", new RefProperty(dataObjectBuilder.getDefinitionId(input)));
 
+            post.summary("creates " + dataObjectBuilder.getName(root));
+            post.description("creates " + dataObjectBuilder.getName(root));
             post.parameter(new BodyParameter()
                     .name(dataObjectBuilder.getName(input) + ".body-param")
                     .schema(inputModel)
