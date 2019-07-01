@@ -102,6 +102,10 @@ public class PathSegment implements Iterable<PathSegment> {
     public String getModuleName() { return moduleName;}
     public Collection<? extends Parameter> getParam() { return localParameters();}
 
+    public boolean forList() {
+        return node != null && !node.getKeyDefinition().isEmpty();
+    }
+
     public boolean isReadOnly() {
         return readOnly;
     }

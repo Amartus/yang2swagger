@@ -55,7 +55,9 @@ class PathHandler extends AbstractPathHandler {
         path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
         if(fullCrud && !pathCtx.isReadOnly()) {
             path.put(new PutOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-            path.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, false).execute(node).tags(tags));
+            if(!pathCtx.forList()) {
+                path.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, false).execute(node).tags(tags));
+            }
             path.delete(new DeleteOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
         }
 
