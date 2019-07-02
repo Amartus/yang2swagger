@@ -19,7 +19,6 @@ import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.*;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -61,23 +60,6 @@ class ODLPathHandler extends AbstractPathHandler {
         return path;
     }
 
-    
-    protected Path operations(DataSchemaNode node, PathSegment pathCtx) {
-        final Path path = new Path();
-        List<String> tags = tags(pathCtx);
-
-        path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-        if(fullCrud) {
-            path.put(new PutOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-            if(!pathCtx.forList()) {
-                path.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, false).execute(node).tags(tags));
-            }
-            path.delete(new DeleteOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-        }
-
-        return path;
-    }
-
     @Override
     public void path(ListSchemaNode lN, PathSegment pathCtx) {
         final Path operationalPath = operationalOperations(lN, pathCtx);
@@ -104,5 +86,10 @@ class ODLPathHandler extends AbstractPathHandler {
     @Override
     protected PathPrinter getPrinter(PathSegment pathCtx) {
         return new ODLRestconfPathPrinter(pathCtx, useModuleName);
+    }
+
+    @Override
+    protected boolean generateModifyOperations(PathSegment pathCtx) {
+        return fullCrud;
     }
 }

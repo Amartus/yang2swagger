@@ -8,6 +8,7 @@ import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.RefProperty;
 
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
@@ -95,6 +96,24 @@ public abstract class AbstractPathHandler implements PathHandler {
 
     protected abstract PathPrinter getPrinter(PathSegment pathCtx);
 
+
+    protected abstract boolean generateModifyOperations(PathSegment pathCtx);
+
+    protected Path operations(DataSchemaNode node, PathSegment pathCtx) {
+        final Path path = new Path();
+        List<String> tags = tags(pathCtx);
+
+        path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
+        if(generateModifyOperations(pathCtx)) {
+            path.put(new PutOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
+            if(!pathCtx.forList()) {
+                path.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, false).execute(node).tags(tags));
+            }
+            path.delete(new DeleteOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
+        }
+
+        return path;
+    }
 
     private Operation defaultOperation(PathSegment pathCtx) {
         final Operation operation = new Operation();

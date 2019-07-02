@@ -19,7 +19,6 @@ import com.mrv.yangtools.codegen.impl.path.*;
 import io.swagger.models.*;
 import org.opendaylight.yangtools.yang.model.api.*;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -42,26 +41,9 @@ class PathHandler extends AbstractPathHandler {
     @Override
     public void path(ContainerSchemaNode cN, PathSegment pathCtx) {
         final Path path = operations(cN, pathCtx);
-        //TODO pluggable PathPrinter
         RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
 
         swagger.path(data + printer.path(), path);
-    }
-
-    protected Path operations(DataSchemaNode node, PathSegment pathCtx) {
-        final Path path = new Path();
-        List<String> tags = tags(pathCtx);
-
-        path.get(new GetOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-        if(fullCrud && !pathCtx.isReadOnly()) {
-            path.put(new PutOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-            if(!pathCtx.forList()) {
-                path.post(new PostOperationGenerator(pathCtx, dataObjectBuilder, false).execute(node).tags(tags));
-            }
-            path.delete(new DeleteOperationGenerator(pathCtx, dataObjectBuilder).execute(node).tags(tags));
-        }
-
-        return path;
     }
 
     @Override
@@ -71,9 +53,7 @@ class PathHandler extends AbstractPathHandler {
         RestconfPathPrinter printer = new RestconfPathPrinter(pathCtx, useModuleName);
         swagger.path(data + printer.path(), path);
 
-        //yes I know it can be written in previous 'if statement' but at some point it is to be refactored
         if(!fullCrud || pathCtx.isReadOnly()) return;
-
 
         //referencing list path
         final Path list = new Path();
@@ -89,7 +69,10 @@ class PathHandler extends AbstractPathHandler {
         return new RestconfPathPrinter(pathCtx, useModuleName);
     }
 
-
+    @Override
+    protected boolean generateModifyOperations(PathSegment pathCtx) {
+        return fullCrud && !pathCtx.isReadOnly();
+    }
 
 
 }
