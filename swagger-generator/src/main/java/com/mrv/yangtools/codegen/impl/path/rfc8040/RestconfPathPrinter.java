@@ -31,15 +31,12 @@ public class RestconfPathPrinter extends PathPrinter {
             params -> params.isEmpty() ? "/" :
                     "=" + params.stream().map(p -> "{" + p.getName() + "}").collect(Collectors.joining(",")) + "/";
 
-    private final boolean useModuleName;
-
     public RestconfPathPrinter(PathSegment path, boolean useModuleName) {
         this(path, useModuleName, false);
     }
 
     public RestconfPathPrinter(PathSegment path, boolean useModuleName, boolean dropLastParams) {
-        super(path, param, dropLastParams ? x -> "/" : param);
-        this.useModuleName = useModuleName;
+        super(useModuleName, path, param, dropLastParams ? x -> "/" : param);
     }
 
     @Override
@@ -47,30 +44,4 @@ public class RestconfPathPrinter extends PathPrinter {
         return segment(paramPrinter, path.getModuleName(), path);
 
     }
-
-    protected String segment(Function<Collection<? extends Parameter>, String> paramWriter, String moduleName, PathSegment seg) {
-        if(seg.getName() == null) return "";
-        return (useModuleName && moduleName != null && !moduleName.isEmpty() ? moduleName + ":" : "") + seg.getName() + paramWriter.apply(seg.getParam());
-    }
-
-    /**
-     *
-     * @return for full path
-     */
-    @Override
-    public String path() {
-        LinkedList<PathSegment> result = new LinkedList<>();
-
-        PathSegment parent = path.drop();
-
-        String lastSegment = segment(lastParamPrinter, path.getModuleName(), path);
-
-        for(PathSegment p : parent) {
-            result.addFirst(p);
-        }
-
-        return result.stream().map(s -> segment(paramPrinter, s.getModuleName(), s)).collect(Collectors.joining()) + lastSegment;
-
-    }
-
 }

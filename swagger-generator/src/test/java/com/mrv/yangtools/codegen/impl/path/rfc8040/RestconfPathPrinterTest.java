@@ -78,7 +78,7 @@ public class RestconfPathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c").withModule("mod2");
 
-        assertEquals("mod1:a/mod1:b={x},{y}/mod2:c/", new RestconfPathPrinter(c, true).path());
+        assertEquals("mod1:a/b={x},{y}/mod2:c/", new RestconfPathPrinter(c, true).path());
         assertEquals("a/b={x},{y}/c/", new RestconfPathPrinter(c, false).path());
     }
 

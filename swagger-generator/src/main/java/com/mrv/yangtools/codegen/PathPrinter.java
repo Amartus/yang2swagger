@@ -11,10 +11,15 @@
 
 package com.mrv.yangtools.codegen;
 
+import com.google.common.base.Strings;
 import io.swagger.models.parameters.Parameter;
 
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Allows for conversion of {@link PathSegment} to strings describing resources
@@ -22,6 +27,7 @@ import java.util.function.Function;
  * @author bartosz.michalik@amartus.com
  */
 public abstract class PathPrinter {
+    protected final boolean useModuleName;
     protected final PathSegment path;
     protected final Function<Collection<? extends Parameter>, String> paramPrinter;
     protected final Function<Collection<? extends Parameter>, String> lastParamPrinter;
@@ -30,35 +36,69 @@ public abstract class PathPrinter {
      * Path printer that uses the same param conversion function for all segments
      * @param path segment
      * @param paramPrinter convert parameter to string
+     * @param useModuleName
      */
-    public PathPrinter(PathSegment path, Function<Collection<? extends Parameter>, String> paramPrinter) {
-        this(path, paramPrinter, paramPrinter);
+    public PathPrinter(PathSegment path, Function<Collection<? extends Parameter>, String> paramPrinter, boolean useModuleName) {
+        this(useModuleName, path, paramPrinter, paramPrinter);
     }
 
     /**
      * Path printer that uses the same param conversion function for all segments
+     * @param useModuleName
      * @param path segment
      * @param paramPrinter convert parameter to string for parent segments of 'path'
      * @param lastParamPrinter convert parameter to string for 'path'
      */
-    public PathPrinter(PathSegment path,
+    public PathPrinter(boolean useModuleName, PathSegment path,
                        Function<Collection<? extends Parameter>, String> paramPrinter,
                        Function<Collection<? extends Parameter>, String> lastParamPrinter) {
+        this.useModuleName = useModuleName;
         this.path = path;
         this.paramPrinter = paramPrinter;
         this.lastParamPrinter = lastParamPrinter;
     }
-
 
     /**
      * Convert segment - do not use parent segments
      * @return resource string
      */
     public abstract String segment();
+
     /**
      * Convert segment to full path taking into account parent segments
      * @return resource string
      */
-    public abstract String path();
+    public String path() {
+        LinkedList<PathSegment> result = new LinkedList<>();
+
+        PathSegment parent = path.drop();
+
+        String lastSegment = segment(lastParamPrinter, path.getModuleName(), path);
+
+        for(PathSegment p : parent) {
+            result.addFirst(p);
+        }
+
+        return result.stream().map(s -> segment(paramPrinter, s.getModuleName(), s)).collect(Collectors.joining()) + lastSegment;
+
+    }
+
+    protected Optional<String> parentModuleName(PathSegment segment) {
+        return Optional
+                .ofNullable(segment.parent())
+                .filter(parent -> parent.getName() != null)
+                .flatMap(parent -> Optional.ofNullable(parent.getModuleName()));
+    }
+
+    protected String segment(Function<Collection<? extends Parameter>, String> paramWriter, String moduleName, PathSegment seg) {
+        if(seg.getName() == null) return "";
+        boolean shouldUseModuleName = useModuleName && !Strings.isNullOrEmpty(moduleName);
+        Supplier<Boolean> differentFromParent = () -> ! parentModuleName(seg)
+                .filter(moduleName::equals)
+                .isPresent();
+
+        final String prefix = shouldUseModuleName && differentFromParent.get() ? moduleName + ":" : "";
+        return prefix + seg.getName() + paramWriter.apply(seg.getParam());
+    }
 
 }

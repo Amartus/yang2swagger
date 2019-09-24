@@ -112,6 +112,10 @@ public class PathSegment implements Iterable<PathSegment> {
 
     public PathSegment drop() {
         log.debug("dropping {} segment", name);
+        return parent();
+    }
+
+    public PathSegment parent() {
         return this.parent;
     }
 
