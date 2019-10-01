@@ -12,10 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
-import com.mrv.yangtools.codegen.impl.postprocessor.AddSecurityDefinitions;
-import com.mrv.yangtools.codegen.impl.postprocessor.CollapseTypes;
-import com.mrv.yangtools.codegen.impl.postprocessor.RemoveUnusedDefinitions;
-import com.mrv.yangtools.codegen.impl.postprocessor.SingleParentInheritenceModel;
+import com.mrv.yangtools.codegen.impl.postprocessor.*;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.auth.BasicAuthDefinition;
 import org.kohsuke.args4j.Argument;
@@ -145,6 +142,7 @@ public class Main {
             generator.appendPostProcessor(new SingleParentInheritenceModel());
         }
 
+        generator.appendPostProcessor(new Rfc4080PayloadWrapper());
         generator.appendPostProcessor(new RemoveUnusedDefinitions());
 
         generator.generate(new OutputStreamWriter(out));
