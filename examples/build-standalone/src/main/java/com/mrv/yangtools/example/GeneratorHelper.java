@@ -63,6 +63,6 @@ public class GeneratorHelper {
                 .consumes("application/xml")
                 .produces("application/xml")
                 .host("localhost:1234")
-                .elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP);
+                .elements(SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RPC);
     }
 }

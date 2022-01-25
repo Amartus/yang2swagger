@@ -110,7 +110,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateRCPModule() {
+    public void testGenerateRPCModule() {
         //when
         swaggerFor("rpc-basic.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()));
 

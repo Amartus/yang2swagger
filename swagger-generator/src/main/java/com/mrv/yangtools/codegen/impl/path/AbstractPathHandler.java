@@ -48,10 +48,10 @@ public abstract class AbstractPathHandler implements PathHandler {
     }
 
     @Override
-    public void path(RpcDefinition rcp, PathSegment pathCtx) {
-        ContainerSchemaNode input = rcp.getInput();
-        ContainerSchemaNode output = rcp.getOutput();
-        ContainerSchemaNode root = new RpcContainerSchemaNode(rcp);
+    public void path(RpcDefinition rpc, PathSegment pathCtx) {
+        ContainerSchemaNode input = rpc.getInput();
+        ContainerSchemaNode output = rpc.getOutput();
+        ContainerSchemaNode root = new RpcContainerSchemaNode(rpc);
         
         input = input.getChildNodes().isEmpty() ? null : input;
         output = output.getChildNodes().isEmpty() ? null : output;

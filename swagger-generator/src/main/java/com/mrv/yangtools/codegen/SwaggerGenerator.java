@@ -74,7 +74,7 @@ public class SwaggerGenerator {
                 .consumes("application/json")
                 .produces("application/json")
                 .version("1.0.0-SNAPSHOT")
-                .elements(Elements.DATA, Elements.RCP)
+                .elements(Elements.DATA, Elements.RPC)
                 .format(Format.YAML);
         return this;
     }
@@ -89,13 +89,13 @@ public class SwaggerGenerator {
         /**
          * to generate paths for RPC operations
          */
-        RCP
+        RPC
     }
 
     public enum Strategy {optimizing, unpacking}
 
     /**
-     * Preconfigure generator. By default it will genrate api for Data and RCP with JSon payloads only.
+     * Preconfigure generator. By default, it will generate api for Data and RPC with JSon payloads only.
      * The api will be in YAML format. You might change default setting with config methods of the class
      * @param ctx context for generation
      * @param modulesToGenerate modules that will be transformed to swagger API
@@ -361,19 +361,19 @@ public class SwaggerGenerator {
                 module.getChildNodes().forEach(n -> generate(n, maxDepth));
             }
 
-            if(toGenerate.contains(Elements.RCP)) {
+            if(toGenerate.contains(Elements.RPC)) {
                 pathCtx = new PathSegment(ctx)
                         .withModule(module.getName());
                 module.getRpcs().forEach(this::generate);
             }
         }
 
-        private void generate(RpcDefinition rcp) {
+        private void generate(RpcDefinition rpc) {
             pathCtx = new PathSegment(pathCtx)
-                        .withName(rcp.getQName().getLocalName())
+                        .withName(rpc.getQName().getLocalName())
                         .withModule(module.getName());
 
-            handler.path(rcp, pathCtx);
+            handler.path(rpc, pathCtx);
 
             pathCtx = pathCtx.drop();
         }

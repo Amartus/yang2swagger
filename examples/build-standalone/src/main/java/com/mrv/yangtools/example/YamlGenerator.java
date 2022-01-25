@@ -45,7 +45,7 @@ public class YamlGenerator {
                 //if you wish to generate only to specific tree depth
                 .maxDepth(2)
                 //define element type
-//                .elements(SwaggerGenerator.Elements.RCP);
+//                .elements(SwaggerGenerator.Elements.RPC);
                 //define path handling type
 //                .pathHandler(new ODLPathHandlerBuilder().withoutFullCrud())
                 .pathHandler(new PathHandlerBuilder().withoutFullCrud())

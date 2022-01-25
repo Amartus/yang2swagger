@@ -35,7 +35,7 @@ public class IoCYamlGenerator {
 
         generator
                 .tagGenerator(new SegmentTagGenerator())
-                .elements(IoCSwaggerGenerator.Elements.RCP)
+                .elements(IoCSwaggerGenerator.Elements.RPC)
                 .appendPostProcessor(new SingleParentInheritenceModel());
 
 

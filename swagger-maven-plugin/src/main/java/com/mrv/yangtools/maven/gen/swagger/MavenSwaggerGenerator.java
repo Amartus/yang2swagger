@@ -71,7 +71,7 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
 
         String version = getAdditionalConfigOrDefault("api-version", mavenProject.getVersion());
         List<String> mimes = Arrays.asList(getAdditionalConfigOrDefault("generator-mime", "json,xml").split(","));
-        List<SwaggerGenerator.Elements> elements = Arrays.stream(getAdditionalConfigOrDefault("generator-elements", "DATA,RCP").split(","))
+        List<SwaggerGenerator.Elements> elements = Arrays.stream(getAdditionalConfigOrDefault("generator-elements", "DATA,RPC").split(","))
                 .filter(e -> {try{ SwaggerGenerator.Elements.valueOf(e); return true;} catch(IllegalArgumentException ex) {return false;}})
                 .map(SwaggerGenerator.Elements::valueOf).collect(Collectors.toList());
         

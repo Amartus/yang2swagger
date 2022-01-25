@@ -114,7 +114,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateRCPModule() {
+    public void testGenerateRPCModule() {
 
         final Consumer<Path> singlePostOperation = p -> {
             assertEquals(1, p.getOperations().size());

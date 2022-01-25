@@ -115,7 +115,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     }
 
     @org.junit.Test
-    public void testGenerateRCPModule() {
+    public void testGenerateRPCModule() {
 
 
         //when

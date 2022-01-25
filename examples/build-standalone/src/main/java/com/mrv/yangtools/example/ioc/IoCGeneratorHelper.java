@@ -67,6 +67,6 @@ public class IoCGeneratorHelper {
                 .consumes("application/xml")
                 .produces("application/xml")
                 .host("localhost:1234")
-                .elements(IoCSwaggerGenerator.Elements.DATA, IoCSwaggerGenerator.Elements.RCP);
+                .elements(IoCSwaggerGenerator.Elements.DATA, IoCSwaggerGenerator.Elements.RPC);
     }
 }

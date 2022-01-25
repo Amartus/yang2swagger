@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
-import com.mrv.yangtools.common.SchemaBuilder;
 
 public class Main {
 
@@ -172,10 +171,10 @@ public class Main {
             case DATA:
                 return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.DATA};
             case RPC:
-                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.RCP};
+                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.RPC};
             case DATA_AND_RPC:
             default:
-                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RCP};
+                return new SwaggerGenerator.Elements[]{SwaggerGenerator.Elements.DATA, SwaggerGenerator.Elements.RPC};
         }
 
     }
