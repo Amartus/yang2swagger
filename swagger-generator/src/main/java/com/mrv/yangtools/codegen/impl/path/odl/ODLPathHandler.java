@@ -29,7 +29,7 @@ class ODLPathHandler extends AbstractPathHandler {
 
     private final String operational;
 
-    ODLPathHandler(SchemaContext ctx, Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
+    ODLPathHandler(SchemaContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
         super(ctx, modules, target, objBuilder, generators, fullCrud);
         operational = "/operational/";
         data = "/config/";

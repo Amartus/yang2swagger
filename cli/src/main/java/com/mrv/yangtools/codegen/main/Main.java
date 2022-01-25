@@ -1,6 +1,7 @@
 package com.mrv.yangtools.codegen.main;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
@@ -69,6 +70,9 @@ public class Main {
     public AuthenticationMechanism authenticationMechanism = AuthenticationMechanism.NONE;
 
 
+    @Option(name = "-basepath", usage="")
+    public String basePath = "localhost:1234";
+
     public enum ElementType {
         DATA, RPC, DATA_AND_RPC;
     }
@@ -124,10 +128,12 @@ public class Main {
         if(useNamespaces)
             pathHandler = pathHandler.useModuleName();
 
+        validate(basePath);
+
         final SwaggerGenerator generator = new SwaggerGenerator(context, toGenerate)
         		.version(apiVersion)
                 .format(outputFormat).consumes(contentType).produces(contentType)
-                .host("localhost:1234")
+                .host(basePath)
                 .pathHandler(pathHandler)
                 .elements(map(elementType));
 
@@ -146,6 +152,10 @@ public class Main {
         generator.appendPostProcessor(new RemoveUnusedDefinitions());
 
         generator.generate(new OutputStreamWriter(out));
+    }
+
+    private void validate(String basePath) {
+        URI.create(basePath);
     }
 
     private SchemaContext buildSchemaContext(String dir, Predicate<Path> accept)
