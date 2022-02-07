@@ -16,7 +16,7 @@ import com.mrv.yangtools.test.utils.MockNodeBuilder;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -31,7 +31,7 @@ public class RestconfPathPrinterTest {
         PathSegment b = new PathSegment(a).withName("b");
         PathSegment c = new PathSegment(b).withName("c");
 
-        assertEquals("a/b/c/", new RestconfPathPrinter(c, false).path());
+        assertEquals("a/b/c", new RestconfPathPrinter(c, false).path());
     }
 
 
@@ -46,7 +46,7 @@ public class RestconfPathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c");
 
-        assertEquals("a/b={x},{y}/c/", new RestconfPathPrinter(c, false).path());
+        assertEquals("a/b={x},{y}/c", new RestconfPathPrinter(c, false).path());
     }
 
     @Test
@@ -61,7 +61,7 @@ public class RestconfPathPrinterTest {
         PathSegment c = new PathSegment(b).withName("c")
                 .withListNode(new MockNodeBuilder("test").param("z").build());
 
-        assertEquals("a/b={x},{y}/c={z}/", new RestconfPathPrinter(c, false).path());
+        assertEquals("a/b={x},{y}/c={z}", new RestconfPathPrinter(c, false).path());
         assertEquals("a/b={x},{y}/c/", new RestconfPathPrinter(c, false, true).path());
     }
 
@@ -78,8 +78,8 @@ public class RestconfPathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c").withModule("mod2");
 
-        assertEquals("mod1:a/b={x},{y}/mod2:c/", new RestconfPathPrinter(c, true).path());
-        assertEquals("a/b={x},{y}/c/", new RestconfPathPrinter(c, false).path());
+        assertEquals("mod1:a/b={x},{y}/mod2:c", new RestconfPathPrinter(c, true).path());
+        assertEquals("a/b={x},{y}/c", new RestconfPathPrinter(c, false).path());
     }
 
 }

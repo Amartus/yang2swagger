@@ -16,7 +16,6 @@ import com.mrv.yangtools.codegen.PathSegment;
 import io.swagger.models.parameters.Parameter;
 
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -28,8 +27,8 @@ import java.util.stream.Collectors;
 public class RestconfPathPrinter extends PathPrinter {
 
     private static final Function<Collection<? extends Parameter>, String> param =
-            params -> params.isEmpty() ? "/" :
-                    "=" + params.stream().map(p -> "{" + p.getName() + "}").collect(Collectors.joining(",")) + "/";
+            params -> params.isEmpty() ? "" :
+                    "=" + params.stream().map(p -> "{" + p.getName() + "}").collect(Collectors.joining(","));
 
     public RestconfPathPrinter(PathSegment path, boolean useModuleName) {
         this(path, useModuleName, false);

@@ -54,7 +54,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
 
-        final String resUri = "/simplest:simple-root/children1/{id}/children2/{children2-id}/";
+        final String resUri = "/simplest:simple-root/children1/{id}/children2/{children2-id}";
 
         assertThat(swagger.getPaths().keySet(), hasItem("/config" + resUri));
         assertThat(swagger.getPaths().keySet(), hasItem("/operational" + resUri));
@@ -73,11 +73,11 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
         assertEquals(5, swagger.getPaths().keySet().size());
         assertEquals(3, swagger.getDefinitions().keySet().size());  
 		assertThat(swagger.getPaths().keySet(),
-				hasItems("/config/simplest:simple-root/",
+				hasItems("/config/simplest:simple-root",
 						"/config/simplest:simple-root/children1/",
-						"/config/simplest:simple-root/children1/{id}/",
-						"/operational/simplest:simple-root/children1/{id}/",
-						"/operational/simplest:simple-root/"));
+						"/config/simplest:simple-root/children1/{id}",
+						"/operational/simplest:simple-root/children1/{id}",
+						"/operational/simplest:simple-root"));
     }
 
     @org.junit.Test
@@ -97,9 +97,9 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
             assertNotNull(p.getGet());
         };
 
-		assertThat(swagger.getPaths().get("/config/read-only:simple-root/c1/id/c2/c2-id/"), nullValue());
+		assertThat(swagger.getPaths().get("/config/read-only:simple-root/c1/id/c2/c2-id"), nullValue());
 
-        final String resUri = "/read-only:simple-root/";
+        final String resUri = "/read-only:simple-root";
 
         assertThat(swagger.getPaths().keySet(), hasItem("/config" + resUri));
         assertThat(swagger.getPaths().keySet(), hasItem("/operational" + resUri));
@@ -138,9 +138,9 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
         checkLeafrefAreFollowed("simpleaugmentation.simpleroot.AddedA", "a1", "string");
-        assertThat(swagger.getPaths().keySet(), hasItem("/operational/simplest:simple-root/simpleAugmentation:added-a/children1/"));
+        assertThat(swagger.getPaths().keySet(), hasItem("/operational/simplest:simple-root/simpleAugmentation:added-a/children1"));
         //as augmented container is config false
-        assertThat(swagger.getPaths().keySet(), not(hasItem("/config/simplest:simple-root/simpleAugmentation:added-a/children1/")));
+        assertThat(swagger.getPaths().keySet(), not(hasItem("/config/simplest:simple-root/simpleAugmentation:added-a/children1")));
     }
 
     @org.junit.Test
@@ -158,8 +158,8 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
         )), defNames);
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "/config/choice-example:protocol/", "/config/choice-example:protocol/data/",
-                "/operational/choice-example:protocol/", "/operational/choice-example:protocol/data/"
+                "/config/choice-example:protocol", "/config/choice-example:protocol/data",
+                "/operational/choice-example:protocol", "/operational/choice-example:protocol/data"
         )), swagger.getPaths().keySet());
 
     }

@@ -13,6 +13,7 @@ package com.mrv.yangtools.codegen;
 
 import com.google.common.base.Strings;
 import io.swagger.models.parameters.Parameter;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -75,12 +76,27 @@ public abstract class PathPrinter {
 
         String lastSegment = segment(lastParamPrinter, path.getModuleName(), path);
 
+
+
         for(PathSegment p : parent) {
             result.addFirst(p);
         }
 
-        return result.stream().map(s -> segment(paramPrinter, s.getModuleName(), s)).collect(Collectors.joining()) + lastSegment;
+        String path = result.stream().map(s -> segment(paramPrinter, s.getModuleName(), s))
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.joining("/"));
+        if(StringUtils.isNotBlank(path)) {
+            return path + "/" + lastSegment;
+        }
+        return lastSegment;
+    }
 
+    private String removeTrailingSlash(String segment) {
+        if(!path.isCollection()  && segment.endsWith("/")) {
+            return segment.substring(0, segment.length() - 1);
+        }
+
+        return segment;
     }
 
     protected Optional<String> parentModuleName(PathSegment segment) {

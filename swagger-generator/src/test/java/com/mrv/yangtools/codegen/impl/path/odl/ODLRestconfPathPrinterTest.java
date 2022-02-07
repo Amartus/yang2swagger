@@ -15,7 +15,7 @@ import com.mrv.yangtools.test.utils.MockNodeBuilder;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
 
@@ -27,7 +27,7 @@ public class ODLRestconfPathPrinterTest {
         PathSegment b = new PathSegment(a).withName("b");
         PathSegment c = new PathSegment(b).withName("c");
 
-        assertEquals("mod1:a/b/c/", new ODLRestconfPathPrinter(c, true).path());
+        assertEquals("mod1:a/b/c", new ODLRestconfPathPrinter(c, true).path());
     }
 
 
@@ -42,7 +42,7 @@ public class ODLRestconfPathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c");
 
-        assertEquals("mod1:a/b/{x}/{y}/c/", new ODLRestconfPathPrinter(c, true).path());
+        assertEquals("mod1:a/b/{x}/{y}/c", new ODLRestconfPathPrinter(c, true).path());
     }
 
     @Test
@@ -57,8 +57,8 @@ public class ODLRestconfPathPrinterTest {
         PathSegment c = new PathSegment(b).withName("c")
                 .withListNode(new MockNodeBuilder("test").param("z").build());
 
-        assertEquals("mod1:a/b/{x}/{y}/c/{z}/", new ODLRestconfPathPrinter(c, true, false).path());
-        assertEquals("a/b/{x}/{y}/c/{z}/", new ODLRestconfPathPrinter(c, false, false).path());
+        assertEquals("mod1:a/b/{x}/{y}/c/{z}", new ODLRestconfPathPrinter(c, true, false).path());
+        assertEquals("a/b/{x}/{y}/c/{z}", new ODLRestconfPathPrinter(c, false, false).path());
         assertEquals("mod1:a/b/{x}/{y}/c/", new ODLRestconfPathPrinter(c, true, true).path());
         assertEquals("a/b/{x}/{y}/c/", new ODLRestconfPathPrinter(c, false, true).path());
     }
@@ -76,7 +76,7 @@ public class ODLRestconfPathPrinterTest {
                 );
         PathSegment c = new PathSegment(b).withName("c").withModule("mod2");
 
-        assertEquals("mod1:a/b/{x}/{y}/mod2:c/", new ODLRestconfPathPrinter(c, true).path());
+        assertEquals("mod1:a/b/{x}/{y}/mod2:c", new ODLRestconfPathPrinter(c, true).path());
     }
 
 }
