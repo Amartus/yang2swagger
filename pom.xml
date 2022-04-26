@@ -30,7 +30,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <logback.version>1.2.9</logback.version>
+        <logback.version>1.2.11</logback.version>
         <swagger.codegen.version>2.2.1</swagger.codegen.version>
         <swagger.version>1.6.6</swagger.version>
         <yangtools.version>1.2.1</yangtools.version>
