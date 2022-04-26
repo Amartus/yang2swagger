@@ -62,7 +62,7 @@ public class GroupingHierarchyHandler {
             String localName = g.getQName().getLocalName();
             int times = names.get(localName).size();
             if(times < 2) return new Tuple<>(g, localName);
-            return new Tuple<>(g, moduleUtils.toModuleName(g.getQName()) + ":" + localName);
+            return new Tuple<>(g, moduleUtils.toModuleName(g.getQName().getModule()) + ":" + localName);
         }).collect(Collectors.toMap(Tuple::first, Tuple::second));
     }
 
@@ -73,9 +73,9 @@ public class GroupingHierarchyHandler {
         ctx.getGroupings().forEach(g -> {
             HierarchyNode node = result.get(g.getPath().getLastComponent());
             g.getUses().forEach(u -> {
-                HierarchyNode parent = result.get(u.getGroupingPath().getLastComponent());
+                HierarchyNode parent = result.get(u.getSourceGrouping().getPath().getLastComponent());
                 if (parent == null) {
-                    log.warn("Hierarchy creation problem. No grouping with name {} found. Ignoring hierarchy relation.", u.getGroupingPath().getLastComponent());
+                    log.warn("Hierarchy creation problem. No grouping with name {} found. Ignoring hierarchy relation.", u.getSourceGrouping().getPath().getLastComponent());
                 } else {
                     node.addParent(parent);
                 }

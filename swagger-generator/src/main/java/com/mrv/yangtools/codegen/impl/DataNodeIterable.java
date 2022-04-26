@@ -55,7 +55,7 @@ public class DataNodeIterable implements Iterable<SchemaNode> {
             return;
         }
 
-        final Iterable<DataSchemaNode> childNodes = dataNode.getChildNodes();
+        final Collection<? extends DataSchemaNode> childNodes = dataNode.getChildNodes();
 
         if (childNodes != null) {
             for (DataSchemaNode childNode : childNodes) {
@@ -69,10 +69,10 @@ public class DataNodeIterable implements Iterable<SchemaNode> {
                     traverse(containerNode);
                 } else if (childNode instanceof ChoiceSchemaNode) {
                     final ChoiceSchemaNode choiceNode = (ChoiceSchemaNode) childNode;
-                    final Set<ChoiceCaseNode> cases = choiceNode.getCases();
+                    final Collection<? extends CaseSchemaNode> cases = choiceNode.getCases();
                     if (cases != null) {
                         log.debug("processing choice: {}", childNode.getQName().getLocalName());
-                        for (final ChoiceCaseNode caseNode : cases) {
+                        for (final CaseSchemaNode caseNode : cases) {
                             log.debug("traversing case  {}:{}", childNode.getQName().getLocalName(), caseNode.getQName().getLocalName());
                             traverse(caseNode);
                         }
@@ -84,7 +84,7 @@ public class DataNodeIterable implements Iterable<SchemaNode> {
     }
 
     private void traverseGroupings(final DataNodeContainer dataNode) {
-        final Set<GroupingDefinition> groupings = dataNode.getGroupings();
+        final Collection<? extends GroupingDefinition> groupings = dataNode.getGroupings();
         if (groupings != null) {
             groupings.forEach(n -> { allChildren.add(n); traverse(n); });
         }

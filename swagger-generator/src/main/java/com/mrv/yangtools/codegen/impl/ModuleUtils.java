@@ -11,13 +11,11 @@
 
 package com.mrv.yangtools.codegen.impl;
 
-import org.opendaylight.yangtools.yang.common.QName;
+import java.util.Optional;
+import org.opendaylight.yangtools.yang.common.QNameModule;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
-
-import java.net.URI;
-import java.util.Set;
 
 /**
  *
@@ -29,19 +27,13 @@ public class ModuleUtils {
     public ModuleUtils(SchemaContext ctx) {
         this.ctx = ctx;
     }
-    public String toModuleName(QName qname) {
-        Set<Module> modules = ctx.findModuleByNamespace(qname.getModule().getNamespace());
-        if(modules.size() != 1) throw new IllegalStateException("no support for " + modules.size() + " modules with name " + qname);
-        return modules.iterator().next().getName();
-    }
-
-    public String toModuleName(URI uri) {
-        Set<Module> modules = ctx.findModuleByNamespace(uri);
-        if(modules.size() != 1) throw new IllegalStateException("no support for " + modules.size() + " modules with uri " + uri);
-        return modules.iterator().next().getName();
+    public String toModuleName(QNameModule qname) {
+        Optional<Module> modules = ctx.findModule(qname);
+        if(modules.isEmpty()) throw new IllegalStateException("no support for " + qname + " modules with name " + qname);
+        return modules.get().getName();
     }
 
     public String toModuleName(SchemaNode node) {
-        return toModuleName(node.getQName());
+        return toModuleName(node.getPath().getLastComponent().getModule());
     }
 }

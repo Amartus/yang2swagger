@@ -23,7 +23,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.ModuleIdentifier;
+import org.opendaylight.yangtools.yang.model.api.ModuleLike;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
@@ -119,7 +119,7 @@ public class Main {
         final SchemaContext context = buildSchemaContext(yangDir, p -> matcher.matches(p.getFileName()));
 
         if(log.isInfoEnabled()) {
-            String modulesSting = context.getModules().stream().map(ModuleIdentifier::getName).collect(Collectors.joining(", "));
+            String modulesSting = context.getModules().stream().map(ModuleLike::getName).collect(Collectors.joining(", "));
 
             log.info("Modules found in the {} are {}", yangDir, modulesSting);
         }

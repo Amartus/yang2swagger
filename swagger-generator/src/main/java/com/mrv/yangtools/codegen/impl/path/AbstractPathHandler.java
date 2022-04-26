@@ -1,14 +1,16 @@
 package com.mrv.yangtools.codegen.impl.path;
 
 import com.mrv.yangtools.codegen.*;
-import com.mrv.yangtools.codegen.impl.RpcContainerSchemaNode;
 
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.RefProperty;
 
-import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
+import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
+import org.opendaylight.yangtools.yang.model.api.ContainerLike;
 import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.InputSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.OutputSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
@@ -49,9 +51,9 @@ public abstract class AbstractPathHandler implements PathHandler {
 
     @Override
     public void path(RpcDefinition rpc, PathSegment pathCtx) {
-        ContainerSchemaNode input = rpc.getInput();
-        ContainerSchemaNode output = rpc.getOutput();
-        ContainerSchemaNode root = new RpcContainerSchemaNode(rpc);
+        InputSchemaNode input = rpc.getInput();
+        OutputSchemaNode output = rpc.getOutput();
+        ContainerLike root = ContainerSchemaNodes.forRPC(rpc);
         
         input = input.getChildNodes().isEmpty() ? null : input;
         output = output.getChildNodes().isEmpty() ? null : output;
@@ -72,23 +74,18 @@ public abstract class AbstractPathHandler implements PathHandler {
             post.parameter(new BodyParameter()
                     .name(dataObjectBuilder.getName(input) + ".body-param")
                     .schema(inputModel)
-                    .description(input.getDescription())
+                    .description(input.getDescription().orElse(null))
             );
         }
 
         if(output != null) {
-            String description = output.getDescription();
-            if(description == null) {
-                description = "Correct response";
-            }
-
             RefProperty refProperty = new RefProperty();
             refProperty.set$ref(dataObjectBuilder.getDefinitionId(root));
             
             dataObjectBuilder.addModel(root);
             post.response(200, new Response()
                     .schema(refProperty)
-                    .description(description));
+                    .description(output.getDescription().orElse("OK")));
         }
         post.response(201, new Response().description("No response")); //no output body
         swagger.path(operations + printer.path(), new Path().post(post));

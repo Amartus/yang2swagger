@@ -24,7 +24,7 @@ import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.ModuleIdentifier;
+import org.opendaylight.yangtools.yang.model.api.ModuleLike;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.slf4j.Logger;
@@ -122,7 +122,7 @@ public class IoCSwaggerGenerator {
         target = new Swagger();
         converter = new AnnotatingTypeConverter(ctx);
         moduleUtils = new ModuleUtils(ctx);
-        this.moduleNames = modulesToGenerate.stream().map(ModuleIdentifier::getName).collect(Collectors.toSet());
+        this.moduleNames = modulesToGenerate.stream().map(ModuleLike::getName).collect(Collectors.toSet());
         //assign default strategy
         strategy(Strategy.optimizing);
 
@@ -298,12 +298,12 @@ public class IoCSwaggerGenerator {
         }
 
         log.info("Generating swagger for yang modules: {}",
-                modules.stream().map(ModuleIdentifier::getName).collect(Collectors.joining(",","[", "]")));
+                modules.stream().map(ModuleLike::getName).collect(Collectors.joining(",","[", "]")));
 
         modules.forEach(m -> {
             mNames.add(m.getName());
-            if(m.getDescription() != null && !m.getDescription().isEmpty()) {
-                mDescs.add(m.getDescription());
+            if(m.getDescription().isPresent()) {
+                mDescs.add(m.getDescription().get());
             }
             dataObjectsBuilder.processModule(m);
 

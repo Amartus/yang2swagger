@@ -15,6 +15,8 @@ import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.*;
 import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.common.QName;
+import org.opendaylight.yangtools.yang.common.QNameModule;
+import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
@@ -48,9 +50,9 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     private final HashMap<QName, String> generatedEnums;
     private final HashMap<DataNodeContainer, String> orgNames;
 
-    protected final static Function<DataNodeContainer, Set<AugmentationSchema>> augmentations = node -> {
+    protected final static Function<DataNodeContainer, Collection<? extends AugmentationSchemaNode>> augmentations = node -> {
         if(node instanceof AugmentationTarget) {
-            Set<AugmentationSchema> res = ((AugmentationTarget) node).getAvailableAugmentations();
+            Collection<? extends AugmentationSchemaNode> res = ((AugmentationTarget) node).getAvailableAugmentations();
             if(res != null) return res;
         }
         return Collections.emptySet();
@@ -98,13 +100,13 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             if(r.getInput() != null)
                 processNode(r.getInput(), null,  cache);
             if(r.getOutput() != null)
-                processNode(new RpcContainerSchemaNode(r), null, cache);
+                processNode(ContainerSchemaNodes.forRPC(r), null, cache);
         });
         log.debug("processing augmentations defined in {}", module.getName());
         module.getAugmentations().forEach(r -> processNode(r, cache));
     }
 
-    protected  void processNode(ContainerSchemaNode container, String proposedName, Set<String> cache) {
+    protected <T extends ContainerLike> void processNode(T container, String proposedName, Set<String> cache) {
         if(container == null) return;
         String name = generateName(container, null, cache);
         names.put(container, name);
@@ -127,7 +129,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         DataNodeContainer tmp = node;
         do {
             if(tmp instanceof DerivableSchemaNode) {
-                com.google.common.base.Optional<? extends SchemaNode> original = ((DerivableSchemaNode) tmp).getOriginal();
+                Optional<? extends SchemaNode> original = ((DerivableSchemaNode) tmp).getOriginal();
                 tmp = null;
                 if(original.isPresent() && original.get() instanceof DataNodeContainer) {
                     result = (DataNodeContainer) original.get();
@@ -165,7 +167,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             }
         }
 
-        String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(node.getQName()));
+        String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(node.getQName().getModule()));
         if(proposedName != null) {
             return modulePrefix + "." + getClassName(proposedName);
         }
@@ -198,7 +200,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected Property getPropertyByType(LeafSchemaNode lN) {
 
         final Property property = converter.convert(lN.getType(), lN);
-        property.setDefault(lN.getDefault());
+        property.setDefault(lN.getType().getDefaultValue().map(Object::toString).orElse(null));
 
         return property;
     }
@@ -250,11 +252,11 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         } else if (node instanceof LeafSchemaNode) {
             LeafSchemaNode lN = (LeafSchemaNode) node;
             prop = getPropertyByType(lN);
-        } else if (node instanceof ContainerSchemaNode) {
-            prop = refOrStructure((ContainerSchemaNode) node);
+        } else if (node instanceof ContainerLike) {
+            prop = refOrStructure((ContainerLike) node);
         } else if (node instanceof ListSchemaNode) {
             prop = new ArrayProperty().items(refOrStructure((ListSchemaNode) node));
-        } else if (node instanceof AnyXmlSchemaNode) {
+        } else if (node instanceof AnyxmlSchemaNode) {
             log.warn("generating swagger string property for any schema type for {}", node.getQName());
             prop = new StringProperty();
         }
@@ -276,13 +278,13 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     private String moduleName(DataSchemaNode node) {
-        Module module = ctx.findModuleByNamespaceAndRevision(node.getQName().getNamespace(), node.getQName().getRevision());
+        Module module = ctx.findModule(QNameModule.create(node.getQName().getNamespace(), node.getQName().getRevision())).orElseThrow();
         return module.getName();
     }
 
     protected abstract <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node);
 
-    private static void assignCaseMetadata(Property property, ChoiceSchemaNode choice, ChoiceCaseNode aCase) {
+    private static void assignCaseMetadata(Property property, ChoiceSchemaNode choice, CaseSchemaNode aCase) {
         String choiceName = choice.getQName().getLocalName();
         String caseName = aCase.getQName().getLocalName();
 
@@ -348,7 +350,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     protected String getName(QName qname) {
-        String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(qname));
+        String modulePrefix =  nameToPackageSegment(moduleUtils.toModuleName(qname.getModule()));
         String name = modulePrefix + "." + getClassName(qname);
 
         String candidate = name;
@@ -362,8 +364,8 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     }
 
     protected String desc(DocumentedNode node) {
-        return  node.getReference() == null ? node.getDescription() :
-                node.getDescription() + " REF:" + node.getReference();
+        return  node.getReference().isEmpty() ? node.getDescription().orElse(null) :
+                node.getDescription().orElse(null) + " REF:" + node.getReference();
     }
 
     protected static class Pair {

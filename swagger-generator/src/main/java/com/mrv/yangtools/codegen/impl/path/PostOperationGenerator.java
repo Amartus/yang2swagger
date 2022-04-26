@@ -36,8 +36,7 @@ public class PostOperationGenerator extends OperationGenerator {
         final Operation post = dropLastSegmentParameters ? listOperation() : defaultOperation();
         final RefModel definition = new RefModel(getDefinitionId(node));
         post.summary("creates " + getName(node));
-        String description = node.getDescription() == null ? "creates " + getName(node) :
-                node.getDescription();
+        String description = node.getDescription().orElse("creates " + getName(node));
         post.description(description);
         post.parameter(new BodyParameter()
                 .name(getName(node) + ".body-param")

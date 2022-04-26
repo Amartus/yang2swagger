@@ -12,9 +12,12 @@
 package com.mrv.yangtools.common;
 
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.parser.api.YangSyntaxErrorException;
+import org.opendaylight.yangtools.yang.model.repo.api.YangTextSchemaSource;
+import org.opendaylight.yangtools.yang.parser.impl.DefaultReactors;
+import org.opendaylight.yangtools.yang.parser.rfc7950.repo.YangStatementStreamSource;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
-import org.opendaylight.yangtools.yang.parser.stmt.reactor.CrossSourceStatementReactor;
-import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.YangInferencePipeline;
+import org.opendaylight.yangtools.yang.parser.stmt.reactor.CrossSourceStatementReactor.BuildAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,32 +71,16 @@ public class SchemaBuilder {
         return this;
     }
 
-
-    public SchemaContext build() throws ReactorException {
-        final CrossSourceStatementReactor.BuildAction reactor = YangInferencePipeline.RFC6020_REACTOR.newBuild();
-        SchemaContext resolveSchemaContext;
+    SchemaContext build() throws ReactorException {
+        final BuildAction reactor = DefaultReactors.defaultReactor().newBuild();
         log.info("Inspecting all defined yangs {}", yangs);
-        final List<InputStream> yangsStreams = new ArrayList<>();
-
-        try {
-            for (Path y : yangs) {
-                try {
-                    yangsStreams.add(new FileInputStream(y.toFile()));
-                } catch (FileNotFoundException e) {
-                    throw new IllegalStateException(y + " is not a file");
-                }
+        for (final Path path : yangs) {
+            try {
+                reactor.addSource(YangStatementStreamSource.create(YangTextSchemaSource.forFile(path.toFile())));
+            } catch (final IOException | YangSyntaxErrorException e) {
+                throw new IllegalStateException(path + " is not a valid YANG file");
             }
-            resolveSchemaContext = reactor.buildEffective(new ArrayList<InputStream>(yangsStreams));
-            return resolveSchemaContext;
-        } finally {
-
-            yangsStreams.forEach(s -> {
-                try {
-                    s.close();
-                } catch (IOException e) {
-                    //ignore
-                }
-            });
         }
+        return reactor.buildEffective();
     }
 }
