@@ -1,5 +1,7 @@
 package com.mrv.yangtools.codegen.main;
 
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
 import java.io.*;
 import java.net.URI;
 import java.nio.file.FileSystems;
@@ -68,6 +70,8 @@ public class Main {
     @Option(name = "-authentication", usage="Authentication definition")
     public AuthenticationMechanism authenticationMechanism = AuthenticationMechanism.NONE;
 
+    @Option(name = "-use-odl-path-format", usage = "Select to use bierman-02 RESTCONF path format. Default false")
+    public boolean odlPathFormat;
 
     @Option(name = "-basepath", usage="")
     public String basePath = "localhost:1234";
@@ -120,12 +124,21 @@ public class Main {
         final Set<Module> toGenerate = context.getModules().stream().filter(m -> modules == null || modules.contains(m.getName()))
                 .collect(Collectors.toSet());
 
-        PathHandlerBuilder pathHandler = new PathHandlerBuilder();
-        if(!fullCrud) {
+        final AbstractPathHandlerBuilder pathHandler;
+        if (odlPathFormat) {
+            // bierman-02
+            pathHandler = new ODLPathHandlerBuilder();
+        } else {
+            // rfc8040
+            pathHandler = new PathHandlerBuilder();
+        }
+
+        if (!fullCrud) {
             pathHandler.withoutFullCrud();
         }
-        if(useNamespaces)
-            pathHandler = pathHandler.useModuleName();
+        if (useNamespaces) {
+            pathHandler.useModuleName();
+        }
 
         validate(basePath);
 
