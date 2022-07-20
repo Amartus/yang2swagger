@@ -45,7 +45,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
 
-        assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}/"));
+        assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/children1={id}/children2={children2-id}"));
     }
     
     @org.junit.Test
@@ -60,7 +60,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
         //then
         assertEquals(3, swagger.getPaths().keySet().size());
         assertEquals(3, swagger.getDefinitions().keySet().size());  
-        assertThat(swagger.getPaths().keySet(), hasItems("/data/simple-root/", "/data/simple-root/children1/", "/data/simple-root/children1={id}/"));
+        assertThat(swagger.getPaths().keySet(), hasItems("/data/simple-root", "/data/simple-root/children1/", "/data/simple-root/children1={id}"));
     }    
 
 
@@ -143,7 +143,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
         )), defNames);
 
         assertEquals(new HashSet<>(Arrays.asList(
-                "/data/protocol/", "/data/protocol/data/"
+                "/data/protocol", "/data/protocol/data"
         )), swagger.getPaths().keySet());
 
     }

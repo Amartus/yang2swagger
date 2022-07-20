@@ -48,7 +48,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
 
         checkLeafrefAreFollowed("simplest.simpleroot.children1.Children2", "parent-id", "integer");
         checkLeafrefAreFollowed("simpleaugmentation.simpleroot.AddedA", "a1", "string");
-        assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/added-a/children1/"));
+        assertThat(swagger.getPaths().keySet(), hasItem("/data/simple-root/added-a/children1"));
     }
 
     @org.junit.Test
