@@ -8,7 +8,7 @@ module with-groupings {
       description "Final";
   }
 
-  grouping g1 {
+  grouping g0 {
     leaf idx {
         type int32;
     }
@@ -48,7 +48,7 @@ module with-groupings {
   }
 
   container grouping-root {
-    grouping g3 {
+    grouping g1 {
       leaf g1-l2 {
           type string;
       }
