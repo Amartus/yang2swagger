@@ -85,7 +85,7 @@ public abstract class AbstractPathHandler implements PathHandler {
             dataObjectBuilder.addModel(root);
             post.response(200, new Response()
                     .schema(refProperty)
-                    .description(output.getDescription().orElse("OK")));
+                    .description(output.getDescription().orElse("Correct response")));
         }
         post.response(201, new Response().description("No response")); //no output body
         swagger.path(operations + printer.path(), new Path().post(post));
