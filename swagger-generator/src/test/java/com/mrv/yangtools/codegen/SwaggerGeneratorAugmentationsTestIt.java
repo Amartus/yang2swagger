@@ -28,7 +28,7 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(3, swagger.getDefinitions().keySet().stream().filter(e -> e.contains("augmenting")).count());
         assertEquals(11, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G1", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
+        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G4", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
         Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
         assertEquals("with.groupings.groupingroot.GroupingChild2", groupingChild2.getSimpleRef());

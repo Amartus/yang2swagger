@@ -48,7 +48,7 @@ module with-groupings {
   }
 
   container grouping-root {
-    grouping g1 {
+    grouping g4 {
       leaf g1-l2 {
           type string;
       }
