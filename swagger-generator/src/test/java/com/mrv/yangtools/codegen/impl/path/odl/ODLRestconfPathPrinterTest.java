@@ -13,7 +13,7 @@ package com.mrv.yangtools.codegen.impl.path.odl;
 import com.mrv.yangtools.codegen.PathSegment;
 import com.mrv.yangtools.test.utils.MockNodeBuilder;
 import org.junit.Test;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -23,7 +23,7 @@ public class ODLRestconfPathPrinterTest {
 
     @Test
     public void simplePath() throws Exception {
-        PathSegment a = new PathSegment(mock(SchemaContext.class)).withName("a").withModule("mod1");
+        PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");
         PathSegment b = new PathSegment(a).withName("b");
         PathSegment c = new PathSegment(b).withName("c");
 
@@ -33,7 +33,7 @@ public class ODLRestconfPathPrinterTest {
 
     @Test
     public void parametrizedPath() throws Exception {
-        PathSegment a = new PathSegment(mock(SchemaContext.class)).withName("a").withModule("mod1");
+        PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");
         PathSegment b = new PathSegment(a).withName("b")
                 .withListNode(new MockNodeBuilder("test")
                         .param("x")
@@ -47,7 +47,7 @@ public class ODLRestconfPathPrinterTest {
 
     @Test
     public void parametrizedPathLastSegment() throws Exception {
-        PathSegment a = new PathSegment(mock(SchemaContext.class)).withName("a").withModule("mod1");;
+        PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");;
         PathSegment b = new PathSegment(a).withName("b")
                 .withListNode(new MockNodeBuilder("test")
                         .param("x")
@@ -65,7 +65,7 @@ public class ODLRestconfPathPrinterTest {
 
     @Test
     public void namedModule() throws Exception {
-        PathSegment a = new PathSegment(mock(SchemaContext.class))
+        PathSegment a = new PathSegment(mock(EffectiveModelContext.class))
                 .withName("a")
                 .withModule("mod1");
         PathSegment b = new PathSegment(a).withName("b")

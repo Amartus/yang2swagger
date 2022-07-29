@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
  */
 public class SwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
-    private final SchemaContext ctx;
+    private final EffectiveModelContext ctx;
     private final Collection<? extends org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
@@ -103,7 +103,7 @@ public class SwaggerGenerator {
      * @param ctx context for generation
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
-    public SwaggerGenerator(SchemaContext ctx, Collection<? extends org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
+    public SwaggerGenerator(EffectiveModelContext ctx, Collection<? extends org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
 

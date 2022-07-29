@@ -44,7 +44,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected static final String DEF_PREFIX = "#/definitions/";
     protected final Swagger swagger;
     protected final TypeConverter converter;
-    protected final SchemaContext ctx;
+    protected final EffectiveModelContext ctx;
     protected final ModuleUtils moduleUtils;
     protected final Map<SchemaNode, String> names;
     private final HashMap<QName, String> generatedEnums;
@@ -64,7 +64,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             .filter(c -> c instanceof DataNodeContainer)
             .anyMatch(c -> this.isTreeAugmented.test((DataNodeContainer) c)));
 
-    public AbstractDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
+    public AbstractDataObjectBuilder(EffectiveModelContext ctx, Swagger swagger, TypeConverter converter) {
         this.names = new HashMap<>();
         this.converter = converter;
         converter.setDataObjectBuilder(this);

@@ -14,7 +14,7 @@ package com.mrv.yangtools.codegen.impl;
 import com.mrv.yangtools.common.Tuple;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +31,10 @@ public class GroupingHierarchyHandler {
     private static final Logger log = LoggerFactory.getLogger(GroupingHierarchyHandler.class);
     private final Map<QName, HierarchyNode> hierarchy;
     private final Map<GroupingDefinition, String> groupingNames;
-    private final SchemaContext ctx;
+    private final EffectiveModelContext ctx;
     private final ModuleUtils moduleUtils;
 
-    public GroupingHierarchyHandler(SchemaContext ctx) {
+    public GroupingHierarchyHandler(EffectiveModelContext ctx) {
         this.ctx = ctx;
         moduleUtils = new ModuleUtils(ctx);
         groupingNames = computeNames();

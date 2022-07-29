@@ -16,7 +16,7 @@ import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.properties.RefProperty;
 import org.junit.Test;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -51,7 +51,7 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
     @org.junit.Test
     public void testGenerateSimpleModuleWithLimitedDepth() throws Exception {
         //given
-    	SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
+    	EffectiveModelContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("simplest.yang"));
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig().maxDepth(2);
         
         //when

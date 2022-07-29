@@ -12,7 +12,7 @@ import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.InputSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.OutputSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractPathHandler implements PathHandler {
     protected final Swagger swagger;
-    protected final SchemaContext ctx;
+    protected final EffectiveModelContext ctx;
     protected final org.opendaylight.yangtools.yang.model.api.Module module;
     protected boolean useModuleName;
     protected String data;
@@ -31,7 +31,7 @@ public abstract class AbstractPathHandler implements PathHandler {
     protected final Set<TagGenerator> tagGenerators;
     protected final  boolean fullCrud;
 
-    protected AbstractPathHandler(SchemaContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
+    protected AbstractPathHandler(EffectiveModelContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
         this.swagger = target;
         this.ctx = ctx;
         this.module = modules;

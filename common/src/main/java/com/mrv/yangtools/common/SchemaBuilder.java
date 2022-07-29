@@ -11,7 +11,7 @@
 
 package com.mrv.yangtools.common;
 
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.parser.api.YangSyntaxErrorException;
 import org.opendaylight.yangtools.yang.model.repo.api.YangTextSchemaSource;
 import org.opendaylight.yangtools.yang.parser.impl.DefaultReactors;
@@ -71,7 +71,7 @@ public class SchemaBuilder {
         return this;
     }
 
-    SchemaContext build() throws ReactorException {
+    EffectiveModelContext build() throws ReactorException {
         final BuildAction reactor = DefaultReactors.defaultReactor().newBuild();
         log.info("Inspecting all defined yangs {}", yangs);
         for (final Path path : yangs) {

@@ -10,7 +10,7 @@ import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,7 @@ public abstract class AbstractItTest {
     };
 
 
-    private SchemaContext ctxFor(Predicate<Path> cond) {
+    private EffectiveModelContext ctxFor(Predicate<Path> cond) {
         try {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
@@ -98,7 +98,7 @@ public abstract class AbstractItTest {
     }
 
     protected void swaggerFor(Predicate<Path> cond, Consumer<SwaggerGenerator> extraConfig) throws IllegalArgumentException {
-        SchemaContext ctx = ctxFor(cond);
+        EffectiveModelContext ctx = ctxFor(cond);
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         if(extraConfig != null) {

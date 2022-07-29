@@ -13,7 +13,7 @@ import com.mrv.yangtools.codegen.DataObjectBuilder;
 import com.mrv.yangtools.codegen.PathHandlerBuilder;
 import com.mrv.yangtools.codegen.TagGenerator;
 import io.swagger.models.Swagger;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 
 import java.util.*;
 
@@ -21,7 +21,7 @@ import java.util.*;
  * @author bartosz.michalik@amartus.com
  */
 public abstract class AbstractPathHandlerBuilder implements PathHandlerBuilder {
-    protected SchemaContext ctx;
+    protected EffectiveModelContext ctx;
     protected Swagger target;
     protected DataObjectBuilder objBuilder;
     protected Set<TagGenerator> tagGenerators = new HashSet<>();
@@ -29,7 +29,7 @@ public abstract class AbstractPathHandlerBuilder implements PathHandlerBuilder {
     protected boolean fullCrud = true;
 
     @Override
-    public void configure(SchemaContext ctx, Swagger target, DataObjectBuilder builder) {
+    public void configure(EffectiveModelContext ctx, Swagger target, DataObjectBuilder builder) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(target);
         Objects.requireNonNull(builder);

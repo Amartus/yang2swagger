@@ -24,7 +24,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.ModuleLike;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,7 +116,7 @@ public class Main {
     void generate() throws IOException, ReactorException {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
-        final SchemaContext context = buildSchemaContext(yangDir, p -> matcher.matches(p.getFileName()));
+        final EffectiveModelContext context = buildEffectiveModelContext(yangDir, p -> matcher.matches(p.getFileName()));
 
         if(log.isInfoEnabled()) {
             String modulesSting = context.getModules().stream().map(ModuleLike::getName).collect(Collectors.joining(", "));
@@ -176,7 +176,7 @@ public class Main {
         URI.create(basePath);
     }
 
-    private SchemaContext buildSchemaContext(String dir, Predicate<Path> accept)
+    private EffectiveModelContext buildEffectiveModelContext(String dir, Predicate<Path> accept)
             throws ReactorException {
         if(dir.contains(File.pathSeparator)) {
             return ContextHelper.getFromDir(Arrays.stream(dir.split(File.pathSeparator)).map(s -> FileSystems.getDefault().getPath(s)), accept);

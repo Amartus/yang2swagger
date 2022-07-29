@@ -17,7 +17,7 @@ import io.swagger.models.parameters.PathParameter;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.LeafSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +51,7 @@ public class PathSegment implements Iterable<PathSegment> {
      * To create a root segment of path
      * @param ctx YANG context
      */
-    public PathSegment(SchemaContext ctx) {
+    public PathSegment(EffectiveModelContext ctx) {
         this(NULL);
         this.converter = new TypeConverter(ctx) {
             @Override

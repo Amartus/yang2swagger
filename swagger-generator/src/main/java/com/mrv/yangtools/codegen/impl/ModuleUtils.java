@@ -14,7 +14,7 @@ package com.mrv.yangtools.codegen.impl;
 import java.util.Optional;
 import org.opendaylight.yangtools.yang.common.QNameModule;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 
 /**
@@ -22,9 +22,9 @@ import org.opendaylight.yangtools.yang.model.api.SchemaNode;
  * @author bartosz.michalik@amartus.com
  */
 public class ModuleUtils {
-    private final SchemaContext ctx;
+    private final EffectiveModelContext ctx;
 
-    public ModuleUtils(SchemaContext ctx) {
+    public ModuleUtils(EffectiveModelContext ctx) {
         this.ctx = ctx;
     }
     public String toModuleName(QNameModule qname) {

@@ -13,7 +13,7 @@ package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.properties.*;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.model.api.TypeDefinition;
 import org.opendaylight.yangtools.yang.model.api.type.*;
@@ -28,10 +28,10 @@ import org.slf4j.LoggerFactory;
  */
 public class TypeConverter {
 
-    private SchemaContext ctx;
+    private EffectiveModelContext ctx;
     private DataObjectBuilder dataObjectBuilder;
 
-    public TypeConverter(SchemaContext ctx) {
+    public TypeConverter(EffectiveModelContext ctx) {
         this.ctx = ctx;
     }
 

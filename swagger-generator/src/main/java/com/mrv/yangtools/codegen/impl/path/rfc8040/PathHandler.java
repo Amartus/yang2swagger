@@ -28,7 +28,7 @@ import java.util.Set;
  */
 class PathHandler extends AbstractPathHandler {
 
-    PathHandler(SchemaContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
+    PathHandler(EffectiveModelContext ctx, org.opendaylight.yangtools.yang.model.api.Module modules, Swagger target, DataObjectBuilder objBuilder, Set<TagGenerator> generators, boolean fullCrud) {
         super(ctx, modules, target, objBuilder, generators, fullCrud);
     }
 

@@ -26,7 +26,7 @@ import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.ModuleLike;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +63,7 @@ import io.swagger.models.Swagger;
  */
 public class IoCSwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(IoCSwaggerGenerator.class);
-    private final SchemaContext ctx;
+    private final EffectiveModelContext ctx;
     private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
@@ -113,7 +113,7 @@ public class IoCSwaggerGenerator {
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
     @Inject
-    public IoCSwaggerGenerator(@Assisted SchemaContext ctx, @Assisted Set<Module> modulesToGenerate) {
+    public IoCSwaggerGenerator(@Assisted EffectiveModelContext ctx, @Assisted Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
         if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");

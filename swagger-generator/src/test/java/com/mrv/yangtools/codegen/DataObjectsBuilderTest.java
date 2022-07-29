@@ -23,7 +23,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 
@@ -45,7 +45,7 @@ public class DataObjectsBuilderTest {
 
     @Mock
     private Swagger swagger;
-    private static SchemaContext ctx;
+    private static EffectiveModelContext ctx;
     private static Module groupings;
 
     @BeforeClass

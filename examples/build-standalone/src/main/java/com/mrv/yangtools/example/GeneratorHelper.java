@@ -13,7 +13,7 @@ package com.mrv.yangtools.example;
 
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +51,7 @@ public class GeneratorHelper {
 
         Predicate<Path> acc = p ->  matcher.matches(p.getFileName());
 
-        final SchemaContext ctx = dir == null ? getFromClasspath(acc) : getFromDir(dir.toPath(), acc);
+        final EffectiveModelContext ctx = dir == null ? getFromClasspath(acc) : getFromDir(dir.toPath(), acc);
         if(ctx.getModules().isEmpty()) throw new IllegalArgumentException(String.format("No YANG modules found in %s", dir == null ? "classpath"  : dir.toString()));
         log.info("Context parsed {}", ctx);
 

@@ -49,7 +49,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private static final Predicate<Map<?,?>> hasProperties = hm -> hm != null && !hm.isEmpty();
 
-    public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
+    public OptimizingDataObjectBuilder(EffectiveModelContext ctx, Swagger swagger, TypeConverter converter) {
         super(ctx, swagger, converter);
         groupings = new HashMap<>();
         existingModels = new HashMap<>();
