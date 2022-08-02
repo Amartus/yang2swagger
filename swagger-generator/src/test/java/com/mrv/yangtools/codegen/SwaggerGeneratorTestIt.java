@@ -16,6 +16,7 @@ import io.swagger.models.Model;
 import io.swagger.models.Path;
 import io.swagger.models.properties.RefProperty;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 
 import java.util.Arrays;
@@ -90,7 +91,8 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
         //then
         assertEquals(3, swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("g2-c-c1")).count());
         assertEquals(7, swagger.getDefinitions().keySet().size());
-        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.groupingroot.G4", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
+        assertThat(swagger.getDefinitions().keySet(), hasItems("with.groupings.G2", "with.groupings.G2", "with.groupings.g2.g2c.G3"));
+        assertThat(swagger.getDefinitions().keySet(), not(hasItem(ArgumentMatchers.endsWith("G4"))));
         Model model = swagger.getDefinitions().get("with.groupings.GroupingRoot");
         RefProperty groupingChild2 = (RefProperty) model.getProperties().get("grouping-child2");
         assertEquals("with.groupings.G2", groupingChild2.getSimpleRef());
