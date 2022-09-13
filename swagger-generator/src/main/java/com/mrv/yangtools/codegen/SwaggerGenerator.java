@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2018 Amartus. All rights reserved.
+ * Copyright (c) 2018-2022 Amartus. All rights reserved.
  *  This program and the accompanying materials are made available under the
  *  terms of the Eclipse Public License v1.0 which accompanies this distribution,
  *  and is available at http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
  *      Damian Mrozowicz <damian.mrozowicz@amartus.com>
+ *      Bartosz Michalik <bartosz.michalik@amartus.com>
  */
 
 package com.mrv.yangtools.codegen;
@@ -23,6 +24,8 @@ import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
 import com.mrv.yangtools.common.SwaggerUtils;
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
+import io.swagger.util.Json;
+import io.swagger.util.Yaml;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,11 +203,11 @@ public class SwaggerGenerator {
     public SwaggerGenerator format(Format f) {
         switch(f) {
             case YAML:
-                mapper = new ObjectMapper(new YAMLFactory());
+                mapper = Yaml.mapper();
                 break;
             case JSON:
             default:
-                mapper = new ObjectMapper(new JsonFactory());
+                mapper = Json.mapper();
         }
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         return this;

@@ -58,6 +58,9 @@ public class Main {
     @Option(name = "-simplify-hierarchy", usage = "Use it to generate Swagger which with simplified inheritence model which can be used with standard code generators. Default false")
     public boolean simplified = false;
 
+    @Option(name = "-reuse-groupings", usage = "Use it to generate Swagger which attempts to reuse structurally identical grouping types. Default false")
+    public boolean reuseGroupings = false;
+
     @Option(name = "-use-namespaces", usage="Use namespaces in resource URI")
     public boolean useNamespaces = false;
 
@@ -84,7 +87,7 @@ public class Main {
         BASIC, NONE
     }
 
-    OutputStream out = System.out;
+    public OutputStream out = System.out;
 
     public static void main(String[] args) {
 
@@ -104,13 +107,13 @@ public class Main {
         }
     }
 
-    protected void init() throws FileNotFoundException {
+    void init() throws FileNotFoundException {
         if (output != null && output.trim().length() > 0) {
             out = new FileOutputStream(output);
         }
     }
 
-    protected void generate() throws IOException, ReactorException {
+    void generate() throws IOException, ReactorException {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
         final SchemaContext context = buildSchemaContext(yangDir, p -> matcher.matches(p.getFileName()));
@@ -149,11 +152,14 @@ public class Main {
                 .pathHandler(pathHandler)
                 .elements(map(elementType));
 
-        generator
-                .appendPostProcessor(new CollapseTypes());
+
 
         if(AuthenticationMechanism.BASIC.equals(authenticationMechanism)) {
             generator.appendPostProcessor(new AddSecurityDefinitions().withSecurityDefinition("api_sec", new BasicAuthDefinition()));
+        }
+
+        if(reuseGroupings) {
+            generator.appendPostProcessor(new CollapseTypes());
         }
 
         if(simplified) {

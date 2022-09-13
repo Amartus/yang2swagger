@@ -37,26 +37,50 @@ we have prepared our own version of the code generator. You might run it standal
 
 You can easily run ```SwaggerGenerator``` from the command-line:
 ```
-java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar
+java -jar swagger-generator-cli-<<version>>-executable.jar
 Argument "module ..." is required
- module ...          : List of YANG module names to generate in swagger output
- -output file        : File to generate, containing the output - defaults to stdout
-                       (default: )
- -yang-dir path      : Directory to search for YANG modules - defaults to current
-                       directory (default: )
- -api-version string : The current version of your API (default: 1.0)
- -format enum        : The output format (options: YAML, JSON) (default: YAML)
- -content-type string: Content type the API generates / consumes (default: application/yang-data+json)
- -simplify-hierarchy : Use it to generate Swagger which with simplified inheritence model which can be used with standard code generators. (default: false)
- -use-namespaces     : Use namespaces in resource URI (default: false)
- -fullCrud           : If the flag is set to false path are generated for GET operations only. (default: true)
- -elements           : Define YANG elements to focus on. (default: DATA + RPC)
- -authentication     : Authentication definition (options: BASIC, NONE) (default: NONE)
+module ...                             : List of YANG module names to generate
+                                         in swagger output
+ -api-version file                     : Version of api generated - default 1.0
+                                         (default: 1.0)
+ -authentication [BASIC | NONE]        : Authentication definition (default:
+                                         NONE)
+ -content-type VAL                     : Content type the API generates /
+                                         consumes - default application/yang-dat
+                                         a+json (default: application/yang-data+
+                                         json)
+ -elements [DATA | RPC | DATA_AND_RPC] : Define YANG elements to focus on.
+                                         Defaul DATA + RPC (default:
+                                         DATA_AND_RPC)
+ -format [YAML | JSON]                 : Output format of generated file -
+                                         defaults to yaml with options of json
+                                         or yaml (default: YAML)
+ -fullCrud                             : If the flag is set to false path are
+                                         generated for GET operations only.
+                                         Default true (default: true)
+ -output file                          : File to generate, containing the
+                                         output - defaults to stdout (default: )
+ -reuse-groupings                      : Use it to generate Swagger which
+                                         attempts to reuse structurally
+                                         identical grouping types. Default
+                                         false (default: false)
+ -simplify-hierarchy                   : Use it to generate Swagger which with
+                                         simplified inheritence model which can
+                                         be used with standard code generators.
+                                         Default false (default: false)
+ -use-namespaces                       : Use namespaces in resource URI
+                                         (default: false)
+ -use-odl-path-format                  : Select to use bierman-02 RESTCONF path
+                                         format. Default false (default: false)
+ -yang-dir path                        : Directory to search for YANG modules -
+                                         defaults to current directory.
+                                         Multiple dirs might be separated by
+                                         system path separator (default: )
 ```
 
 For example:
 ```
-java -jar ~/.m2/repository/com/mrv/yangtools/swagger-generator-cli/1.0-SNAPSHOT/swagger-generator-cli-1.0-SNAPSHOT-executable.jar \
+java -jar swagger-generator-cli-<<version>>-executable.jar \
  -yang-dir examples/build-standalone/src/main/resources \
  -output swagger.yaml \
  mef-services
