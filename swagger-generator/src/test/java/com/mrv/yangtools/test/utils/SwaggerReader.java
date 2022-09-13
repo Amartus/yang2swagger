@@ -30,7 +30,7 @@ import java.io.Reader;
  */
 public class SwaggerReader {
 
-    Swagger read(Reader reader, SwaggerGenerator.Format format) throws IOException {
+    public Swagger read(Reader reader, SwaggerGenerator.Format format) throws IOException {
         ObjectMapper objectMapper = format == SwaggerGenerator.Format.JSON ?  new ObjectMapper(new JsonFactory())
                 : new ObjectMapper(new YAMLFactory());
 

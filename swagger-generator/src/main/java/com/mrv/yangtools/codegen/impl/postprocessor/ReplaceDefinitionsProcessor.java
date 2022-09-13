@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * Processor that allows replacing one definitions with another in any swagger.
+ * Processor that allows replacing one definition with another one in any swagger.
  * This implementation is simple and limited only to the type definitions that are aggregators of references.
  * @author bartosz.michalik@amartus.com
  */
@@ -51,13 +51,19 @@ public abstract class ReplaceDefinitionsProcessor implements Consumer<Swagger> {
 
     private void fixModel(String name, Model m, Map<String, String> replacements) {
         ModelImpl fixProperties = null;
+
+        if(m instanceof RefModel) {
+            fixRefModel((RefModel) m, replacements);
+            return;
+        }
+
         if(m instanceof ModelImpl) {
             fixProperties = (ModelImpl) m;
         }
 
         if(m instanceof ComposedModel) {
             ComposedModel cm = (ComposedModel) m;
-            fixComposedModel(name, cm, replacements);
+            fixComposedModel(cm, replacements);
             fixProperties =  cm.getAllOf().stream()
                     .filter(c -> c instanceof ModelImpl).map(c -> (ModelImpl)c)
                     .findFirst().orElse(null);
@@ -88,13 +94,13 @@ public abstract class ReplaceDefinitionsProcessor implements Consumer<Swagger> {
     }
     private boolean fixProperty(RefProperty p, Map<String, String> replacements) {
         if(replacements.containsKey(p.getSimpleRef())) {
-            p.set$ref(replacements.get(p.getSimpleRef()));
+            p.set$ref("#/definitions/" + replacements.get(p.getSimpleRef()));
             return true;
         }
         return false;
     }
 
-    private void fixComposedModel(String name, ComposedModel m, Map<String, String> replacements) {
+    private void fixComposedModel(ComposedModel m, Map<String, String> replacements) {
         Set<RefModel> toReplace = m.getAllOf().stream().filter(c -> c instanceof RefModel).map(cm -> (RefModel) cm)
                 .filter(rm -> replacements.containsKey(rm.getSimpleRef())).collect(Collectors.toSet());
         toReplace.forEach(r -> {
@@ -107,6 +113,11 @@ public abstract class ReplaceDefinitionsProcessor implements Consumer<Swagger> {
         });
     }
 
+    private void fixRefModel(RefModel model, Map<String, String> replacements) {
+        if(replacements.containsKey(model.getSimpleRef())) {
+            model.set$ref("#/definitions/" + replacements.get(model.getSimpleRef()));
+        }
+    }
 
     private void fixOperation(Operation operation, Map<String, String> replacements) {
         operation.getResponses().values()
@@ -126,26 +137,14 @@ public abstract class ReplaceDefinitionsProcessor implements Consumer<Swagger> {
     private void fixParameter(Parameter p, Map<String, String> replacements) {
         if(!(p instanceof BodyParameter)) return;
         BodyParameter bp = (BodyParameter) p;
-        if(!(bp.getSchema() instanceof RefModel)) return;
-        RefModel ref = (RefModel) bp.getSchema();
-        if(replacements.containsKey(ref.getSimpleRef())) {
-            String replacement = replacements.get(ref.getSimpleRef());
-            bp.setDescription(bp.getDescription().replace(ref.getSimpleRef(), replacement));
-            bp.setSchema(new RefModel(replacement));
-        }
 
+        fixModel(null, bp.getSchema(), replacements);
     }
 
     private void fixResponse(Response r, Map<String, String> replacements) {
-        if(! (r.getSchema() instanceof RefProperty)) return;
-        RefProperty schema = (RefProperty) r.getSchema();
-        if(replacements.containsKey(schema.getSimpleRef())) {
-            String replacement = replacements.get(schema.getSimpleRef());
-            if(r.getDescription() != null)
-                r.setDescription(r.getDescription().replace(schema.getSimpleRef(), replacement));
-            schema.setDescription(replacement);
-            r.setSchema(new RefProperty(replacement));
+        Model model = r.getResponseSchema();
+        if(model != null) {
+            fixModel(null, model, replacements);
         }
-
     }
 }

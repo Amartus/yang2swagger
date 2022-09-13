@@ -58,6 +58,9 @@ public class Main {
     @Option(name = "-simplify-hierarchy", usage = "Use it to generate Swagger which with simplified inheritence model which can be used with standard code generators. Default false")
     public boolean simplified = false;
 
+    @Option(name = "-reuse-groupings", usage = "Use it to generate Swagger which attempts to reuse structurally identical grouping types. Default false")
+    public boolean reuseGroupings = false;
+
     @Option(name = "-use-namespaces", usage="Use namespaces in resource URI")
     public boolean useNamespaces = false;
 
@@ -149,11 +152,14 @@ public class Main {
                 .pathHandler(pathHandler)
                 .elements(map(elementType));
 
-        generator
-                .appendPostProcessor(new CollapseTypes());
+
 
         if(AuthenticationMechanism.BASIC.equals(authenticationMechanism)) {
             generator.appendPostProcessor(new AddSecurityDefinitions().withSecurityDefinition("api_sec", new BasicAuthDefinition()));
+        }
+
+        if(reuseGroupings) {
+            generator.appendPostProcessor(new CollapseTypes());
         }
 
         if(simplified) {
