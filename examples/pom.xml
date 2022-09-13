@@ -21,7 +21,6 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
     <modules>
-        <module>maven-plugin-example</module>
         <module>build-standalone</module>
     </modules>
 

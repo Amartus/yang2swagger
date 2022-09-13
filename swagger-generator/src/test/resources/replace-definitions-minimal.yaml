@@ -1,0 +1,69 @@
+swagger: "2.0"
+info:
+  description: "TEST"
+  version: "1.0.0-SNAPSHOT"
+  title: "Test"
+host: "localhost:8080"
+basePath: "/restconf"
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+paths:
+  /operations/create-object:
+    post:
+      tags:
+        - "objects"
+      parameters:
+        - in: "body"
+          name: "objects.createobject.Input.body-param"
+          required: false
+          schema:
+            properties:
+              input:
+                $ref: "#/definitions/objects.createobject.Input"
+      responses:
+        "400":
+          description: "Internal error"
+        "201":
+          description: "No response"
+  /operations/update-object:
+    post:
+      tags:
+        - "objects"
+      parameters:
+        - in: "body"
+          name: "objects.updateobject.Input.body-param"
+          required: false
+          schema:
+            properties:
+              input:
+                $ref: "#/definitions/objects.updateobject.Input"
+      responses:
+        "400":
+          description: "Internal error"
+        "200":
+          description: "OK"
+          schema:
+            $ref: "#/definitions/objects.updateobject.Input"
+        "201":
+          description: "No response"
+definitions:
+  objects.Id2:
+    type: "object"
+    properties:
+      id_2:
+        type: "string"
+  objects.Id1:
+    type: "object"
+    properties:
+      id_1:
+        type: "string"
+  objects.createobject.Input:
+    allOf:
+      - $ref: "#/definitions/objects.Id2"
+      - $ref: "#/definitions/objects.Id1"
+  objects.updateobject.Input:
+    allOf:
+      - $ref: "#/definitions/objects.Id2"
+      - $ref: "#/definitions/objects.Id1"
