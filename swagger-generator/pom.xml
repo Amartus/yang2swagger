@@ -20,10 +20,6 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <properties>
-        <swagger.version>1.5.9</swagger.version>
-    </properties>
-
     <artifactId>swagger-generator</artifactId>
 
     <dependencies>
@@ -52,15 +48,15 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-core</artifactId>
-            <version>[1.0.31,1.9.99)</version>
+            <version>${swagger.version}</version>
         </dependency>
-
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-parser</artifactId>
-            <version>[1.0.31,1.9.99)</version>
+            <version>1.0.61</version>
             <scope>test</scope>
         </dependency>
+
 
         <dependency>
             <groupId>junit</groupId>
