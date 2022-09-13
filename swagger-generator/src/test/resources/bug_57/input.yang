@@ -1,0 +1,36 @@
+module objects {
+
+  yang-version "1.1";
+  namespace "urn:objects";
+  prefix "obje";
+
+  grouping id_1 {
+    leaf id_1 {
+      type "string";
+    }
+  }
+
+  grouping id_2 {
+    leaf id_2 {
+      type "string";
+    }
+  }
+
+  rpc create-object {
+    input {
+      uses id_1;
+      uses id_2;
+    }
+    output {
+    }
+  }
+
+  rpc update-object {
+    input {
+      uses id_1;
+      uses id_2;
+    }
+    output {
+    }
+  }
+}

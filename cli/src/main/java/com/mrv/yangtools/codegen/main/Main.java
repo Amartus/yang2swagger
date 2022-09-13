@@ -84,7 +84,7 @@ public class Main {
         BASIC, NONE
     }
 
-    OutputStream out = System.out;
+    public OutputStream out = System.out;
 
     public static void main(String[] args) {
 
@@ -104,13 +104,13 @@ public class Main {
         }
     }
 
-    protected void init() throws FileNotFoundException {
+    void init() throws FileNotFoundException {
         if (output != null && output.trim().length() > 0) {
             out = new FileOutputStream(output);
         }
     }
 
-    protected void generate() throws IOException, ReactorException {
+    void generate() throws IOException, ReactorException {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
 
         final SchemaContext context = buildSchemaContext(yangDir, p -> matcher.matches(p.getFileName()));

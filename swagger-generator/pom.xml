@@ -52,7 +52,7 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-core</artifactId>
-            <version>${swagger.version}</version>
+            <version>[1.0.31,1.9.99)</version>
         </dependency>
 
         <dependency>
