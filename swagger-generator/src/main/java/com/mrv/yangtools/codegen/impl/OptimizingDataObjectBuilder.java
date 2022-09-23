@@ -74,7 +74,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
         if(isTreeAugmented.test(node)) {
             Optional<T> effective = effective(node);
-            return effective.isPresent() ? names.get(effective.get()) : names.get(node);
+            return effective.isPresent() ? names.get(effective.get())
+                    : names.get(names.keySet().stream().filter(t -> t.getPath().equals(node.getPath())).findFirst().get());
         } else {
             DataNodeContainer toCheck = original(node) == null ? node : original(node);
 
