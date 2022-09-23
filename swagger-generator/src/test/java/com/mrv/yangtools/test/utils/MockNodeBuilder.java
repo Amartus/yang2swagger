@@ -11,8 +11,8 @@
 
 package com.mrv.yangtools.test.utils;
 
+import java.time.LocalDate;
 import java.util.List;
-import org.joda.time.LocalDate;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.QNameModule;
 import org.opendaylight.yangtools.yang.common.Revision;
@@ -38,7 +38,7 @@ public class MockNodeBuilder {
     private List<QName> names;
 
     public MockNodeBuilder(String module) {
-        this.module = QNameModule.create(Paths.get("test", module).toUri(), Revision.of(new LocalDate().toString()));
+        this.module = QNameModule.create(Paths.get("test", module).toUri(), Revision.of(LocalDate.now().toString()));
         this.params = new ArrayList<>();
         this.names = new ArrayList<>();
     }
