@@ -4,6 +4,7 @@ package com.mrv.yangtools.codegen;
 import com.mrv.yangtools.codegen.impl.ModelUtils;
 import io.swagger.models.*;
 import io.swagger.models.properties.ArrayProperty;
+import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 
 import java.util.*;
@@ -135,22 +136,40 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
         Map<String, Model> rockTheHouseDefinitions = swagger.getDefinitions().entrySet().stream()
                 .filter(e -> e.getKey().toLowerCase().startsWith("rpc.basic.rockthe"))
                 .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
-        assertEquals(6, rockTheHouseDefinitions.size());
+        assertEquals(5, rockTheHouseDefinitions.size());
         Model inputAug = getAugmentation(rockTheHouseDefinitions.get("rpc.basic.rockthehouse.input.xyz.CRes"), "rpc-augmentations");
         Model outputAug = getAugmentation(rockTheHouseDefinitions.get("rpc.basic.rockthehouse.output.Response"), "rpc-augmentations");
 
         final String type = "rpc.augmentations.addition.AContainer";
         final String prop = "a-container";
-        Function<Model, String> refType = m -> m instanceof ModelImpl ? ((RefProperty)m.getProperties().get(prop)).getSimpleRef(): null;
-
+        Function<Model, String> refType = m ->
+                Optional.ofNullable(propertiesFor(m, swagger).get(prop)).map(p -> ((RefProperty)p).getSimpleRef()).orElse(null);
         assertNotNull(inputAug);
         assertNotNull(outputAug);
         assertEquals(type, refType.apply(inputAug));
         assertEquals(type, refType.apply(outputAug));
     }
 
+    private Map<String, Property> propertiesFor(Model model, Swagger ctx) {
+        if(model instanceof ModelImpl) {
+            return model.getProperties();
+        }
+        if(model instanceof RefModel) {
+            return propertiesFor(ctx.getDefinitions().get(((RefModel) model).getSimpleRef()), ctx);
+        }
+        if(model instanceof ComposedModel) {
+            return ((ComposedModel) model).getAllOf().stream()
+                    .map(m -> propertiesFor(m, ctx))
+                    .reduce(new HashMap<>(), (a,b) -> {
+                        a.putAll(b);
+                        return a;
+                    });
+        }
+        return null;
+    }
+
     private Model getAugmentation(Model model, String prefix) {
-        if(model == null || !(model instanceof ComposedModel)) return null;
+        if(!(model instanceof ComposedModel)) return null;
         RefModel augRef = ((ComposedModel) model).getAllOf().stream()
                 .filter(m -> m instanceof RefModel)
                 .filter(m -> {

@@ -18,8 +18,8 @@ import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.QNameModule;
-import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,7 +147,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     protected void processNode(DataNodeContainer container, Set<String> cache) {
         final HashSet<String> used = new HashSet<String>(cache);
 
-        DataNodeHelper.stream(container).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+        DataNodeHelper.stream(container)
+                .filter(n -> n instanceof DataSchemaNode)
                 .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
                     String name = generateName(n, null, used);
@@ -276,7 +277,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 .findFirst().orElse(null);
 
         if(existingId != null) {
-            RefModel ref = new RefModel(existingId);
+            RefModel ref = new RefModel(DEF_PREFIX + existingId);
             ComposedModel composedModel = new ComposedModel();
             composedModel.setChild(ref);
             model = composedModel;
@@ -347,7 +348,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 String pkg = BindingMapping.nameToPackageSegment(prop.get("prefix"));
                 String augName = pkg + "." + modelName + "Augmentation" + idx;
                 swagger.getDefinitions().put(augName, m);
-                aModels.add(new RefModel("#/definitions/"+augName));
+                aModels.add(new RefModel(DEF_PREFIX + augName));
                 idx++;
 
             }

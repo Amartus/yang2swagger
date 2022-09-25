@@ -30,7 +30,7 @@ public class ReplaceEmptyWithParent extends  ReplaceDefinitionsProcessor {
         return swagger.getDefinitions().entrySet()
                 .stream().filter(e -> {
             Model model = e.getValue();
-            if (model instanceof ComposedModel) {
+            if (model instanceof ComposedModel && model.getVendorExtensions().isEmpty()) {
                 List<Model> allOf = ((ComposedModel) model).getAllOf();
                 return allOf.size() == 1 && allOf.get(0) instanceof RefModel;
             }

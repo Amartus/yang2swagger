@@ -1,20 +1,16 @@
 package com.mrv.yangtools.codegen.impl.path;
 
 import com.mrv.yangtools.codegen.*;
-
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.RefProperty;
-
 import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
-import org.opendaylight.yangtools.yang.model.api.ContainerLike;
-import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.InputSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.OutputSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
-import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
+import org.opendaylight.yangtools.yang.model.api.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -66,7 +62,7 @@ public abstract class AbstractPathHandler implements PathHandler {
         if(input != null) {
             dataObjectBuilder.addModel(input);
 
-            ModelImpl inputModel = new ModelImpl();
+            ModelImpl inputModel = new ModelImpl().type(ModelImpl.OBJECT);
             inputModel.addProperty("input", new RefProperty(dataObjectBuilder.getDefinitionId(input)));
 
             post.summary("operates on " + dataObjectBuilder.getName(root));
@@ -79,12 +75,14 @@ public abstract class AbstractPathHandler implements PathHandler {
         }
 
         if(output != null) {
+            var model = new ModelImpl().type(ModelImpl.OBJECT);
             RefProperty refProperty = new RefProperty();
-            refProperty.set$ref(dataObjectBuilder.getDefinitionId(root));
-            
-            dataObjectBuilder.addModel(root);
+            refProperty.set$ref(dataObjectBuilder.getDefinitionId(output));
+            model.addProperty("output", refProperty);
+
+            dataObjectBuilder.addModel(output);
             post.response(200, new Response()
-                    .schema(refProperty)
+                    .responseSchema(model)
                     .description(output.getDescription().orElse("Correct response")));
         }
         post.response(201, new Response().description("No response")); //no output body

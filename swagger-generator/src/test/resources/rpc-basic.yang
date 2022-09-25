@@ -48,7 +48,7 @@ module rpc-basic {
         }
         output {
             container response {
-                leaf configrmation {
+                leaf confirmation {
                     type string;
                 }
                 uses res;

@@ -12,13 +12,18 @@
 package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
-import io.swagger.models.*;
-import io.swagger.models.properties.*;
+import io.swagger.models.Model;
+import io.swagger.models.ModelImpl;
+import io.swagger.models.Swagger;
+import io.swagger.models.properties.AbstractProperty;
+import io.swagger.models.properties.ArrayProperty;
+import io.swagger.models.properties.Property;
+import io.swagger.models.properties.StringProperty;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.QNameModule;
 import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
-import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,12 +101,10 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         processNode(module, cache);
 
         log.debug("processing rpcs defined in {}", module.getName());
-        module.getRpcs().forEach(r -> {
-            if(r.getInput() != null)
-                processNode(r.getInput(), null,  cache);
-            if(r.getOutput() != null)
-                processNode(ContainerSchemaNodes.forRPC(r), null, cache);
-        });
+        module.getRpcs()
+                        .forEach(rcp -> {
+                            processNode(ContainerSchemaNodes.forRPC(rcp), null, cache);
+                        });
         log.debug("processing augmentations defined in {}", module.getName());
         module.getAugmentations().forEach(r -> processNode(r, cache));
     }
