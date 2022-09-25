@@ -11,7 +11,10 @@
 
 package com.mrv.yangtools.codegen;
 
-import com.mrv.yangtools.codegen.impl.*;
+import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
+import com.mrv.yangtools.codegen.impl.DataNodeHelper;
+import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
+import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.Model;
 import io.swagger.models.Swagger;
@@ -20,11 +23,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
-import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
-import org.opendaylight.yangtools.yang.model.api.SchemaNode;
+import org.opendaylight.yangtools.yang.model.api.*;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 
 import java.util.Collections;
@@ -55,7 +55,7 @@ public class DataObjectsBuilderTest {
     }
 
     @Test
-    public void testAddModelGroupings() throws Exception {
+    public void testAddModelGroupings() {
         //having
         UnpackingDataObjectsBuilder builder = new UnpackingDataObjectsBuilder(ctx, swagger, new AnnotatingTypeConverter(ctx));
         SchemaNode c1 = DataNodeHelper.stream(groupings).filter(n -> n.getQName().getLocalName().equals("c1")).findFirst().orElseThrow(IllegalArgumentException::new);
@@ -67,7 +67,7 @@ public class DataObjectsBuilderTest {
     }
 
     @Test
-    public void testNameGroupingsUnpacking() throws Exception {
+    public void testNameGroupingsUnpacking() {
         //having
         UnpackingDataObjectsBuilder builder = new UnpackingDataObjectsBuilder(ctx, swagger, new AnnotatingTypeConverter(ctx));
         builder.processModule(groupings);
@@ -79,7 +79,7 @@ public class DataObjectsBuilderTest {
     }
 
     @Test
-    public void testNameGroupingsOptimizing() throws Exception {
+    public void testNameGroupingsOptimizing() {
         //having
         DataObjectBuilder builder = new OptimizingDataObjectBuilder(ctx, swagger, new AnnotatingTypeConverter(ctx));
         builder.processModule(groupings);

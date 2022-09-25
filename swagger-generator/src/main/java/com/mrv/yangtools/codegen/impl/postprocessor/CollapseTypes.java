@@ -13,9 +13,13 @@ import io.swagger.models.ComposedModel;
 import io.swagger.models.RefModel;
 import io.swagger.models.Swagger;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
 import static java.util.stream.Collectors.*;
 
 /**
@@ -29,7 +33,7 @@ public class CollapseTypes extends ReplaceDefinitionsProcessor {
             m.getAllOf().stream()
                 .filter(a -> a instanceof RefModel)
                 .map(a -> ((RefModel) a).getSimpleRef().hashCode())
-                .reduce((a,b) -> a + b).orElse(0)
+                .reduce(Integer::sum).orElse(0)
     );
 
 

@@ -4,14 +4,6 @@ package com.mrv.yangtools.common;
 // (powered by Fernflower decompiler)
 // File originates from ODL project
 
-import java.text.SimpleDateFormat;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -20,6 +12,13 @@ import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.QNameModule;
+
+import java.text.SimpleDateFormat;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public final class BindingMapping {
     public static final Set<String> JAVA_RESERVED_WORDS = ImmutableSet.of(
@@ -43,7 +42,7 @@ public final class BindingMapping {
     private static final Pattern COLON_SLASH_SLASH = Pattern.compile("://", 16);
     private static final String QUOTED_DOT = Matcher.quoteReplacement(".");
     private static final Splitter DOT_SPLITTER = Splitter.on('.');
-    private static final ThreadLocal<SimpleDateFormat> PACKAGE_DATE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+    private static final ThreadLocal<SimpleDateFormat> PACKAGE_DATE_FORMAT = new ThreadLocal<>() {
         protected SimpleDateFormat initialValue() {
             return new SimpleDateFormat("yyMMdd");
         }
@@ -64,8 +63,7 @@ public final class BindingMapping {
 
     public static String getRootPackageName(QNameModule module) {
         Preconditions.checkArgument(module != null, "Module must not be null");
-        Preconditions.checkArgument(module.getRevision() != null, "Revision must not be null");
-        Preconditions.checkArgument(module.getNamespace() != null, "Namespace must not be null");
+        Preconditions.checkArgument(module.getRevision().isPresent(), "Revision must not be null");
         StringBuilder packageNameBuilder = new StringBuilder();
         packageNameBuilder.append("org.opendaylight.yang.gen.v1");
         packageNameBuilder.append('.');

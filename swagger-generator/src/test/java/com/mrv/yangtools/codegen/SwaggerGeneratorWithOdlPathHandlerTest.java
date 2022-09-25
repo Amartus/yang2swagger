@@ -41,9 +41,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     @org.junit.Test
     public void testGenerateSimpleModule() {
         //when
-        swaggerFor("simplest.yang", generator -> {
-            generator.pathHandler(new ODLPathHandlerBuilder().useModuleName());
-        });
+        swaggerFor("simplest.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()));
         
 
         Set<String> defNames = swagger.getDefinitions().keySet();
@@ -65,9 +63,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     @org.junit.Test
     public void testGenerateSimpleModuleWithLimitedDepth() {
         //when
-        swaggerFor("simplest.yang", generator -> {
-            generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()).maxDepth(2);
-        });
+        swaggerFor("simplest.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()).maxDepth(2));
 
         //then
         assertEquals(5, swagger.getPaths().keySet().size());
@@ -83,9 +79,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
     @org.junit.Test
     public void testGenerateReadOnlyModule() {
         //when
-        swaggerFor("read-only.yang", generator -> {
-            generator.pathHandler(new ODLPathHandlerBuilder().useModuleName());
-        });
+        swaggerFor("read-only.yang", generator -> generator.pathHandler(new ODLPathHandlerBuilder().useModuleName()));
 
         //then
         // c2 element is read only, there should be only get with operational prefix for this element

@@ -58,15 +58,14 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         effectiveNode = new LinkedList<>();
 
         Collection<? extends Module> allModules = ctx.getModules();
-        HashSet<String> names = new HashSet<>();
-        allModules.forEach(m -> processGroupings(m, names));
+        allModules.forEach(this::processGroupings);
     }
 
     @SuppressWarnings("unchecked")
     public <T extends SchemaNode & DataNodeContainer> Optional<T> effective(T node) {
-        return effectiveNode.stream().filter(n -> {
-            return n instanceof SchemaNode && ((SchemaNode) n).getQName().equals(node.getQName());
-        }).map(n -> (T)n).findFirst();
+        return effectiveNode.stream()
+                .filter(n -> n instanceof SchemaNode && ((SchemaNode) n).getQName().equals(node.getQName()))
+                .map(n -> (T)n).findFirst();
     }
 
 
@@ -74,8 +73,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
         if(isTreeAugmented.test(node)) {
             Optional<T> effective = effective(node);
-            return effective.isPresent() ? names.get(effective.get())
-                    : names.get(names.keySet().stream().filter(t -> t.getPath().equals(node.getPath())).findFirst().get());
+            return effective.map(names::get)
+                    .orElse(names.get(names.keySet().stream().filter(t -> t.getPath().equals(node.getPath())).findFirst().get()));
         } else {
             DataNodeContainer toCheck = original(node) == null ? node : original(node);
 
@@ -85,7 +84,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         }
         String name = names.get(node);
         if(name == null) {
-            name = generateName(node, null, null);
+            name = generateName(node, null);
             names.put(node, name);
             log.info("generated name on the fly name for node {} is {}", node.getQName(), name);
 
@@ -104,14 +103,12 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private Stream<GroupingDefinition> groupings(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
-        //noinspection SuspiciousMethodCalls
         return uses.stream().map(u -> groupings.get(u.getSourceGrouping().getPath()));
     }
 
     private GroupingDefinition grouping(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
         assert uses.size() == 1;
-        //noinspection SuspiciousMethodCalls
         return groupings.get(uses.iterator().next().getSourceGrouping().getPath());
     }
 
@@ -145,25 +142,25 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     protected void processNode(DataNodeContainer container, Set<String> cache) {
-        final HashSet<String> used = new HashSet<String>(cache);
+        final HashSet<String> used = new HashSet<>(cache);
 
         DataNodeHelper.stream(container)
                 .filter(n -> n instanceof DataSchemaNode)
                 .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
-                    String name = generateName(n, null, used);
+                    String name = generateName(n, null);
                     used.add(name);
                     names.put(n, name);
                 });
     }
 
 
-    protected void processGroupings(DataNodeContainer container, Set<String> cache) {
+    protected void processGroupings(DataNodeContainer container) {
         DataNodeHelper.stream(container).filter(n -> n instanceof GroupingDefinition)
                 .map(n -> (GroupingDefinition)n)
                 .forEach(n -> {
-                    String gName = generateName(n, null, cache);
-                    if(names.values().contains(gName)) {
+                    String gName = generateName(n, null);
+                    if(names.containsValue(gName)) {
                         //no type compatibility check at the moment thus this piece of code is prone to changes in parser
 
                         boolean differentDeclaration = groupings.values().stream().map(g -> g.asEffectiveStatement().getDeclared())
@@ -180,11 +177,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
 
 
-    @SuppressWarnings("unchecked")
     @Override
     protected <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
         String definitionId = getDefinitionId(node);
-        T effectiveNode = (T) getEffectiveChild(node.getQName());
+        T effectiveNode = getEffectiveChild(node.getQName());
 
         boolean treeAugmented = isTreeAugmented.test(effectiveNode);
 
@@ -338,7 +334,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 augmented.child(model);
             }
 
-            LinkedList<RefModel> aModels = new LinkedList<RefModel>();
+            LinkedList<RefModel> aModels = new LinkedList<>();
             if(augmented.getInterfaces() != null) {
                 aModels.addAll(augmented.getInterfaces());
             }
@@ -615,7 +611,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private  Model simple(DataNodeContainer toModel) {
         final ModelImpl model = new ModelImpl();
-        if(model instanceof DocumentedNode) {
+        if(toModel instanceof DocumentedNode) {
             model.description(desc((DocumentedNode) toModel));
         }
         log.debug("added object type for {}", toModel.toString());

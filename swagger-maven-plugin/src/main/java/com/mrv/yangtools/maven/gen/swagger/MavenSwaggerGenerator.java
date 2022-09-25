@@ -16,7 +16,6 @@ import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
-
 import org.apache.maven.project.MavenProject;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.Module;
@@ -138,11 +137,7 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
     
     private String getFileExtension() {
         String stringFormat = additionalConfig.get("swagger-format");
-        if(stringFormat != null) {
-        	return stringFormat;
-        } else {
-           return "swagger";
-        }
+        return Objects.requireNonNullElse(stringFormat, "swagger");
     }
     
     private SwaggerGenerator.Format format() {

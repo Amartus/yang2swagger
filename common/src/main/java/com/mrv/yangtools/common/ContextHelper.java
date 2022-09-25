@@ -69,7 +69,7 @@ public class ContextHelper {
 
         SchemaBuilder builder = new SchemaBuilder().accepts(accept);
 
-        dirs.filter(p -> Files.isDirectory(p)).forEach((path) -> {
+        dirs.filter(Files::isDirectory).forEach((path) -> {
             try {
                 log.info("adding {}", path);
                 builder.add(path);

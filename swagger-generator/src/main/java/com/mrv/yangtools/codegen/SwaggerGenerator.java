@@ -12,9 +12,7 @@
 package com.mrv.yangtools.codegen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
@@ -304,9 +302,7 @@ public class SwaggerGenerator {
 
         modules.forEach(m -> {
             mNames.add(m.getName());
-            if(m.getDescription().isPresent()) {
-                mDescs.add(m.getDescription().get());
-            }
+            m.getDescription().ifPresent(mDescs::add);
             dataObjectsBuilder.processModule(m);
 
         });

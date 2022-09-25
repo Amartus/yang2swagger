@@ -1,7 +1,23 @@
 package com.mrv.yangtools.codegen.main;
 
+import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.*;
+import com.mrv.yangtools.common.ContextHelper;
+import io.swagger.models.auth.BasicAuthDefinition;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
+import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.ModuleLike;
+import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.net.URI;
 import java.nio.file.FileSystems;
@@ -13,23 +29,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder;
-import com.mrv.yangtools.codegen.impl.postprocessor.*;
-import com.mrv.yangtools.common.ContextHelper;
-import io.swagger.models.auth.BasicAuthDefinition;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.ModuleLike;
-import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
-import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.mrv.yangtools.codegen.SwaggerGenerator;
 
 public class Main {
 
@@ -80,7 +79,7 @@ public class Main {
     public String basePath = "localhost:1234";
 
     public enum ElementType {
-        DATA, RPC, DATA_AND_RPC;
+        DATA, RPC, DATA_AND_RPC
     }
 
     public enum AuthenticationMechanism {

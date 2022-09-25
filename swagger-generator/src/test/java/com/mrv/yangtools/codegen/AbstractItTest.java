@@ -56,11 +56,12 @@ public abstract class AbstractItTest {
         Operation post = p.getPost();
         if(post.getParameters() != null) {
             Optional<Parameter> body = post.getParameters().stream().filter(par -> "body".equals(par.getIn())).findFirst();
-            if(body.isPresent()) {
-                Property input = ((BodyParameter) body.get()).getSchema().getProperties().get("input");
-                assertTrue(input instanceof RefProperty);
-                assertNotNull("Incorrect structure in ", swagger.getDefinitions().get(((RefProperty)input).getSimpleRef()));
-            }
+            body
+                .map(b -> ((BodyParameter) b).getSchema().getProperties().get("input"))
+                .ifPresent(input -> {
+                    assertTrue(input instanceof RefProperty);
+                    assertNotNull("Incorrect structure in ", swagger.getDefinitions().get(((RefProperty) input).getSimpleRef()));
+            });
         }
 
         Response response = post.getResponses().get("200");

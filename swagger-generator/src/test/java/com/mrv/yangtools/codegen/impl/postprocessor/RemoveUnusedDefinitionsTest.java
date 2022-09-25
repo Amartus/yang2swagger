@@ -6,7 +6,7 @@ import org.junit.Test;
 import java.util.Map;
 
 import static com.mrv.yangtools.codegen.impl.postprocessor.AbstractWithSwagger.Type.R;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author bartosz.michalik@amartus.com
@@ -67,7 +67,7 @@ public class RemoveUnusedDefinitionsTest extends AbstractWithSwagger {
         swagger.path("/c/propF", p("f", R));
         int initial = swagger.getDefinitions().size();
 
-        _removingB();;
+        _removingB();
 
         assertEquals(initial - 2, swagger.getDefinitions().size());
     }

@@ -15,9 +15,9 @@ import com.mrv.yangtools.codegen.impl.TypeConverter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.PathParameter;
 import org.opendaylight.yangtools.yang.common.QName;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.LeafSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,12 +168,9 @@ public class PathSegment implements Iterable<PathSegment> {
                                     .map(n -> ((LeafSchemaNode)n))
                                     .findFirst();
 
-                            if(keyNode.isPresent()) {
-                                final LeafSchemaNode kN = keyNode.get();
-                                param
+                            keyNode.ifPresent(kN -> param
                                     .description("Id of " + node.getQName().getLocalName())
-                                    .property(converter.convert(kN.getType(), kN));
-                            }
+                                    .property(converter.convert(kN.getType(), kN)));
 
                             return param;
                         })
@@ -208,7 +205,7 @@ public class PathSegment implements Iterable<PathSegment> {
 
     @Override
     public Iterator<PathSegment> iterator() {
-        return new Iterator<PathSegment>() {
+        return new Iterator<>() {
 
             private PathSegment current = PathSegment.this;
 

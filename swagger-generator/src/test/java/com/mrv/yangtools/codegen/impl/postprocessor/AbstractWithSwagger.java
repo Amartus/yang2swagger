@@ -20,7 +20,7 @@ public class AbstractWithSwagger {
     private static final String DEF_PREFIX = "#/definitions/";
 
     protected Swagger swagger;
-    enum Type {R, W, RW};
+    enum Type {R, W, RW}
 
     @Before
     public void setupSwagger() {

@@ -128,14 +128,14 @@ public class SwaggerGeneratorAugmentationsTestIt extends AbstractItTest {
         //then
         Map<String, Path> paths = swagger.getPaths().entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith("/operations"))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         assertEquals(4, paths.keySet().size());
         paths.values().forEach(singlePostOperation);
 
         Map<String, Model> rockTheHouseDefinitions = swagger.getDefinitions().entrySet().stream()
                 .filter(e -> e.getKey().toLowerCase().startsWith("rpc.basic.rockthe"))
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         assertEquals(5, rockTheHouseDefinitions.size());
         Model inputAug = getAugmentation(rockTheHouseDefinitions.get("rpc.basic.rockthehouse.input.xyz.CRes"), "rpc-augmentations");
         Model outputAug = getAugmentation(rockTheHouseDefinitions.get("rpc.basic.rockthehouse.output.Response"), "rpc-augmentations");

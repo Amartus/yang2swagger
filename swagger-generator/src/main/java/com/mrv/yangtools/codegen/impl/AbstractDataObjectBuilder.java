@@ -32,7 +32,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.mrv.yangtools.common.BindingMapping.getClassName;
@@ -102,16 +101,14 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
         log.debug("processing rpcs defined in {}", module.getName());
         module.getRpcs()
-                        .forEach(rcp -> {
-                            processNode(ContainerSchemaNodes.forRPC(rcp), null, cache);
-                        });
+                        .forEach(rcp -> processNode(ContainerSchemaNodes.forRPC(rcp), null, cache));
         log.debug("processing augmentations defined in {}", module.getName());
         module.getAugmentations().forEach(r -> processNode(r, cache));
     }
 
     protected <T extends ContainerLike> void processNode(T container, String proposedName, Set<String> cache) {
         if(container == null) return;
-        String name = generateName(container, null, cache);
+        String name = generateName(container, null);
         names.put(container, name);
 
         processNode(container, cache);
@@ -122,7 +119,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         DataNodeHelper.stream(container).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
                 .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
-                    String name = generateName(n, null, cache);
+                    String name = generateName(n, null);
                     names.put(n, name);
                 });
     }
@@ -134,8 +131,11 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             if(tmp instanceof DerivableSchemaNode) {
                 Optional<? extends SchemaNode> original = ((DerivableSchemaNode) tmp).getOriginal();
                 tmp = null;
-                if(original.isPresent() && original.get() instanceof DataNodeContainer) {
-                    result = (DataNodeContainer) original.get();
+                var dnc = original
+                        .filter(o -> o instanceof DataNodeContainer)
+                        .map(o -> (DataNodeContainer) o);
+                if(dnc.isPresent()) {
+                    result = dnc.get();
                     tmp = result;
                 }
             } else {
@@ -146,7 +146,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         return result;
     }
 
-    protected String generateName(SchemaNode node, String proposedName, Set<String> _cache) {
+    protected String generateName(SchemaNode node, String proposedName) {
         if(node instanceof DataNodeContainer) {
             DataNodeContainer original = null;
             if(! isTreeAugmented.test((DataNodeContainer) node)) {
@@ -155,7 +155,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
             if(original != null) {
                 if(! orgNames.containsKey(original)) {
-                    String name = generateName((SchemaNode)original, proposedName, _cache);
+                    String name = generateName((SchemaNode)original, proposedName);
                     orgNames.put(original, name);
                 } else {
                     log.debug("reusing original definition to get name for {}", node.getQName());
@@ -228,13 +228,12 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
                 .filter(choiceP.and(acceptChoice)) // handling choices
                 .flatMap(c -> {
                     ChoiceSchemaNode choice = (ChoiceSchemaNode) c;
-                    Stream<Pair> streamOfPairs = choice.getCases().stream()
+                    return choice.getCases().stream()
                             .flatMap(_case -> _case.getChildNodes().stream().map(sc -> {
                                 Pair prop = prop(sc);
                                 assignCaseMetadata(prop.property, choice, _case);
                                 return prop;
                             }));
-                    return streamOfPairs;
                 }).collect(Collectors.toMap(pair -> pair.name, pair -> pair.property, (oldV, newV) -> newV));
 
         HashMap<String, Property> result = new HashMap<>();
@@ -359,7 +358,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         String candidate = name;
 
         int idx = 1;
-        while(generatedEnums.values().contains(DEF_PREFIX + candidate)) {
+        while(generatedEnums.containsValue(DEF_PREFIX + candidate)) {
             log.warn("Name {} already defined for enum. generating random postfix", candidate);
             candidate = name + idx;
         }

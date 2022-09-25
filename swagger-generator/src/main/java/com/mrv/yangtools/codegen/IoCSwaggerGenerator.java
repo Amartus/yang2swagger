@@ -9,27 +9,6 @@
  */
 package com.mrv.yangtools.codegen;
 
-import java.io.IOException;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import org.opendaylight.yangtools.yang.model.api.ChoiceSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
-import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.ModuleLike;
-import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
-import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,9 +20,18 @@ import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
-
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
+import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.Writer;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * YANG to Swagger generator
@@ -302,9 +290,7 @@ public class IoCSwaggerGenerator {
 
         modules.forEach(m -> {
             mNames.add(m.getName());
-            if(m.getDescription().isPresent()) {
-                mDescs.add(m.getDescription().get());
-            }
+            m.getDescription().ifPresent(mDescs::add);
             dataObjectsBuilder.processModule(m);
 
         });

@@ -22,7 +22,7 @@ import static org.mockito.Mockito.mock;
 public class ODLRestconfPathPrinterTest {
 
     @Test
-    public void simplePath() throws Exception {
+    public void simplePath() {
         PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");
         PathSegment b = new PathSegment(a).withName("b");
         PathSegment c = new PathSegment(b).withName("c");
@@ -32,7 +32,7 @@ public class ODLRestconfPathPrinterTest {
 
 
     @Test
-    public void parametrizedPath() throws Exception {
+    public void parametrizedPath() {
         PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");
         PathSegment b = new PathSegment(a).withName("b")
                 .withListNode(new MockNodeBuilder("test")
@@ -46,8 +46,8 @@ public class ODLRestconfPathPrinterTest {
     }
 
     @Test
-    public void parametrizedPathLastSegment() throws Exception {
-        PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");;
+    public void parametrizedPathLastSegment() {
+        PathSegment a = new PathSegment(mock(EffectiveModelContext.class)).withName("a").withModule("mod1");
         PathSegment b = new PathSegment(a).withName("b")
                 .withListNode(new MockNodeBuilder("test")
                         .param("x")
@@ -64,7 +64,7 @@ public class ODLRestconfPathPrinterTest {
     }
 
     @Test
-    public void namedModule() throws Exception {
+    public void namedModule() {
         PathSegment a = new PathSegment(mock(EffectiveModelContext.class))
                 .withName("a")
                 .withModule("mod1");

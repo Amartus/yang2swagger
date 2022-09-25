@@ -2,7 +2,7 @@ package com.mrv.yangtools.codegen.impl.postprocessor;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 
 /**
@@ -19,6 +19,6 @@ public class Rfc4080PayloadWrapperTest extends AbstractWithSwagger {
                 .filter(k -> k.endsWith("Wrapper"))
                 .count();
 
-        assertTrue(numberOfWrappers == swagger.getPaths().size());
+        assertEquals(numberOfWrappers, swagger.getPaths().size());
     }
 }

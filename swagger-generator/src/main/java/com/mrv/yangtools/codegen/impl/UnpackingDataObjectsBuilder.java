@@ -17,6 +17,7 @@ import io.swagger.models.Swagger;
 import io.swagger.models.properties.ObjectProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
+import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +65,7 @@ public class UnpackingDataObjectsBuilder extends AbstractDataObjectBuilder {
         return model;
     }
     /**
-     * Get name for data node. Prerequisite is to have node's module traversed {@link UnpackingDataObjectsBuilder#processModule(Module)}.
+     * Get name for data node. Prerequisite is to have node's module traversed {@link UnpackingDataObjectsBuilder#processModule(Module)}}.
      * @param node node
      * @return name
      */
