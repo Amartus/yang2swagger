@@ -21,11 +21,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.yangtools.yang.model.api.DataNodeContainer;
+import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
-import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.ListEffectiveStatementImpl;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -45,7 +45,7 @@ public class DataObjectsBuilderTest {
 
     @Mock
     private Swagger swagger;
-    private static SchemaContext ctx;
+    private static EffectiveModelContext ctx;
     private static Module groupings;
 
     @BeforeClass
@@ -61,7 +61,7 @@ public class DataObjectsBuilderTest {
         SchemaNode c1 = DataNodeHelper.stream(groupings).filter(n -> n.getQName().getLocalName().equals("c1")).findFirst().orElseThrow(IllegalArgumentException::new);
         //when
         builder.processModule(groupings);
-        builder.addModel((ListEffectiveStatementImpl) c1);
+        builder.addModel((ListSchemaNode) c1);
         //then
         verify(swagger).addDefinition(eq("with.groupings.groupingroot.C1"), any(Model.class));
     }

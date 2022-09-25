@@ -11,8 +11,11 @@
 
 package com.mrv.yangtools.test.utils;
 
+import java.time.LocalDate;
+import java.util.List;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.QNameModule;
+import org.opendaylight.yangtools.yang.common.Revision;
 import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.LeafListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
@@ -21,7 +24,6 @@ import org.opendaylight.yangtools.yang.model.util.type.BaseTypes;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Date;
 
 import static org.mockito.Mockito.*;
 
@@ -32,11 +34,11 @@ import static org.mockito.Mockito.*;
 public class MockNodeBuilder {
 
     private final QNameModule module;
-    private final ArrayList<DataSchemaNode> params;
-    private ArrayList<QName> names;
+    private final List<DataSchemaNode> params;
+    private List<QName> names;
 
     public MockNodeBuilder(String module) {
-        this.module = QNameModule.create(Paths.get("test", module).toUri(), new Date());
+        this.module = QNameModule.create(Paths.get("test", module).toUri(), Revision.of(LocalDate.now().toString()));
         this.params = new ArrayList<>();
         this.names = new ArrayList<>();
     }
@@ -44,7 +46,7 @@ public class MockNodeBuilder {
     @SuppressWarnings("unchecked")
     public MockNodeBuilder param(String name) {
 
-        LeafListSchemaNode leaf = mock(LeafListSchemaNode.class);
+        final LeafListSchemaNode leaf = mock(LeafListSchemaNode.class);
         QName qname = QName.create(module, name);
 
         when(leaf.getQName()).thenReturn(qname);
@@ -58,8 +60,8 @@ public class MockNodeBuilder {
     public ListSchemaNode build() {
         ListSchemaNode result = mock(ListSchemaNode.class);
 
-        when(result.getKeyDefinition()).thenReturn(names);
-        when(result.getChildNodes()).thenReturn(params);
+        doReturn(names).when(result).getKeyDefinition();
+        doReturn(params).when(result).getChildNodes();
 
         return result;
     }

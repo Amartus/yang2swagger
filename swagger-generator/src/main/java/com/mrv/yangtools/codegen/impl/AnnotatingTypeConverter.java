@@ -13,7 +13,7 @@ package com.mrv.yangtools.codegen.impl;
 
 import io.swagger.models.properties.AbstractProperty;
 import io.swagger.models.properties.Property;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.model.api.TypeDefinition;
 import org.opendaylight.yangtools.yang.model.api.type.LeafrefTypeDefinition;
@@ -24,7 +24,7 @@ import org.opendaylight.yangtools.yang.model.api.type.LeafrefTypeDefinition;
  * @author bartosz.michalik@amartus.com
  */
 public class AnnotatingTypeConverter extends TypeConverter {
-    public AnnotatingTypeConverter(SchemaContext ctx) {
+    public AnnotatingTypeConverter(EffectiveModelContext ctx) {
         super(ctx);
     }
 

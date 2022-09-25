@@ -14,7 +14,7 @@ package com.mrv.yangtools.codegen.impl;
 import com.mrv.yangtools.common.Tuple;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +31,10 @@ public class GroupingHierarchyHandler {
     private static final Logger log = LoggerFactory.getLogger(GroupingHierarchyHandler.class);
     private final Map<QName, HierarchyNode> hierarchy;
     private final Map<GroupingDefinition, String> groupingNames;
-    private final SchemaContext ctx;
+    private final EffectiveModelContext ctx;
     private final ModuleUtils moduleUtils;
 
-    public GroupingHierarchyHandler(SchemaContext ctx) {
+    public GroupingHierarchyHandler(EffectiveModelContext ctx) {
         this.ctx = ctx;
         moduleUtils = new ModuleUtils(ctx);
         groupingNames = computeNames();
@@ -62,7 +62,7 @@ public class GroupingHierarchyHandler {
             String localName = g.getQName().getLocalName();
             int times = names.get(localName).size();
             if(times < 2) return new Tuple<>(g, localName);
-            return new Tuple<>(g, moduleUtils.toModuleName(g.getQName()) + ":" + localName);
+            return new Tuple<>(g, moduleUtils.toModuleName(g.getQName().getModule()) + ":" + localName);
         }).collect(Collectors.toMap(Tuple::first, Tuple::second));
     }
 
@@ -73,9 +73,9 @@ public class GroupingHierarchyHandler {
         ctx.getGroupings().forEach(g -> {
             HierarchyNode node = result.get(g.getPath().getLastComponent());
             g.getUses().forEach(u -> {
-                HierarchyNode parent = result.get(u.getGroupingPath().getLastComponent());
+                HierarchyNode parent = result.get(u.getSourceGrouping().getPath().getLastComponent());
                 if (parent == null) {
-                    log.warn("Hierarchy creation problem. No grouping with name {} found. Ignoring hierarchy relation.", u.getGroupingPath().getLastComponent());
+                    log.warn("Hierarchy creation problem. No grouping with name {} found. Ignoring hierarchy relation.", u.getSourceGrouping().getPath().getLastComponent());
                 } else {
                     node.addParent(parent);
                 }

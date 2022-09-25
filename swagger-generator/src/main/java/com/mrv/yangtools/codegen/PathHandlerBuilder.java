@@ -13,7 +13,7 @@ package com.mrv.yangtools.codegen;
 
 import io.swagger.models.Swagger;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 
 import java.util.Collection;
 
@@ -23,7 +23,7 @@ import java.util.Collection;
 public interface PathHandlerBuilder {
     PathHandler forModule(Module module);
 
-    void configure(SchemaContext ctx, Swagger target, DataObjectBuilder builder);
+    void configure(EffectiveModelContext ctx, Swagger target, DataObjectBuilder builder);
 
     void addTagGenerator(TagGenerator generator);
 

@@ -30,10 +30,10 @@
     <packaging>pom</packaging>
 
     <properties>
-        <logback.version>1.2.9</logback.version>
+        <logback.version>1.2.11</logback.version>
         <swagger.codegen.version>2.2.1</swagger.codegen.version>
         <swagger.version>1.6.6</swagger.version>
-        <yangtools.version>1.2.1</yangtools.version>
+        <yangtools.version>6.0.7</yangtools.version>
         <guice.version>4.1.0</guice.version>
     </properties>
 
@@ -141,14 +141,14 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.10.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>11</source>
+                    <target>11</target>
                 </configuration>
             </plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.0.1</version>
+				<version>3.2.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>

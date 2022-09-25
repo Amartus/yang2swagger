@@ -12,18 +12,18 @@
 package com.mrv.yangtools.maven.gen.swagger;
 
 import com.google.common.base.Preconditions;
-import com.mrv.yangtools.codegen.PathHandlerBuilder;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.SegmentTagGenerator;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
 
 import org.apache.maven.project.MavenProject;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
 import org.opendaylight.yangtools.yang2sources.spi.BasicCodeGenerator;
 import org.opendaylight.yangtools.yang2sources.spi.BuildContextAware;
 import org.opendaylight.yangtools.yang2sources.spi.MavenProjectAware;
+import org.opendaylight.yangtools.yang2sources.spi.ModuleResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +57,8 @@ public class MavenSwaggerGenerator implements BasicCodeGenerator, BuildContextAw
     private File resourceBaseDir;
 
     @Override
-    public Collection<File> generateSources(SchemaContext schemaContext, File outputDir, Set<Module> modules) throws IOException {
+    public Collection<File> generateSources(EffectiveModelContext schemaContext, File outputDir, Set<Module> modules,
+            final ModuleResourceResolver moduleResourcePathResolver) throws IOException {
         final File outputBaseDir = outputDir == null ? getDefaultOutputBaseDir() : outputDir;
 
         if(! outputBaseDir.exists()) {

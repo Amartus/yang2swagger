@@ -33,8 +33,7 @@ public class PutOperationGenerator extends OperationGenerator {
         final Operation put = defaultOperation();
         final RefModel definition = new RefModel(getDefinitionId(node));
         put.summary("creates or updates " + getName(node));
-        String description = node.getDescription() == null ? "creates or updates " + getName(node) :
-                node.getDescription();
+        String description = node.getDescription().orElse("creates or updates " + getName(node));
         put.description(description);
         put.parameter(new BodyParameter()
                 .name(getName(node) + ".body-param")

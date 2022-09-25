@@ -17,15 +17,13 @@ import io.swagger.models.*;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.common.QName;
-import org.opendaylight.yangtools.yang.model.api.*;
+import org.opendaylight.yangtools.yang.common.QNameModule;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.parser.stmt.rfc6020.effective.GroupingEffectiveStatementImpl;
+import org.opendaylight.yangtools.yang.model.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
 import java.util.*;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -51,7 +49,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private static final Predicate<Map<?,?>> hasProperties = hm -> hm != null && !hm.isEmpty();
 
-    public OptimizingDataObjectBuilder(SchemaContext ctx, Swagger swagger, TypeConverter converter) {
+    public OptimizingDataObjectBuilder(EffectiveModelContext ctx, Swagger swagger, TypeConverter converter) {
         super(ctx, swagger, converter);
         groupings = new HashMap<>();
         existingModels = new HashMap<>();
@@ -59,7 +57,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         groupingHierarchyHandler = new GroupingHierarchyHandler(ctx);
         effectiveNode = new LinkedList<>();
 
-        Set<Module> allModules = ctx.getModules();
+        Collection<? extends Module> allModules = ctx.getModules();
         HashSet<String> names = new HashSet<>();
         allModules.forEach(m -> processGroupings(m, names));
     }
@@ -76,7 +74,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
         if(isTreeAugmented.test(node)) {
             Optional<T> effective = effective(node);
-            return effective.isPresent() ? names.get(effective.get()) : names.get(node);
+            return effective.isPresent() ? names.get(effective.get())
+                    : names.get(names.keySet().stream().filter(t -> t.getPath().equals(node.getPath())).findFirst().get());
         } else {
             DataNodeContainer toCheck = original(node) == null ? node : original(node);
 
@@ -106,14 +105,14 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     private Stream<GroupingDefinition> groupings(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
         //noinspection SuspiciousMethodCalls
-        return uses.stream().map(u -> groupings.get(u.getGroupingPath()));
+        return uses.stream().map(u -> groupings.get(u.getSourceGrouping().getPath()));
     }
 
     private GroupingDefinition grouping(DataNodeContainer node) {
         Set<UsesNode> uses = uses(node);
         assert uses.size() == 1;
         //noinspection SuspiciousMethodCalls
-        return groupings.get(uses.iterator().next().getGroupingPath());
+        return groupings.get(uses.iterator().next().getSourceGrouping().getPath());
     }
 
     /**
@@ -148,7 +147,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
     protected void processNode(DataNodeContainer container, Set<String> cache) {
         final HashSet<String> used = new HashSet<String>(cache);
 
-        DataNodeHelper.stream(container).filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+        DataNodeHelper.stream(container)
+                .filter(n -> n instanceof DataSchemaNode)
                 .filter(n -> ! names.containsKey(n))
                 .forEach(n -> {
                     String name = generateName(n, null, used);
@@ -166,8 +166,8 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                     if(names.values().contains(gName)) {
                         //no type compatibility check at the moment thus this piece of code is prone to changes in parser
 
-                        boolean differentDeclaration = groupings.values().stream().map(g -> ((GroupingEffectiveStatementImpl) g).getDeclared())
-                                .noneMatch(g -> g.equals(((GroupingEffectiveStatementImpl) n).getDeclared()));
+                        boolean differentDeclaration = groupings.values().stream().map(g -> g.asEffectiveStatement().getDeclared())
+                                .noneMatch(g -> g.equals(n.asEffectiveStatement().getDeclared()));
                         if(differentDeclaration) {
                             gName = "G" + gName;
                         }
@@ -268,7 +268,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         return simpleModel ? simple(toModel) : composed(toModel);
     }
 
-    private Model fromAugmentation(AugmentationSchema augmentation) {
+    private Model fromAugmentation(AugmentationSchemaNode augmentation) {
 
         Model model = fromContainer(augmentation);
         final Model toCheck = model;
@@ -277,7 +277,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 .findFirst().orElse(null);
 
         if(existingId != null) {
-            RefModel ref = new RefModel(existingId);
+            RefModel ref = new RefModel(DEF_PREFIX + existingId);
             ComposedModel composedModel = new ComposedModel();
             composedModel.setChild(ref);
             model = composedModel;
@@ -285,10 +285,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
         HashMap<String, String> properties = new HashMap<>();
 
-        if(augmentation instanceof NamespaceRevisionAware) {
-            URI uri = ((NamespaceRevisionAware) augmentation).getNamespace();
-            properties.put("namespace", uri.toString());
-            properties.put("prefix", moduleUtils.toModuleName(uri));
+        if(augmentation instanceof QNameModuleAware) {
+            QNameModule module = ((QNameModuleAware) augmentation).getQNameModule();
+            properties.put("namespace", module.getNamespace().toString());
+            properties.put("prefix", moduleUtils.toModuleName(module));
             model.getVendorExtensions().put("x-augmentation", properties);
         }
 
@@ -348,7 +348,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 String pkg = BindingMapping.nameToPackageSegment(prop.get("prefix"));
                 String augName = pkg + "." + modelName + "Augmentation" + idx;
                 swagger.getDefinitions().put(augName, m);
-                aModels.add(new RefModel("#/definitions/"+augName));
+                aModels.add(new RefModel(DEF_PREFIX + augName));
                 idx++;
 
             }
@@ -414,10 +414,10 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private Set<UsesNode> optimizeInheritance(Set<UsesNode> result) {
         return result.stream().filter(r -> {
-            SchemaPath rName = r.getGroupingPath();
+            SchemaPath rName = r.getSourceGrouping().getPath();
 
             return result.stream().filter(o -> ! o.equals(r))
-                    .noneMatch(o -> groupingHierarchyHandler.isParent(rName, o.getGroupingPath().getLastComponent()));
+                    .noneMatch(o -> groupingHierarchyHandler.isParent(rName, o.getSourceGrouping().getPath().getLastComponent()));
         }).collect(Collectors.toSet());
     }
 
@@ -478,7 +478,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
         final List<RefModel> models = new LinkedList<>();
 
         uses(node).forEach(u -> {
-            GroupingDefinition grouping = groupings.get(u.getGroupingPath());
+            GroupingDefinition grouping = groupings.get(u.getSourceGrouping().getPath());
             GroupingInfo info = traverse(grouping);
             info.models.forEach(def -> {
                 String groupingIdx = getDefinitionId(def);

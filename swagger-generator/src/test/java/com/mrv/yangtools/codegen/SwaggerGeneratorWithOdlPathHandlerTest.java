@@ -18,7 +18,7 @@ import io.swagger.models.Path;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.RefProperty;
 import org.junit.Test;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 
 import java.util.Arrays;
@@ -145,7 +145,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
     @org.junit.Test
     public void testGenerateChoice() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
+        EffectiveModelContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("choice.yang"));
 
 		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
 				.pathHandler(new ODLPathHandlerBuilder().useModuleName());
@@ -166,7 +166,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
     @org.junit.Test
     public void testGenerateEnum() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("enum-module.yang"));
+        EffectiveModelContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("enum-module.yang"));
 
 		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
 				.pathHandler(new ODLPathHandlerBuilder());
@@ -183,7 +183,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
     @org.junit.Test
     public void testAugGroupEx() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("aug-group-ex"));
+        EffectiveModelContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("aug-group-ex"));
 
 		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
 				.pathHandler(new ODLPathHandlerBuilder());
@@ -200,7 +200,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
     @org.junit.Test
     public void testInheritenceWithAugmentation() throws Exception {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("inheritence-with-augmentation"));
+        EffectiveModelContext ctx = ContextHelper.getFromClasspath(p -> p.getParent().getFileName().toString().equals("inheritence-with-augmentation"));
 
 		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
 				.pathHandler(new ODLPathHandlerBuilder());
@@ -224,7 +224,7 @@ public class SwaggerGeneratorWithOdlPathHandlerTest extends AbstractItTest {
 
     @Test
     public void testDuplicatedNames() throws ReactorException {
-        SchemaContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("duplicated-names.yang"));
+        EffectiveModelContext ctx = ContextHelper.getFromClasspath(p -> p.getFileName().toString().equals("duplicated-names.yang"));
 		SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig()
 				.pathHandler(new ODLPathHandlerBuilder());
         swagger = generator.generate();

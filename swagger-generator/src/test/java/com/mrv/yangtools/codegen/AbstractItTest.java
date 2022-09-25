@@ -4,13 +4,16 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.common.ContextHelper;
-import io.swagger.models.*;
+import io.swagger.models.Model;
+import io.swagger.models.Operation;
+import io.swagger.models.Response;
+import io.swagger.models.Swagger;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.junit.After;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +26,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * @author bartosz.michalik@amartus.com
@@ -63,10 +65,9 @@ public abstract class AbstractItTest {
 
         Response response = post.getResponses().get("200");
         if(response != null) {
-        	RefProperty schema = (RefProperty) response.getSchema();
+        	Model schema = response.getResponseSchema();
             if(schema != null) {
-                String ref = schema.getSimpleRef();
-                Property output = swagger.getDefinitions().get(ref).getProperties().get("output");
+                Property output = schema.getProperties().get("output");
                 assertTrue(output instanceof RefProperty);
                 assertNotNull("Incorrect structure in ",swagger.getDefinitions().get(((RefProperty)output).getSimpleRef()));
 
@@ -75,7 +76,7 @@ public abstract class AbstractItTest {
     };
 
 
-    private SchemaContext ctxFor(Predicate<Path> cond) {
+    private EffectiveModelContext ctxFor(Predicate<Path> cond) {
         try {
             return ContextHelper.getFromClasspath(cond);
         } catch (ReactorException e) {
@@ -98,7 +99,7 @@ public abstract class AbstractItTest {
     }
 
     protected void swaggerFor(Predicate<Path> cond, Consumer<SwaggerGenerator> extraConfig) throws IllegalArgumentException {
-        SchemaContext ctx = ctxFor(cond);
+        EffectiveModelContext ctx = ctxFor(cond);
 
         SwaggerGenerator generator = new SwaggerGenerator(ctx, ctx.getModules()).defaultConfig();
         if(extraConfig != null) {

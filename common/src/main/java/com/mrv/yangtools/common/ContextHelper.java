@@ -11,7 +11,7 @@
 
 package com.mrv.yangtools.common;
 
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +40,11 @@ public class ContextHelper {
      * @return YANG context
      * @throws ReactorException in case of parsing errors
      */
-    public static SchemaContext getFromDir(Path dir, Predicate<Path> accept) throws ReactorException {
+    public static EffectiveModelContext getFromDir(Path dir, Predicate<Path> accept) throws ReactorException {
         return getFromDir(Stream.of(dir), accept);
     }
 
-    public static SchemaContext getFromDir(Stream<Path> dirs, Predicate<Path> accept) throws ReactorException {
+    public static EffectiveModelContext getFromDir(Stream<Path> dirs, Predicate<Path> accept) throws ReactorException {
         return getCtx(dirs, accept);
     }
 
@@ -54,7 +54,7 @@ public class ContextHelper {
      * @return YANG context in case of parsing errors
      * @throws ReactorException in case of problem with YANG modules parsing
      */
-    public static SchemaContext getFromClasspath(Predicate<Path> accept) throws ReactorException {
+    public static EffectiveModelContext getFromClasspath(Predicate<Path> accept) throws ReactorException {
         return getCtx(Arrays.stream(System.getProperty("java.class.path", ".").split(File.pathSeparator)).map(s -> Paths.get(s.replaceFirst("^/(.:/)", "$1"))), accept);
     }
 
@@ -65,7 +65,7 @@ public class ContextHelper {
      * @return YANG context
      * @throws ReactorException in case of parsing errors
      */
-    public static SchemaContext getCtx(Stream<Path> dirs, Predicate<Path> accept) throws ReactorException {
+    public static EffectiveModelContext getCtx(Stream<Path> dirs, Predicate<Path> accept) throws ReactorException {
 
         SchemaBuilder builder = new SchemaBuilder().accepts(accept);
 

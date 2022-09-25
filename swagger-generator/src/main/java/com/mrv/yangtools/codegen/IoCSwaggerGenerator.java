@@ -24,9 +24,9 @@ import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.DataSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.Module;
-import org.opendaylight.yangtools.yang.model.api.ModuleIdentifier;
+import org.opendaylight.yangtools.yang.model.api.ModuleLike;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +63,7 @@ import io.swagger.models.Swagger;
  */
 public class IoCSwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(IoCSwaggerGenerator.class);
-    private final SchemaContext ctx;
+    private final EffectiveModelContext ctx;
     private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
@@ -113,7 +113,7 @@ public class IoCSwaggerGenerator {
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
     @Inject
-    public IoCSwaggerGenerator(@Assisted SchemaContext ctx, @Assisted Set<Module> modulesToGenerate) {
+    public IoCSwaggerGenerator(@Assisted EffectiveModelContext ctx, @Assisted Set<Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
         if(modulesToGenerate.isEmpty()) throw new IllegalStateException("No modules to generate has been specified");
@@ -122,7 +122,7 @@ public class IoCSwaggerGenerator {
         target = new Swagger();
         converter = new AnnotatingTypeConverter(ctx);
         moduleUtils = new ModuleUtils(ctx);
-        this.moduleNames = modulesToGenerate.stream().map(ModuleIdentifier::getName).collect(Collectors.toSet());
+        this.moduleNames = modulesToGenerate.stream().map(ModuleLike::getName).collect(Collectors.toSet());
         //assign default strategy
         strategy(Strategy.optimizing);
 
@@ -298,12 +298,12 @@ public class IoCSwaggerGenerator {
         }
 
         log.info("Generating swagger for yang modules: {}",
-                modules.stream().map(ModuleIdentifier::getName).collect(Collectors.joining(",","[", "]")));
+                modules.stream().map(ModuleLike::getName).collect(Collectors.joining(",","[", "]")));
 
         modules.forEach(m -> {
             mNames.add(m.getName());
-            if(m.getDescription() != null && !m.getDescription().isEmpty()) {
-                mDescs.add(m.getDescription());
+            if(m.getDescription().isPresent()) {
+                mDescs.add(m.getDescription().get());
             }
             dataObjectsBuilder.processModule(m);
 

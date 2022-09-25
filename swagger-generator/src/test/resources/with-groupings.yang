@@ -8,7 +8,7 @@ module with-groupings {
       description "Final";
   }
 
-  grouping g1 {
+  grouping g0 {
     leaf idx {
         type int32;
     }

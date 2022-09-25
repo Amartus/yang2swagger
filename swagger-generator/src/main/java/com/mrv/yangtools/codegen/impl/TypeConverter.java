@@ -13,12 +13,11 @@ package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.properties.*;
-import org.opendaylight.yangtools.yang.model.api.SchemaContext;
+import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.model.api.TypeDefinition;
 import org.opendaylight.yangtools.yang.model.api.type.*;
 import org.opendaylight.yangtools.yang.model.util.SchemaContextUtil;
-import org.opendaylight.yangtools.yang.model.util.type.BaseTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,10 +28,10 @@ import org.slf4j.LoggerFactory;
  */
 public class TypeConverter {
 
-    private SchemaContext ctx;
+    private EffectiveModelContext ctx;
     private DataObjectBuilder dataObjectBuilder;
 
-    public TypeConverter(SchemaContext ctx) {
+    public TypeConverter(EffectiveModelContext ctx) {
         this.ctx = ctx;
     }
 
@@ -58,10 +57,10 @@ public class TypeConverter {
             return new BooleanProperty();
         }
 
-        if(baseType instanceof IntegerTypeDefinition || baseType instanceof UnsignedIntegerTypeDefinition) {
+        if(baseType instanceof RangeRestrictedTypeDefinition) {
             //TODO [bmi] how to map int8 type ???
             BaseIntegerProperty integer = new IntegerProperty();
-            if (BaseTypes.isInt64(baseType) || BaseTypes.isUint32(baseType)) {
+            if (baseType instanceof Int64TypeDefinition || baseType instanceof Uint32TypeDefinition) {
                 integer = new LongProperty();
             }
             return integer;

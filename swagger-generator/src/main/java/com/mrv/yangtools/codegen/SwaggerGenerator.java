@@ -54,8 +54,8 @@ import java.util.stream.Collectors;
  */
 public class SwaggerGenerator {
     private static final Logger log = LoggerFactory.getLogger(SwaggerGenerator.class);
-    private final SchemaContext ctx;
-    private final Set<org.opendaylight.yangtools.yang.model.api.Module> modules;
+    private final EffectiveModelContext ctx;
+    private final Collection<? extends org.opendaylight.yangtools.yang.model.api.Module> modules;
     private final Swagger target;
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
@@ -103,7 +103,7 @@ public class SwaggerGenerator {
      * @param ctx context for generation
      * @param modulesToGenerate modules that will be transformed to swagger API
      */
-    public SwaggerGenerator(SchemaContext ctx, Set<org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
+    public SwaggerGenerator(EffectiveModelContext ctx, Collection<? extends org.opendaylight.yangtools.yang.model.api.Module> modulesToGenerate) {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(modulesToGenerate);
 
@@ -114,7 +114,7 @@ public class SwaggerGenerator {
         if(modulesToGenerate.isEmpty()) {
             log.error("No modules has been specified for swagger generation");
             if(log.isInfoEnabled()) {
-                String msg = ctx.getModules().stream().map(ModuleIdentifier::getName).collect(Collectors.joining(", "));
+                String msg = ctx.getModules().stream().map(ModuleLike::getName).collect(Collectors.joining(", "));
                 log.info("Modules in the context are: {}", msg);
             }
             throw new IllegalStateException("No modules to generate has been specified");
@@ -124,7 +124,7 @@ public class SwaggerGenerator {
         target = new Swagger();
         converter = new AnnotatingTypeConverter(ctx);
         moduleUtils = new ModuleUtils(ctx);
-        this.moduleNames = modulesToGenerate.stream().map(ModuleIdentifier::getName).collect(Collectors.toSet());
+        this.moduleNames = modulesToGenerate.stream().map(ModuleLike::getName).collect(Collectors.toSet());
         //assign default strategy
         strategy(Strategy.optimizing);
 
@@ -300,12 +300,12 @@ public class SwaggerGenerator {
 
 
         log.info("Generating swagger for yang modules: {}",
-                modules.stream().map(ModuleIdentifier::getName).collect(Collectors.joining(",","[", "]")));
+                modules.stream().map(ModuleLike::getName).collect(Collectors.joining(",","[", "]")));
 
         modules.forEach(m -> {
             mNames.add(m.getName());
-            if(m.getDescription() != null && !m.getDescription().isEmpty()) {
-                mDescs.add(m.getDescription());
+            if(m.getDescription().isPresent()) {
+                mDescs.add(m.getDescription().get());
             }
             dataObjectsBuilder.processModule(m);
 

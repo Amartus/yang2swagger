@@ -22,8 +22,7 @@ public class PatchOperationGenerator extends OperationGenerator {
         final Operation patch = defaultOperation();
         final RefModel definition = new RefModel(getDefinitionId(node));
         patch.summary("patches " + getName(node));
-        String description = node.getDescription() == null ? "patches " + getName(node) :
-                node.getDescription();
+        String description = node.getDescription().orElse("patches " + getName(node));
         patch.description(description);
         patch.parameter(new BodyParameter()
                 .name(getName(node) + ".body-param")
