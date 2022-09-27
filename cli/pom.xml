@@ -5,7 +5,7 @@
     <parent>
         <artifactId>yangtools</artifactId>
         <groupId>com.mrv.yangtools</groupId>
-       <version>2.0-SNAPSHOT</version>
+       <version>2.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
