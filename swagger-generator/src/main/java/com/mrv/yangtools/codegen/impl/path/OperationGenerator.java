@@ -45,8 +45,8 @@ public abstract class OperationGenerator<T extends SchemaNode & DataNodeContaine
         return defaultOperation();
     }
 
-    protected String getDefinitionId(T node) {
-        return repo.getDefinitionId(node);
+    protected String getDefinitionRef(T node) {
+        return repo.getDefinitionRef(node);
     }
 
     protected String getName(T node) {

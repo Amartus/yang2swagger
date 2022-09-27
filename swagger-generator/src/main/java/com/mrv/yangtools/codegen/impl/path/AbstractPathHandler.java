@@ -60,7 +60,7 @@ public abstract class AbstractPathHandler implements PathHandler {
             dataObjectBuilder.addModel(input);
 
             ModelImpl inputModel = new ModelImpl().type(ModelImpl.OBJECT);
-            inputModel.addProperty("input", new RefProperty(dataObjectBuilder.getDefinitionId(input)));
+            inputModel.addProperty("input", new RefProperty(dataObjectBuilder.getDefinitionRef(input)));
 
             post.summary("operates on " + dataObjectBuilder.getName(root));
             post.description("operates on " + dataObjectBuilder.getName(root));
@@ -73,9 +73,7 @@ public abstract class AbstractPathHandler implements PathHandler {
 
         if(output != null) {
             var model = new ModelImpl().type(ModelImpl.OBJECT);
-            RefProperty refProperty = new RefProperty();
-            refProperty.set$ref(dataObjectBuilder.getDefinitionId(output));
-            model.addProperty("output", refProperty);
+            model.addProperty("output", new RefProperty(dataObjectBuilder.getDefinitionRef(output)));
 
             dataObjectBuilder.addModel(output);
             post.response(200, new Response()

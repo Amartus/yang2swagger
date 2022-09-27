@@ -45,7 +45,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
 
-    protected static final String DEF_PREFIX = "#/definitions/";
+
     protected final Swagger swagger;
     protected final TypeConverter converter;
     protected final EffectiveModelContext ctx;
@@ -85,7 +85,7 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
      * @return id
      */
     @Override
-    public <T extends SchemaNode & DataNodeContainer> String getDefinitionId(T node) {
+    public <T extends SchemaNode & DataNodeContainer> String getDefinitionRef(T node) {
         return DEF_PREFIX + getName(node);
     }
 

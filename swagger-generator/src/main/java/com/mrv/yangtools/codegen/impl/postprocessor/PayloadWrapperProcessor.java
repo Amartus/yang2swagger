@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import static com.mrv.yangtools.codegen.DataObjectBuilder.DEF_PREFIX;
+
 /**
  * Wrap payload with a single rooted, works with {@link com.mrv.yangtools.codegen.impl.path.rfc8040.RestconfPathPrinter}
  * path schema only
@@ -59,30 +61,28 @@ public abstract class PayloadWrapperProcessor implements Consumer<Swagger> {
     }
 
     private void wrap(String propertyName, Response r) {
-        RefProperty prop = (RefProperty) r.getSchema();
-        String wrapperName = wrap(propertyName, prop.getSimpleRef());
-        r.setSchema(new RefProperty(wrapperName));
+        RefModel prop = (RefModel) r.getResponseSchema();
+        r.setResponseSchema(wrap(propertyName, prop.getSimpleRef()));
     }
 
     private void wrap(String propertyName, BodyParameter param) {
         RefModel m = (RefModel) param.getSchema();
-        String wrapperName = wrap(propertyName, m.getSimpleRef());
-        param.setSchema(new RefModel(wrapperName));
+        param.setSchema(wrap(propertyName, m.getSimpleRef()));
     }
 
-    private String wrap(String propertyName, String simpleRef) {
+    private RefModel wrap(String propertyName, String simpleRef) {
         String wrapperName = simpleRef + POSTFIX;
         Model model = swagger.getDefinitions().get(wrapperName);
         if (model == null) {
             addWrappingModel(wrapperName, propertyName, simpleRef);
         }
-        return wrapperName;
+        return new RefModel(DEF_PREFIX + wrapperName);
     }
 
     private void addWrappingModel(String wrapperName, String propertyName, String simpleRef) {
         log.info("Adding top-level model {} {} -> {}", wrapperName, propertyName, simpleRef);
         ModelImpl model = new ModelImpl();
-        model.addProperty(propertyName, new RefProperty(simpleRef));
+        model.addProperty(propertyName, new RefProperty(DEF_PREFIX + simpleRef));
         swagger.addDefinition(wrapperName, model);
     }
 }

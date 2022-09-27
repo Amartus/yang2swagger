@@ -78,9 +78,9 @@ public class UnpackingDataObjectsBuilder extends AbstractDataObjectBuilder {
         final boolean useReference = built.contains(getName(node));
         Property prop;
         if(useReference) {
-            final String definitionId = getDefinitionId(node);
-            log.debug("reference to {}", definitionId);
-            prop = new RefProperty(definitionId);
+            final String definitionRef = getDefinitionRef(node);
+            log.debug("reference to {}", definitionRef);
+            prop = new RefProperty(definitionRef);
         } else {
             log.debug("submodel for {}", getName(node));
             prop = new ObjectProperty(structure(node, x -> true, x -> true));

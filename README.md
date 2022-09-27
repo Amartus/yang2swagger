@@ -99,14 +99,12 @@ To use the docker image, gather all the YANG files into a single directory and
 from inside that directory run the following:
 
 ```
-docker run -it -v $(pwd):/usr/src/yang yang2swagger <arguments>
+docker run -it -v $(pwd):. yang2swagger <arguments>
 ```
 
-Where `<arguments>` can either be the arguments for the jar file, enclosed in
-quotes, or `EXTRACT_JAR` if you need to extract the JAR file to the mounted
-docker volume.
-
 ### Maven integration ###
+
+**The maven integration plugins were not thoroughly checked in current release. Please raise any issues as a github tracker.** 
 
 You can generate ```yaml.swagger``` as part of resource generation step in your maven module. You can also choose the name by editing base-module and swagger-format additionalConfigs. To do so please add following plugin configuration to your project:
 
@@ -127,7 +125,7 @@ You can generate ```yaml.swagger``` as part of resource generation step in your 
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-maven-plugin</artifactId>
-                <version>1.1.3</version>
+                <version>${yang.to.swagger.version}</version>
             </dependency>
         </dependencies>
         <executions>
@@ -174,7 +172,7 @@ You might also consider to plug-in code generator into your model definition:
             <dependency>
                 <groupId>com.mrv.yangtools</groupId>
                 <artifactId>swagger-codegen-jaxrs</artifactId>
-                <version>1.0-SNAPSHOT</version>
+                <version>${yang.to.swagger.version}</version>
             </dependency>
         </dependencies>
         <executions>

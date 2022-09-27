@@ -24,6 +24,7 @@ import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
  * @author bartosz.michalik@amartus.com
  */
 public interface DataObjectBuilder extends DataObjectRepo {
+    String DEF_PREFIX = "#/definitions/";
     /**
      * Build model for a given node
      * @param node for which model is to be build
@@ -50,7 +51,7 @@ public interface DataObjectBuilder extends DataObjectRepo {
     /**
      * Add model for enum
      * @param enumType enum to build swagger model from
-     * @return definition id like in {@link DataObjectRepo#getDefinitionId(SchemaNode)}
+     * @return definition id like in {@link DataObjectRepo#getDefinitionRef(SchemaNode)}
      */
     String addModel(EnumTypeDefinition enumType);
 

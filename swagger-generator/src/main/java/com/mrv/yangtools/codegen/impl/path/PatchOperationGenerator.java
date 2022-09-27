@@ -20,7 +20,7 @@ public class PatchOperationGenerator extends OperationGenerator {
     @Override
     public Operation execute(DataSchemaNode node) {
         final Operation patch = defaultOperation();
-        final RefModel definition = new RefModel(getDefinitionId(node));
+        final RefModel definition = new RefModel(getDefinitionRef(node));
         patch.summary("patches " + getName(node));
         String description = node.getDescription().orElse("patches " + getName(node));
         patch.description(description);
@@ -30,7 +30,7 @@ public class PatchOperationGenerator extends OperationGenerator {
                 .description(getName(node) + " to be added or updated"));
 
         patch.response(200, new Response()
-                .schema(new RefProperty(getDefinitionId(node)))
+                .schema(new RefProperty(getDefinitionRef(node)))
                 .description(getName(node)));
         patch.response(204, new Response().description("Operation successful"));
         return patch;

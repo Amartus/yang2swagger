@@ -179,13 +179,13 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     @Override
     protected <T extends DataSchemaNode & DataNodeContainer> Property refOrStructure(T node) {
-        String definitionId = getDefinitionId(node);
+        String definitionId = getDefinitionRef(node);
         T effectiveNode = getEffectiveChild(node.getQName());
 
         boolean treeAugmented = isTreeAugmented.test(effectiveNode);
 
         if(treeAugmented) {
-            definitionId = getDefinitionId(effectiveNode);
+            definitionId = getDefinitionRef(effectiveNode);
         }
 
         log.debug("reference to {}", definitionId);
@@ -451,7 +451,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                         return ! OptimizingDataObjectBuilder.isAugmented.test((DataNodeContainer) effectiveChild);
                     });
             if(noneAugmented) {
-                String groupingIdx = getDefinitionId(def);
+                String groupingIdx = getDefinitionRef(def);
                 log.debug("found grouping id {} for {}", groupingIdx, def.getQName());
                 info.models.clear();
                 info.models.add(def);
@@ -477,7 +477,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
             GroupingDefinition grouping = groupings.get(u.getSourceGrouping().getPath());
             GroupingInfo info = traverse(grouping);
             info.models.forEach(def -> {
-                String groupingIdx = getDefinitionId(def);
+                String groupingIdx = getDefinitionRef(def);
                 log.debug("adding grouping {} to composed model", groupingIdx);
                 RefModel refModel = new RefModel(groupingIdx);
 

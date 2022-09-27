@@ -34,7 +34,7 @@ public class GetOperationGenerator extends OperationGenerator {
         String description = node.getDescription().orElse("returns " + getName(node));
         get.description(description);
         get.response(200, new Response()
-                .schema(new RefProperty(getDefinitionId(node)))
+                .schema(new RefProperty(getDefinitionRef(node)))
                 .description(getName(node)));
         return get;
     }
