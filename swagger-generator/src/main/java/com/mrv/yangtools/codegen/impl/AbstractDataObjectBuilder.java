@@ -12,6 +12,8 @@
 package com.mrv.yangtools.codegen.impl;
 
 import com.mrv.yangtools.codegen.DataObjectBuilder;
+import com.mrv.yangtools.common.BindingMapping;
+
 import io.swagger.models.*;
 import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.common.QName;
@@ -250,6 +252,16 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         } else if (node instanceof LeafSchemaNode) {
             LeafSchemaNode lN = (LeafSchemaNode) node;
             prop = getPropertyByType(lN);
+            if (prop != null) {
+                //Map mandatory to required
+                if (lN.getConstraints().isMandatory() == true)
+                    prop.setRequired(lN.getConstraints().isMandatory());
+
+                //Set default value;
+                if (lN.getDefault() != null)
+                    prop.setDefault(lN.getDefault());
+                
+            } 
         } else if (node instanceof ContainerSchemaNode) {
             prop = refOrStructure((ContainerSchemaNode) node);
         } else if (node instanceof ListSchemaNode) {
