@@ -11,7 +11,7 @@ import java.util.stream.Stream;
  * Type usage builder. There are two types of relations supported
  * <ul>
  *     <li>uses</li> - poitned by properties of a given definition
- *     <li>references</li> - part of composition of a hgiven definition
+ *     <li>references</li> - part of composition of a given definition
  * </ul>
  * @author bartosz.michalik@amartus.com
  */

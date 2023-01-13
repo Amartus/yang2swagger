@@ -88,19 +88,18 @@ public class SwaggerRefHelper {
         Response response = oper.getResponses().get(responseCode);
         if(response == null) return null;
 
-        Property prop = response.getSchema();
+        Model prop = response.getResponseSchema();
+        Property outputProperty = null;
 
-        if(prop instanceof ObjectProperty) {
-            prop = ((ObjectProperty) prop).getProperties().get("output");
+        if(prop instanceof RefModel) {
+            return ((RefModel)prop).getSimpleRef();
+        } else if(prop != null) {
+          outputProperty = prop.getProperties().get("output");
         }
 
-        if(prop instanceof RefProperty) {
-            return ((RefProperty)prop).getSimpleRef();
-        }
+        if(prop == null || outputProperty == null) return null;
 
-        if(prop == null) return null;
-
-        RefProperty schema = (RefProperty) prop;
+        RefProperty schema = (RefProperty) outputProperty;
         return schema.getSimpleRef();
     }
 
