@@ -68,19 +68,26 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
                 .map(n -> (T)n).findFirst();
     }
 
+    private <T extends SchemaNode & DataNodeContainer> Optional<String> effectiveName(T node) {
+        Optional<T> effective = effective(node);
+        return effective.map(names::get)
+                .or(() -> {
+                    var fk = names.keySet().stream().filter(t -> t.getPath().equals(node.getPath())).findFirst();
+                    return fk.map(names::get);
+                });
+    }
 
     @Override
     public <T extends SchemaNode & DataNodeContainer> String getName(T node) {
         if(isTreeAugmented.test(node)) {
-            Optional<T> effective = effective(node);
-            return effective.map(names::get)
-                    .orElse(names.get(names.keySet().stream().filter(t -> t.getPath().equals(node.getPath())).findFirst().get()));
-        } else {
-            DataNodeContainer toCheck = original(node) == null ? node : original(node);
+            var name = effectiveName(node);
+            if(name.isPresent()) return name.get();
+        }
 
-            if(isDirectGrouping(toCheck)) {
-                return names.get(grouping(toCheck));
-            }
+        DataNodeContainer toCheck = original(node) == null ? node : original(node);
+
+        if(isDirectGrouping(toCheck)) {
+            return names.get(grouping(toCheck));
         }
         String name = names.get(node);
         if(name == null) {
