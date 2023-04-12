@@ -101,7 +101,7 @@ public class OptimizingDataObjectBuilder extends AbstractDataObjectBuilder {
 
     private <T extends SchemaNode & DataNodeContainer> T getEffectiveChild(QName name) {
         if(effectiveNode.isEmpty()) return null;
-        return effectiveNode.stream().map(n -> n.getDataChildByName(name))
+            return effectiveNode.stream().map(n -> n.getDataChildByName(name))
                 .filter(n -> n instanceof DataNodeContainer)
                 .map(n -> (T)n)
                 .findFirst().orElse(null);

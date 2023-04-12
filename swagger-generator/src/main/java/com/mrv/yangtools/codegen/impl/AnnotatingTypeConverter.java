@@ -14,9 +14,12 @@ package com.mrv.yangtools.codegen.impl;
 import io.swagger.models.properties.AbstractProperty;
 import io.swagger.models.properties.Property;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
+import org.opendaylight.yangtools.yang.model.api.PathExpression;
 import org.opendaylight.yangtools.yang.model.api.SchemaNode;
 import org.opendaylight.yangtools.yang.model.api.TypeDefinition;
 import org.opendaylight.yangtools.yang.model.api.type.LeafrefTypeDefinition;
+
+import java.util.Optional;
 
 /**
  * Annotate property with metadata for leafref
@@ -32,13 +35,16 @@ public class AnnotatingTypeConverter extends TypeConverter {
     public Property convert(TypeDefinition<?> type, SchemaNode parent) {
         Property prop = super.convert(type, parent);
 
-        if(prop instanceof AbstractProperty) {
-            if(type instanceof LeafrefTypeDefinition) {
-                String leafRef = ((LeafrefTypeDefinition) type).getPathStatement().toString();
-                ((AbstractProperty) prop).setVendorExtension("x-path", leafRef);
-            }
+        if(prop instanceof AbstractProperty && type instanceof LeafrefTypeDefinition) {
+            toXpath((LeafrefTypeDefinition) type)
+                    .ifPresent(xp -> ((AbstractProperty) prop).setVendorExtension("x-path", xp));
         }
 
         return prop;
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private Optional<String> toXpath(LeafrefTypeDefinition node) {
+        return Optional.ofNullable(node.getPathStatement()).map(PathExpression::getOriginalString);
     }
 }

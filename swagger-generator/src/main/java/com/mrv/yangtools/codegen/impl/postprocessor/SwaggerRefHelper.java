@@ -19,6 +19,7 @@ import io.swagger.models.properties.RefProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -73,7 +74,8 @@ public class SwaggerRefHelper {
         if(p instanceof ArrayProperty) return toUses(((ArrayProperty)p).getItems());
 
         if(p instanceof ObjectProperty) {
-            return ((ObjectProperty)p).getProperties().values().stream()
+            return Optional.ofNullable(((ObjectProperty) p).getProperties())
+                    .stream().flatMap(it -> it.values().stream())
                     .flatMap(SwaggerRefHelper::toUses);
         }
 

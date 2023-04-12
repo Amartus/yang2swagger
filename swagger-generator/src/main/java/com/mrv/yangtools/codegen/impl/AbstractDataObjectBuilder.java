@@ -15,15 +15,13 @@ import com.mrv.yangtools.codegen.DataObjectBuilder;
 import io.swagger.models.Model;
 import io.swagger.models.ModelImpl;
 import io.swagger.models.Swagger;
-import io.swagger.models.properties.AbstractProperty;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.StringProperty;
+import io.swagger.models.properties.*;
 import org.opendaylight.yangtools.yang.common.QName;
 import org.opendaylight.yangtools.yang.common.QNameModule;
 import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.model.api.*;
+import org.opendaylight.yangtools.yang.model.api.stmt.ChoiceEffectiveStatement;
 import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -258,13 +256,20 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             prop = refOrStructure((ContainerLike) node);
         } else if (node instanceof ListSchemaNode) {
             prop = new ArrayProperty().items(refOrStructure((ListSchemaNode) node));
+        } else if (node instanceof ChoiceEffectiveStatement) {
+            log.warn("direct choice not supported yey for {}", node.getQName());
+            prop = new ObjectProperty();
         } else if (node instanceof AnyxmlSchemaNode) {
             log.warn("generating swagger string property for any schema type for {}", node.getQName());
             prop = new StringProperty();
         }
 
+
+
         if (prop != null) {
             prop.setDescription(desc(node));
+        } else {
+            log.warn("{} type not supported for {}", node.getClass().getName(), node.getQName());
         }
 
         return new Pair(propertyName, prop);
