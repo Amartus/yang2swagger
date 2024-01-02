@@ -68,7 +68,7 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
 
     }
 
-    private class Worker {
+    private static class Worker {
         private final Map<String, TypeNode> hierarchy;
         private final Swagger swagger;
         private Set<String> toUnpack;

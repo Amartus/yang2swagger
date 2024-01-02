@@ -379,7 +379,7 @@ public class SwaggerGenerator {
 
         private void generate(DataSchemaNode node, final int depth) {
         	if(depth == 0) {
-        		log.debug("Maxmium depth level reached, skipping {} and it's childs", node.getPath());
+        		log.debug("Maximum depth level reached, skipping {} and it's childs", node.getPath());
         		return;
         	}
 
