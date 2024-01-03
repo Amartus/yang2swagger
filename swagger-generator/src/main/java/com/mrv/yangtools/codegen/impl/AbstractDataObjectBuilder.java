@@ -75,6 +75,10 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
         this.moduleUtils = new ModuleUtils(ctx);
         this.generatedEnums = new HashMap<>();
         this.orgNames = new HashMap<>();
+
+        if(swagger.getDefinitions() == null) {
+            swagger.setDefinitions(new LinkedHashMap<>());
+        }
     }
 
     /**

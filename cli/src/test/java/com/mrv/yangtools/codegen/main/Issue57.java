@@ -1,22 +1,17 @@
 package com.mrv.yangtools.codegen.main;
 
 import io.swagger.models.Swagger;
-import io.swagger.parser.SwaggerParser;
-import org.junit.Assert;
-import org.junit.Test;
-import org.kohsuke.args4j.CmdLineParser;
-
-import java.io.ByteArrayOutputStream;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class Issue57 {
+public class  Issue57 {
     private static String path;
 
     static {
@@ -35,7 +30,7 @@ public class Issue57 {
                 path
         ).collect(Collectors.toList());
 
-        Swagger swagger = runParser(args);
+        Swagger swagger = Utils.runParser(args);
         assertContainsOnly(swagger, s -> s.endsWith("Input"),
                 "objects.createobject.Input","objects.updateobject.Input");
     }
@@ -49,7 +44,7 @@ public class Issue57 {
                 path
         ).collect(Collectors.toList());
 
-        Swagger swagger = runParser(args);
+        Swagger swagger = Utils.runParser(args);
 
         assertContainsOnly(swagger, s -> s.endsWith("Input"), "objects.createobject.Input");
     }
@@ -61,22 +56,5 @@ public class Issue57 {
         Set<String> expected = Stream.of(name)
                 .collect(Collectors.toSet());
         Assert.assertEquals(expected, result);
-    }
-
-    private Swagger runParser(List<String> args) {
-        Main main = new Main();
-        CmdLineParser parser = new CmdLineParser(main);
-        try {
-            parser.parseArgument(args);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            main.out = baos;
-            main.init();
-            main.generate();
-
-            return  new SwaggerParser().parse(new String(baos.toByteArray(), StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
     }
 }

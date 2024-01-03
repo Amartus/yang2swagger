@@ -107,7 +107,7 @@ public class Main {
     }
 
     void init() throws FileNotFoundException {
-        if (output != null && output.trim().length() > 0) {
+        if (output != null && !output.trim().isEmpty()) {
             out = new FileOutputStream(output);
         }
     }
@@ -165,7 +165,11 @@ public class Main {
             generator.appendPostProcessor(new SingleParentInheritenceModel());
         }
 
-        generator.appendPostProcessor(new Rfc4080PayloadWrapper());
+        if(!odlPathFormat) {
+            //TODO check if something similar is needed for ODL paths as well
+            generator.appendPostProcessor(new Rfc4080PayloadWrapper());
+        }
+
         generator.appendPostProcessor(new RemoveUnusedDefinitions());
 
         generator.generate(new OutputStreamWriter(out));

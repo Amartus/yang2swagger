@@ -74,12 +74,15 @@ public class AbstractWithSwagger {
 
         if(properites.isEmpty() && parents.isEmpty()) return new ModelImpl();
 
+        var parRef = parents.stream().map(p -> new RefModel(DEF_PREFIX + p))
+            .collect(Collectors.toList());
+
+
         ComposedModel model = new ComposedModel();
-        model.setAllOf(
-                parents.stream()
-                        .map(p -> new RefModel(DEF_PREFIX + p))
-                        .collect(Collectors.toList())
-        );
+
+        model.setParent(parRef.get(0));
+        model.setInterfaces(parRef.subList(1, parRef.size()));
+
 
         if(!properites.isEmpty()) {
             final ModelImpl m = new ModelImpl();
