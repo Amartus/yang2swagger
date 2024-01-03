@@ -312,8 +312,8 @@ public class SwaggerGenerator {
         modules.forEach(m -> new ModuleGenerator(m).generate());
 
         // update info with module names and descriptions
-        String modules = mNames.stream().collect(Collectors.joining(","));
-        String descriptions = mDescs.stream().collect(Collectors.joining(","));
+        String modules = String.join(",", mNames);
+        String descriptions = String.join(",", mDescs);
         if(descriptions.isEmpty()) {
             descriptions = modules + " API generated from yang definitions";
         }

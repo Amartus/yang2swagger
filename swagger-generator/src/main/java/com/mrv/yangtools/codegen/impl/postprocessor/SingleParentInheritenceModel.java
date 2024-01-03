@@ -102,7 +102,7 @@ public class SingleParentInheritenceModel implements Consumer<Swagger> {
         }
 
         Stream<TypeNode> getAllInHierarchy(TypeNode node) {
-            if(node.getReferencing().size() > 0) return Stream.concat(Stream.of(node), sorted(node.getReferencing()).flatMap(this::getAllInHierarchy));
+            if(!node.getReferencing().isEmpty()) return Stream.concat(Stream.of(node), sorted(node.getReferencing()).flatMap(this::getAllInHierarchy));
             return Stream.of(node);
         }
 
