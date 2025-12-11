@@ -17,6 +17,7 @@ import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.MountPointPostProcessor;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
 import com.mrv.yangtools.common.SwaggerUtils;
@@ -66,6 +67,7 @@ public class SwaggerGenerator {
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
     private PathHandlerBuilder pathHandlerBuilder;
+    private Map<String, List<String>> yangmntMappings = Collections.emptyMap();
 
     public SwaggerGenerator defaultConfig() {
         //setting defaults
@@ -262,7 +264,19 @@ public class SwaggerGenerator {
     public SwaggerGenerator maxDepth(int maxDepth) {
     	this.maxDepth = maxDepth;
         return this;
-    }    
+    }
+
+    /**
+     * Provide mappings for mount-point extension: label -> list of module:grouping strings
+     */
+    public SwaggerGenerator yangmntMappings(Map<String, List<String>> mappings) {
+        this.yangmntMappings = mappings == null ? Collections.emptyMap() : mappings;
+        if(yangmntMappings != null && !yangmntMappings.isEmpty()) {
+            // run a lightweight post processor to update composed models for mount-points
+            this.appendPostProcessor(new MountPointPostProcessor(yangmntMappings, ctx, moduleUtils, (com.mrv.yangtools.codegen.DataObjectRepo) dataObjectsBuilder));
+        }
+        return this;
+    }
 
     /**
      * Run Swagger generation for configured modules. Write result to target. The file format
