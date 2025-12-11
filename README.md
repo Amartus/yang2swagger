@@ -12,6 +12,7 @@ Our tool supports:
  * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * YANG modules documentation - which is added to generated swagger API specification
+ * mount-point - for which types can be provided during swagger generation
 
 
 In this project we use YANG parser from [OpenDaylight](https://www.opendaylight.org/) (ODL) yang-tools project. The generated Swagger specification is available as Java object or serialized either to YAML or JSON file.
@@ -76,6 +77,17 @@ module ...                             : List of YANG module names to generate
                                          defaults to current directory.
                                          Multiple dirs might be separated by
                                          system path separator (default: )
+ -mount-point-mappings                 : Mount-point mappings as a JSON string.  
+                                         Assigns mount-point labels (from YANG
+                                         files) to lists of content types
+                                         that should be used when generating 
+                                         Swagger definitions. Expected format:
+                                         '{"mount-label": ["module:grouping", ...]}'
+                                         Example:
+                                         '{"list-entry-data": [
+                                         "entry-type-1:content",
+                                         "entry-type-2:content"
+                                         ]}'
 ```
 
 For example:

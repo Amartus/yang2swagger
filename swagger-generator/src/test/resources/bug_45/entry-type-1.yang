@@ -1,0 +1,22 @@
+module entry-type-1 {
+    namespace "urn:demo:entry-type-1";
+    prefix "et1";
+    yang-version 1.1;
+    revision "2022-03-12" {
+        description "First cut";
+    }
+    grouping content {
+        container type-1 {
+            leaf x {
+                type string;
+            }
+            leaf y {
+                type string;
+            }
+            leaf z {
+                type string;
+            }
+        }
+    }
+    uses content;
+}
