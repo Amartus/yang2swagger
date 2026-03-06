@@ -144,6 +144,9 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                         // attach RPCs from this module to the mount nodes
                         attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
                         continue; // mapping entry handled
+                    } else {
+                        // module-only mapping but module not found -> throw
+                        throw new IllegalArgumentException(trimmed + " does not exist, check Your configuration & spelling");
                     }
                 }
 
@@ -238,7 +241,8 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                     refModels.add(new RefModel("#/definitions/" + simple));
                 } else {
-                    log.warn("Cannot resolve mapping entry '{}' for mount label {}", map, label);
+                    // if we reached this point, the mapping string could not be resolved -> throw an exception
+                    throw new IllegalArgumentException(map + " does not exist, check Your configuration & spelling");
                 }
             }
 
@@ -398,6 +402,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     }
                 } catch (Exception ex) {
                     // ignore
+
                 }
                 if(eff == null && !declaredAccessRestricted) {
                     try {
@@ -813,5 +818,4 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         }
     }
 }
-
 

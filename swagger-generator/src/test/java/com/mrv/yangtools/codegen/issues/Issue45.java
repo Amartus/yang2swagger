@@ -64,7 +64,26 @@ public class Issue45 extends AbstractItTest {
         ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
         Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
         Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
+    }
 
+    @Test
+    public void testInvalidModuleMounting() throws IOException, ReactorException {
+
+        try {
+            runSwaggerGeneratorWithMountMappings(Arrays.asList("invalid-module"));
+            Assert.fail("Expected IllegalArgumentException for invalid module mapping");
+        } catch (IllegalArgumentException iae) {
+            Assert.assertTrue(iae.getMessage().contains("invalid-module does not exist"));
+        }
+
+        StringWriter writer = new StringWriter();
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        mapper.writeValue(writer, swagger);
+
+        createSwaggerFile(writer, "swagger3.yml");
+
+        //add exception check
     }
 
     private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {
