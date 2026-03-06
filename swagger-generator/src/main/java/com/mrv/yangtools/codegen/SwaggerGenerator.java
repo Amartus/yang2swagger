@@ -17,6 +17,7 @@ import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.MountPointPostProcessor;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
@@ -128,10 +129,22 @@ public class SwaggerGenerator {
         //assign default strategy
         strategy(Strategy.optimizing);
 
-        //no exposed swagger API
+        // set default path handler builder (avoid NPE if caller doesn't set one)
+        try {
+            AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+            defaultBuilder.useModuleName();
+            this.pathHandlerBuilder = defaultBuilder;
+        } catch (Throwable t) {
+            // fallback: leave null and allow caller to set pathHandler explicitly
+            this.pathHandlerBuilder = null;
+        }
+
+        // no exposed swagger API
         target.info(new Info());
 
-        pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+//        AbstractPathHandlerBuilder pathHandlerBuilder1 = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+//        pathHandlerBuilder1.useModuleName();
+//        pathHandlerBuilder = pathHandlerBuilder1;
         //default postprocessors
         postprocessor = new ReplaceEmptyWithParent();
     }
@@ -321,6 +334,15 @@ public class SwaggerGenerator {
 
         });
         //initialize plugable path handler
+        if(pathHandlerBuilder == null) {
+            try {
+                AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+                defaultBuilder.useModuleName();
+                pathHandlerBuilder = defaultBuilder;
+            } catch (Throwable t) {
+                throw new IllegalStateException("No PathHandlerBuilder configured and default builder could not be instantiated", t);
+            }
+        }
         pathHandlerBuilder.configure(ctx, target, dataObjectsBuilder);
 
         modules.forEach(m -> new ModuleGenerator(m).generate());

@@ -5,6 +5,11 @@ import io.swagger.models.ModelImpl;
 import io.swagger.models.ComposedModel;
 import io.swagger.models.RefModel;
 import io.swagger.models.Swagger;
+import io.swagger.models.Path;
+import io.swagger.models.Response;
+import io.swagger.models.Operation;
+import io.swagger.models.parameters.BodyParameter;
+import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.DataNodeHelper;
@@ -20,6 +25,11 @@ import com.mrv.yangtools.codegen.DataObjectBuilder;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
+import org.opendaylight.yangtools.yang.model.api.InputSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.OutputSchemaNode;
+import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
 
 /**
  * Lightweight postprocessor that attaches mount definitions to target models.
@@ -118,6 +128,25 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
             // resolve mapped module:grouping entries to definition refs using context and dataRepo
             List<RefModel> refModels = new ArrayList<>();
             for(String map : mapped) {
+                // New behavior: if mapping is module-only (no ':') and module exists in context, treat as module mapping
+                String trimmed = map == null ? "" : map.trim();
+                if(!trimmed.contains(":")) {
+                    Optional<Module> mod = findModuleByName(trimmed);
+                    if(mod.isPresent()) {
+                        // gather refs from the whole module
+                        List<RefModel> moduleRefs = resolveModuleMappings(mod.get().getName(), swagger);
+                        // add unique
+                        for(RefModel rm : moduleRefs) {
+                            boolean exists = refModels.stream().anyMatch(r -> r.getSimpleRef().equals(rm.getSimpleRef()));
+                            if(!exists) refModels.add(rm);
+                        }
+
+                        // attach RPCs from this module to the mount nodes
+                        attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
+                        continue; // mapping entry handled
+                    }
+                }
+
                 String[] parts = map.split(":",2);
                 String modulePart = parts.length > 0 ? parts[0].trim() : "";
                 String namePart = parts.length > 1 ? parts[1].trim() : parts[0].trim();
@@ -190,6 +219,18 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                                     log.warn("Cannot create definition for mapping {}: {}", map, ex.toString());
                                 }
                             }
+
+                            // Additionally, ensure nested container/list models inside the resolved node are created
+                            try {
+                                if(resolvedNode instanceof GroupingDefinition) {
+                                    createModelsForGrouping((GroupingDefinition) resolvedNode, builder);
+                                } else if(resolvedNode instanceof DataNodeContainer) {
+                                    createModelsForContainer((DataNodeContainer) resolvedNode, builder);
+                                }
+                            } catch (Exception ex) {
+                                log.debug("Creating nested definitions for mapping {} failed: {}", map, ex.toString());
+                            }
+
                         } catch (Exception e) {
                             log.warn("Creating definition for mapping {} failed: {}", map, e.toString());
                         }
@@ -583,4 +624,194 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     void addModelUnchecked(DataObjectBuilder builder, Object o) {
         builder.addModel((T) o);
     }
+
+    // New helper: find module by name in context
+    private Optional<Module> findModuleByName(String moduleName) {
+        if(moduleName == null || moduleName.isEmpty()) return Optional.empty();
+        // ensure the Optional type matches Module (ctx.getModules() may return ? extends Module)
+        return ctx.getModules().stream().map(m -> (Module) m).filter(m -> moduleName.equals(m.getName())).findFirst();
+    }
+
+    // New helper: resolve all groupings and top-level containers/lists from a module into RefModel list
+     private List<RefModel> resolveModuleMappings(String moduleName, Swagger swagger) {
+        List<RefModel> refs = new ArrayList<>();
+        Optional<Module> modOpt = findModuleByName(moduleName);
+        if(!modOpt.isPresent()) return refs;
+        Module mod = modOpt.get();
+
+        Set<String> seen = new HashSet<>();
+
+        // 1) groupings in context that belong to this module
+        for(GroupingDefinition g : ctx.getGroupings()) {
+            String gModule = moduleUtils.toModuleName(g);
+            if(!moduleName.equals(gModule)) continue;
+            try {
+                String defRef = dataRepo.getDefinitionRef(g);
+                if(defRef != null) {
+                    String simple = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
+                    // ensure model exists in swagger definitions; create if missing
+                    if((swagger.getDefinitions() == null || !swagger.getDefinitions().containsKey(simple)) && dataRepo instanceof DataObjectBuilder) {
+                        try {
+                            DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+                            try {
+                                String gname = null;
+                                try { gname = getNameUnchecked(g); } catch (Exception e) { /* ignore */ }
+                                if(gname != null) addModelUnchecked(builder, g, gname);
+                                else addModelUnchecked(builder, g);
+                            } catch (Exception ex) { /* ignore */ }
+                            try { createModelsForGrouping(g, builder); } catch (Exception ex2) { /* ignore */ }
+                        } catch (Exception exx) { /* ignore */ }
+                    }
+                    if(seen.add(simple)) refs.add(new RefModel("#/definitions/" + simple));
+                }
+            } catch (Exception e) {
+                // try to create using builder if available
+                if(dataRepo instanceof DataObjectBuilder) {
+                    try {
+                        DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+                        try { addModelUnchecked(builder, g); } catch (Exception ex) { /* ignore */ }
+                        try { String defRef = dataRepo.getDefinitionRef(g); if(defRef != null) { String simple = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef; if(seen.add(simple)) refs.add(new RefModel("#/definitions/" + simple)); } } catch (Exception ex2) { /* ignore */ }
+
+                        // ensure nested container/list models inside grouping are created as well
+                        try { createModelsForGrouping(g, builder); } catch (Exception ex3) { /* ignore */ }
+                    } catch (Exception ex) { /* ignore */ }
+                }
+            }
+        }
+
+        // 2) include top-level containers and lists from the module as well (to bring nested types)
+        if(dataRepo instanceof DataObjectBuilder) {
+            DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+            for(org.opendaylight.yangtools.yang.model.api.DataSchemaNode child : mod.getChildNodes()) {
+                if(child instanceof ContainerSchemaNode || child instanceof ListSchemaNode) {
+                    try {
+                        // Try to ensure model exists but DO NOT add its RefModel to the returned refs list.
+                        String defRef = resolveDefinition((DataNodeContainer) child);
+                        if(defRef == null) {
+                            // try to create model
+                            try { addModelUnchecked(builder, child); } catch (Exception ex) { /* ignore */ }
+                            // after creating, attempt to resolve again (but we won't add to refs)
+                            try { String defRef2 = resolveDefinition((DataNodeContainer) child); if(defRef2 != null) { String simple = defRef2.startsWith("#/definitions/") ? defRef2.substring("#/definitions/".length()) : defRef2; /* ensure uniqueness in swagger but do not add to refs */ } } catch (Exception ex2) { /* ignore */ }
+
+                            // recursively create nested models for children so nested types exist in definitions
+                            try { createModelsForContainer((DataNodeContainer) child, builder); } catch (Exception ex3) { /* ignore */ }
+                        } else {
+                            // definition already present; still ensure nested definitions exist
+                            try { createModelsForContainer((DataNodeContainer) child, builder); } catch (Exception ex3) { /* ignore */ }
+                        }
+                    } catch (Exception e) {
+                        // ignore individual child
+                    }
+                }
+            }
+        }
+
+        // Note: For module-only mappings we intentionally include groupings and top-level containers/lists from the module
+        // to provide nested definitions required by mounted models.
+
+        return refs;
+    }
+
+    // New helper: recursively create models for grouping's inner containers/lists
+    private void createModelsForGrouping(GroupingDefinition grouping, DataObjectBuilder builder) {
+        if(grouping == null || builder == null) return;
+        // GroupingDefinition may contain DataSchemaNode children inside its body
+        DataNodeHelper.stream(grouping)
+                .filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+                .map(n -> (DataNodeContainer) n)
+                .forEach(c -> {
+                    try {
+                        addModelUnchecked(builder, c);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    try { createModelsForContainer(c, builder); } catch (Exception e) { /* ignore */ }
+                });
+    }
+
+    // New helper: recursively create models for container/list and its nested containers/lists
+    private void createModelsForContainer(DataNodeContainer container, DataObjectBuilder builder) {
+        if(container == null || builder == null) return;
+        // for each child that is a container or list, ensure model exists and recurse
+        for(Object childObj : ((org.opendaylight.yangtools.yang.model.api.DataNodeContainer)container).getChildNodes()) {
+            if(!(childObj instanceof org.opendaylight.yangtools.yang.model.api.DataSchemaNode)) continue;
+            org.opendaylight.yangtools.yang.model.api.DataSchemaNode child = (org.opendaylight.yangtools.yang.model.api.DataSchemaNode) childObj;
+            if(child instanceof ContainerSchemaNode || child instanceof ListSchemaNode) {
+                DataNodeContainer dc = (DataNodeContainer) child;
+                try {
+                    addModelUnchecked(builder, dc);
+                } catch (Exception e) {
+                    // ignore
+                }
+                // recurse
+                try { createModelsForContainer(dc, builder); } catch (Exception e) { /* ignore */ }
+            }
+        }
+    }
+
+    // New helper: attach RPCs from module as operations under each mount node
+    private void attachModuleRpcsToMount(Module module, List<DataNodeContainer> mountNodes, Swagger swagger) {
+        if(module == null || mountNodes == null || mountNodes.isEmpty()) return;
+        if(!(dataRepo instanceof DataObjectBuilder)) {
+            log.info("No DataObjectBuilder available — skipping attaching RPC models for module {}", module.getName());
+            return;
+        }
+        DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+        String operationsPrefix = "/operations/";
+
+        for(RpcDefinition rpc : module.getRpcs()) {
+            try {
+                InputSchemaNode input = rpc.getInput();
+                OutputSchemaNode output = rpc.getOutput();
+                input = input.getChildNodes().isEmpty() ? null : input;
+                output = output.getChildNodes().isEmpty() ? null : output;
+
+                Operation post = new Operation();
+                post.response(400, new Response().description("Internal error"));
+                post.setParameters(new ArrayList<>());
+                post.tag(module.getName());
+
+                if(input != null) {
+                    builder.addModel(input);
+                    ModelImpl inputModel = new ModelImpl().type(ModelImpl.OBJECT);
+                    inputModel.addProperty("input", new RefProperty(builder.getDefinitionRef(input)));
+                    post.summary("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
+                    post.description("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
+                    post.parameter(new BodyParameter()
+                            .name(builder.getName(input) + ".body-param")
+                            .schema(inputModel)
+                            .description(input.getDescription().orElse(null))
+                    );
+                }
+
+                if(output != null) {
+                    ModelImpl model = new ModelImpl().type(ModelImpl.OBJECT);
+                    model.addProperty("output", new RefProperty(builder.getDefinitionRef(output)));
+                    builder.addModel(output);
+                    post.response(200, new Response()
+                            .responseSchema(model)
+                            .description(output.getDescription().orElse("Correct response")));
+                }
+
+                post.response(201, new Response().description("No response"));
+
+                // attach to each mount node as a path
+                for(DataNodeContainer mount : mountNodes) {
+                    String pathKey = operationsPrefix + getNodeId(mount) + "/" + rpc.getQName().getLocalName();
+                    if(swagger.getPaths() != null && swagger.getPaths().containsKey(pathKey)) {
+                        log.warn("RPC path {} already exists in swagger, skipping", pathKey);
+                        continue;
+                    }
+                    if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
+                    swagger.path(pathKey, new Path().post(post));
+                    log.info("Attached RPC {} under path {} for mount node {}", rpc.getQName().getLocalName(), pathKey, getNodeId(mount));
+                }
+
+            } catch (Exception e) {
+                log.warn("Failed to attach RPC {} from module {}: {}", rpc.getQName().getLocalName(), module.getName(), e.toString());
+            }
+        }
+    }
 }
+
+

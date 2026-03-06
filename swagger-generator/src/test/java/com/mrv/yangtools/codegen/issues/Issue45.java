@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
@@ -33,26 +34,40 @@ import java.util.stream.Stream;
 public class Issue45 extends AbstractItTest {
 
     @Test
-    public void testIssue45() throws IOException, ReactorException {
-        runSwaggerGeneratorWithMountMappings();
+    public void testSpecificTypeMounting() throws IOException, ReactorException {
+        runSwaggerGeneratorWithMountMappings(Arrays.asList("entry-type-1:content", "entry-type-2:content"));
 
         StringWriter writer = new StringWriter();
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.writeValue(writer, swagger);
 
+        createSwaggerFile(writer, "swagger.yml");
+
+        ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
+        Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
+        Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
+    }
+
+    @Test
+    public void testModuleMounting() throws IOException, ReactorException {
+
+        runSwaggerGeneratorWithMountMappings(Arrays.asList("entry-type-1", "entry-type-2"));
+
+        StringWriter writer = new StringWriter();
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        mapper.writeValue(writer, swagger);
+
+        createSwaggerFile(writer, "swagger2.yml");
+
         ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
         Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
         Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
 
-        String yaml = writer.toString();
-
-        try (PrintWriter out = new PrintWriter("swagger.yml")) {
-            out.print(yaml);
-        }
     }
 
-    private void runSwaggerGeneratorWithMountMappings() throws ReactorException {
+    private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
         final EffectiveModelContext context = buildEffectiveModelContext(
                 Paths.get("src","test","resources","bug_45").toString(),
@@ -65,7 +80,7 @@ public class Issue45 extends AbstractItTest {
 
         SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig();
         Map<String, List<String>> mapping = new HashMap<>();
-        mapping.put("list-entry-data", Arrays.asList("entry-type-1:content", "entry-type-2:content"));
+        mapping.put("entry-type-specific-data", listEntryData);
         generator.yangmntMappings(mapping);
         swagger = generator.generate();
     }
@@ -73,5 +88,21 @@ public class Issue45 extends AbstractItTest {
     private EffectiveModelContext buildEffectiveModelContext(String dir, Predicate<Path> accept)
             throws ReactorException {
         return ContextHelper.getFromDir(Stream.of(FileSystems.getDefault().getPath(dir)), accept);
+    }
+
+    private void createSwaggerFile(StringWriter writer, String swaggerFileName) throws IOException {
+        // remove any existing swagger2.yml to avoid stale file from previous runs
+        try {
+            Path out = Paths.get(swaggerFileName);
+            Files.deleteIfExists(out);
+        } catch (Exception e) {
+            // ignore any error while deleting
+        }
+
+        String yaml = writer.toString();
+
+        try (PrintWriter out = new PrintWriter(swaggerFileName)) {
+            out.print(yaml);
+        }
     }
 }
