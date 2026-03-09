@@ -154,6 +154,18 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 String modulePart = parts.length > 0 ? parts[0].trim() : "";
                 String namePart = parts.length > 1 ? parts[1].trim() : parts[0].trim();
 
+                // If mapping explicitly references a module (module:...), ensure RPCs from that module are attached to this mount
+                if(!modulePart.isEmpty()) {
+                    Optional<Module> moduleRef = findModuleByName(modulePart);
+                    if(moduleRef.isPresent()) {
+                        try {
+                            attachModuleRpcsToMount(moduleRef.get(), entry.getValue(), swagger);
+                        } catch (Exception e) {
+                            log.debug("Attaching RPCs for module {} failed: {}", modulePart, e.toString());
+                        }
+                    }
+                }
+
                 String defRef = null;
                 Object resolvedNode = null;
                 // 1) try groupings
@@ -757,6 +769,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     // New helper: attach RPCs from module as operations under each mount node
     private void attachModuleRpcsToMount(Module module, List<DataNodeContainer> mountNodes, Swagger swagger) {
         if(module == null || mountNodes == null || mountNodes.isEmpty()) return;
+        log.debug("attachModuleRpcsToMount invoked for module {} with {} mount nodes", module.getName(), mountNodes.size());
         if(!(dataRepo instanceof DataObjectBuilder)) {
             log.info("No DataObjectBuilder available — skipping attaching RPC models for module {}", module.getName());
             return;
@@ -766,6 +779,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
         for(RpcDefinition rpc : module.getRpcs()) {
             try {
+                log.debug("Processing RPC {} in module {}", rpc.getQName().getLocalName(), module.getName());
                 InputSchemaNode input = rpc.getInput();
                 OutputSchemaNode output = rpc.getOutput();
                 input = input.getChildNodes().isEmpty() ? null : input;
@@ -803,20 +817,10 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                 // attach to each mount node as a path (operations root)
                 for(DataNodeContainer mount : mountNodes) {
-                    String pathKey = operationsPrefix + getNodeId(mount) + "/" + rpc.getQName().getLocalName();
-                    if(swagger.getPaths() != null && swagger.getPaths().containsKey(pathKey)) {
-                        log.warn("RPC path {} already exists in swagger, skipping", pathKey);
-                    } else {
-                        if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
-                        swagger.path(pathKey, new Path().post(baseOp));
-                        log.info("Attached RPC {} under path {} for mount node {}", rpc.getQName().getLocalName(), pathKey, getNodeId(mount));
-                    }
-
-                    // Additionally try to attach RPC under the data path where the mount node lives (mounted RPC)
+                    // Only create mounted RPC under data path; do not create operations-root entries here
                     try {
                         String dataPath = findDataPathForMount(mount, swagger);
                         if(dataPath != null) {
-                            // create a copy of operation and tag it with the mounting module name
                             Operation mountedOp = copyOperation(baseOp);
                             String mountModuleName = null;
                             try {
@@ -826,10 +830,8 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                                     mountModuleName = ((Module) mount).getName();
                                 }
                             } catch (Exception e) {
-                                // fallback to original rpc module
                                 mountModuleName = module.getName();
                             }
-                            // set tag to module where mounted
                             if(mountModuleName != null) mountedOp.tag(mountModuleName);
 
                             String mountedRpcKey = dataPath + "/" + (mountModuleName != null ? mountModuleName : module.getName()) + ":" + rpc.getQName().getLocalName();
@@ -839,13 +841,16 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                                 if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
                                 swagger.path(mountedRpcKey, new Path().post(mountedOp));
                                 log.info("Attached mounted RPC {} under data path {} for mount node {}", rpc.getQName().getLocalName(), mountedRpcKey, getNodeId(mount));
-                            }
-                        } else {
-                            log.debug("Could not find data path for mount node {}, skipping mounted RPC creation for {}", getNodeId(mount), rpc.getQName().getLocalName());
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed to attach mounted RPC {} for mount node {}: {}", rpc.getQName().getLocalName(), getNodeId(mount), e.toString());
-                    }
+
+                                // keep global operations/* entries (generated by the main path handlers);
+                                // this postprocessor only adds mounted data-path operations and must not remove globals
+                             }
+                         } else {
+                             log.debug("Could not find data path for mount node {}, skipping mounted RPC creation for {}", getNodeId(mount), rpc.getQName().getLocalName());
+                         }
+                     } catch (Exception e) {
+                         log.warn("Failed to attach mounted RPC {} for mount node {}: {}", rpc.getQName().getLocalName(), getNodeId(mount), e.toString());
+                     }
                 }
 
             } catch (Exception e) {
