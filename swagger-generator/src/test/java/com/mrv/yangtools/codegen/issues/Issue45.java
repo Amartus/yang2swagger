@@ -94,7 +94,8 @@ public class Issue45 extends AbstractItTest {
 
         Collection<? extends Module> modulesToGenerate = context.getModules().stream()
                 .filter(module -> module.getName().equals("list-manager")
-                        || module.getName().equals("entry-type-1"))
+                        || module.getName().equals("entry-type-1")
+                        || module.getName().equals("entry-type-2"))
                 .collect(Collectors.toList());
 
         SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig();

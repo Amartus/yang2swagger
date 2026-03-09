@@ -497,7 +497,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 }
             }
 
-            // declared fields (some implementations keep sub-statements in private fields)
+            // declared fields (some implementations keep sub-statement in private fields)
             if(!declaredAccessRestricted) {
                 for(java.lang.reflect.Field f : eff.getClass().getDeclaredFields()) {
                     try {
@@ -771,18 +771,19 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 input = input.getChildNodes().isEmpty() ? null : input;
                 output = output.getChildNodes().isEmpty() ? null : output;
 
-                Operation post = new Operation();
-                post.response(400, new Response().description("Internal error"));
-                post.setParameters(new ArrayList<>());
-                post.tag(module.getName());
+                // create base operation (for global /operations paths) tagged with RPC module
+                Operation baseOp = new Operation();
+                baseOp.response(400, new Response().description("Internal error"));
+                baseOp.setParameters(new ArrayList<>());
+                baseOp.tag(module.getName());
 
                 if(input != null) {
                     builder.addModel(input);
                     ModelImpl inputModel = new ModelImpl().type(ModelImpl.OBJECT);
                     inputModel.addProperty("input", new RefProperty(builder.getDefinitionRef(input)));
-                    post.summary("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
-                    post.description("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
-                    post.parameter(new BodyParameter()
+                    baseOp.summary("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
+                    baseOp.description("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
+                    baseOp.parameter(new BodyParameter()
                             .name(builder.getName(input) + ".body-param")
                             .schema(inputModel)
                             .description(input.getDescription().orElse(null))
@@ -793,23 +794,58 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     ModelImpl model = new ModelImpl().type(ModelImpl.OBJECT);
                     model.addProperty("output", new RefProperty(builder.getDefinitionRef(output)));
                     builder.addModel(output);
-                    post.response(200, new Response()
+                    baseOp.response(200, new Response()
                             .responseSchema(model)
                             .description(output.getDescription().orElse("Correct response")));
                 }
 
-                post.response(201, new Response().description("No response"));
+                baseOp.response(201, new Response().description("No response"));
 
-                // attach to each mount node as a path
+                // attach to each mount node as a path (operations root)
                 for(DataNodeContainer mount : mountNodes) {
                     String pathKey = operationsPrefix + getNodeId(mount) + "/" + rpc.getQName().getLocalName();
                     if(swagger.getPaths() != null && swagger.getPaths().containsKey(pathKey)) {
                         log.warn("RPC path {} already exists in swagger, skipping", pathKey);
-                        continue;
+                    } else {
+                        if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
+                        swagger.path(pathKey, new Path().post(baseOp));
+                        log.info("Attached RPC {} under path {} for mount node {}", rpc.getQName().getLocalName(), pathKey, getNodeId(mount));
                     }
-                    if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
-                    swagger.path(pathKey, new Path().post(post));
-                    log.info("Attached RPC {} under path {} for mount node {}", rpc.getQName().getLocalName(), pathKey, getNodeId(mount));
+
+                    // Additionally try to attach RPC under the data path where the mount node lives (mounted RPC)
+                    try {
+                        String dataPath = findDataPathForMount(mount, swagger);
+                        if(dataPath != null) {
+                            // create a copy of operation and tag it with the mounting module name
+                            Operation mountedOp = copyOperation(baseOp);
+                            String mountModuleName = null;
+                            try {
+                                if(mount instanceof org.opendaylight.yangtools.yang.model.api.SchemaNode) {
+                                    mountModuleName = moduleUtils.toModuleName((org.opendaylight.yangtools.yang.model.api.SchemaNode) mount);
+                                } else if(mount instanceof Module) {
+                                    mountModuleName = ((Module) mount).getName();
+                                }
+                            } catch (Exception e) {
+                                // fallback to original rpc module
+                                mountModuleName = module.getName();
+                            }
+                            // set tag to module where mounted
+                            if(mountModuleName != null) mountedOp.tag(mountModuleName);
+
+                            String mountedRpcKey = dataPath + "/" + (mountModuleName != null ? mountModuleName : module.getName()) + ":" + rpc.getQName().getLocalName();
+                            if(swagger.getPaths() != null && swagger.getPaths().containsKey(mountedRpcKey)) {
+                                log.warn("Mounted RPC path {} already exists in swagger, skipping", mountedRpcKey);
+                            } else {
+                                if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
+                                swagger.path(mountedRpcKey, new Path().post(mountedOp));
+                                log.info("Attached mounted RPC {} under data path {} for mount node {}", rpc.getQName().getLocalName(), mountedRpcKey, getNodeId(mount));
+                            }
+                        } else {
+                            log.debug("Could not find data path for mount node {}, skipping mounted RPC creation for {}", getNodeId(mount), rpc.getQName().getLocalName());
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to attach mounted RPC {} for mount node {}: {}", rpc.getQName().getLocalName(), getNodeId(mount), e.toString());
+                    }
                 }
 
             } catch (Exception e) {
@@ -817,5 +853,55 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
             }
         }
     }
-}
 
+    // New helper: try to discover the data path key in swagger for a given mount node
+    private String findDataPathForMount(DataNodeContainer mount, Swagger swagger) {
+        if(mount == null || swagger == null || swagger.getPaths() == null) return null;
+        String nodeId = getNodeId(mount);
+        if(nodeId == null) return null;
+
+        // candidate keys that start with /data/ and contain the node id as a segment
+        List<String> candidates = new ArrayList<>();
+        for(String key : swagger.getPaths().keySet()) {
+            if(!key.startsWith("/data/")) continue;
+            // split into segments, ignore leading empty
+            String[] segs = key.split("/");
+            for(String s : segs) {
+                if(s == null || s.isEmpty()) continue;
+                // compare with nodeId or with module:nodeId form
+                if(s.equals(nodeId) || s.endsWith(":" + nodeId) || s.startsWith(nodeId + "=") || s.contains(":" + nodeId + "=") || s.contains(":" + nodeId)) {
+                    candidates.add(key);
+                    break;
+                }
+            }
+        }
+
+        if(candidates.isEmpty()) return null;
+        // prefer the longest (most specific) path
+        candidates.sort(Comparator.comparingInt(String::length).reversed());
+        return candidates.get(0);
+    }
+
+    // New helper: shallow copy of an Operation (parameters, responses, summary, description) without tags
+    private Operation copyOperation(Operation src) {
+        Operation dst = new Operation();
+        try {
+            dst.setParameters(src.getParameters() == null ? null : new ArrayList<>(src.getParameters()));
+        } catch (Exception e) {
+            // ignore
+        }
+        try {
+            if(src.getResponses() != null) {
+                Map<String, Response> copy = new LinkedHashMap<>();
+                copy.putAll(src.getResponses());
+                dst.setResponses(copy);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        try { dst.setSummary(src.getSummary()); } catch (Exception e) {}
+        try { dst.setDescription(src.getDescription()); } catch (Exception e) {}
+        // do not copy tags - caller should set appropriate tag
+        return dst;
+    }
+}
