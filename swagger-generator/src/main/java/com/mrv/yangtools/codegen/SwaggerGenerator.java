@@ -413,6 +413,20 @@ public class SwaggerGenerator {
             pathCtx = pathCtx.drop();
         }
 
+        private void generateActions(ActionNodeContainer node) {
+            if(!toGenerate.contains(Elements.RPC)) return;
+
+            node.getActions().forEach(action -> {
+                pathCtx = new PathSegment(pathCtx)
+                        .withName(action.getQName().getLocalName())
+                        .withModule(moduleUtils.toModuleName(action));
+
+                handler.path(action, pathCtx);
+
+                pathCtx = pathCtx.drop();
+            });
+        }
+
         private void generate(DataSchemaNode node, final int depth) {
         	if(depth == 0) {
         		log.debug("Maximum depth level reached, skipping {} and it's childs", node.getPath());
@@ -434,6 +448,7 @@ public class SwaggerGenerator {
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
+                generateActions(cN);
                 cN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(cN);
 
@@ -449,6 +464,7 @@ public class SwaggerGenerator {
                         .withListNode(lN);
 
                 handler.path(lN, pathCtx);
+                generateActions(lN);
                 lN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(lN);
 

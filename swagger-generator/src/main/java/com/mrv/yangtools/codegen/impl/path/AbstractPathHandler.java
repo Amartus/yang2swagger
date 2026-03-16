@@ -54,15 +54,22 @@ public abstract class AbstractPathHandler implements PathHandler {
 
     @Override
     public void path(RpcDefinition rpc, PathSegment pathCtx) {
-        InputSchemaNode input = rpc.getInput();
-        OutputSchemaNode output = rpc.getOutput();
-        ContainerLike root = ContainerSchemaNodes.forRPC(rpc);
-        
+        generateOperation(rpc, pathCtx, dataObjectBuilder.getName(ContainerSchemaNodes.forRPC(rpc)));
+    }
+
+    @Override
+    public void path(ActionDefinition action, PathSegment pathCtx) {
+        generateOperation(action, pathCtx, action.getQName().getLocalName());
+    }
+
+    private void generateOperation(OperationDefinition operationDef, PathSegment pathCtx, String operationName) {
+        InputSchemaNode input = operationDef.getInput();
+        OutputSchemaNode output = operationDef.getOutput();
+
         input = input.getChildNodes().isEmpty() ? null : input;
         output = output.getChildNodes().isEmpty() ? null : output;
-    	
-        PathPrinter printer = getPrinter(pathCtx);
 
+        PathPrinter printer = getPrinter(pathCtx);
         Operation post = defaultOperation(pathCtx);
 
         post.tag(module.getName());
@@ -72,8 +79,8 @@ public abstract class AbstractPathHandler implements PathHandler {
             ModelImpl inputModel = new ModelImpl().type(ModelImpl.OBJECT);
             inputModel.addProperty("input", new RefProperty(dataObjectBuilder.getDefinitionRef(input)));
 
-            post.summary("operates on " + dataObjectBuilder.getName(root));
-            post.description("operates on " + dataObjectBuilder.getName(root));
+            post.summary("operates on " + operationName);
+            post.description("operates on " + operationName);
             post.parameter(new BodyParameter()
                     .name(dataObjectBuilder.getName(input) + ".body-param")
                     .schema(inputModel)
