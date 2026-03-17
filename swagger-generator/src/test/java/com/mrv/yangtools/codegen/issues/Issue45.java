@@ -44,13 +44,8 @@ public class Issue45 extends AbstractItTest {
 
         createSwaggerFile(writer, "swagger.yml");
 
-        ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
-        Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
-        Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
-
-        String actionPath = "/operations/list-manager:list-entry={name}/list-entry-action";
-        Assert.assertTrue("Missing action path in swagger: " + actionPath, swagger.getPaths().containsKey(actionPath));
-        Assert.assertNotNull("Action should be exposed as POST", swagger.getPaths().get(actionPath).getPost());
+        validateMountPointMapping();
+        validateActionMapping();
     }
 
     @Test
@@ -65,9 +60,8 @@ public class Issue45 extends AbstractItTest {
 
         createSwaggerFile(writer, "swagger2.yml");
 
-        ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
-        Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
-        Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
+        validateMountPointMapping();
+        validateActionMapping();
     }
 
     @Test
@@ -86,8 +80,18 @@ public class Issue45 extends AbstractItTest {
         mapper.writeValue(writer, swagger);
 
         createSwaggerFile(writer, "swagger3.yml");
+    }
 
-        //add exception check
+    private void validateActionMapping() {
+        String actionPath = "/operations/list-manager:list-entry={name}/list-entry-action";
+        Assert.assertTrue("Missing action path in swagger: " + actionPath, swagger.getPaths().containsKey(actionPath));
+        Assert.assertNotNull("Action should be exposed as POST", swagger.getPaths().get(actionPath).getPost());
+    }
+
+    private void validateMountPointMapping() {
+        ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
+        Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
+        Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
     }
 
     private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {

@@ -81,9 +81,13 @@ module ...                             : List of YANG module names to generate
  -mount-point-mappings                 : Mount-point mappings as a JSON string.  
                                          Assigns mount-point labels (from YANG
                                          files) to lists of content types
-                                         that should be used when generating 
-                                         Swagger definitions. Expected format:
+                                         (can be passed as a specific type or
+                                         a whole module) that should be used 
+                                         when generating Swagger definitions. 
+                                         Expected format:
                                          '{"mount-label": ["module:grouping", ...]}'
+                                         or
+                                         '{"mount-label": ["module", ...]}'
                                          Example:
                                          '{"list-entry-data": [
                                          "entry-type-1:content",
