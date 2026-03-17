@@ -107,12 +107,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         if(swagger.getDefinitions() == null || swagger.getDefinitions().isEmpty()) return;
 
         // build a set of candidate refs based on provided module:grouping strings
-        Map<String, String> candidateDefs = new HashMap<>();
-        if(swagger.getDefinitions() != null) {
-            for(String s : swagger.getDefinitions().keySet()) {
-                candidateDefs.put(s.toLowerCase(), s);
-            }
-        }
+        Map<String, String> candidateDefs = buildCandidateDefinitions(swagger);
 
         // collect nodes by mount-point label
         Map<String, List<DataNodeContainer>> nodesByLabel = getMountPointFromModules();
@@ -138,11 +133,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     if(mod.isPresent()) {
                         // gather refs from the whole module
                         List<RefModel> moduleRefs = resolveModuleMappings(mod.get().getName(), swagger);
-                        // add unique
-                        for(RefModel rm : moduleRefs) {
-                            boolean exists = refModels.stream().anyMatch(r -> r.getSimpleRef().equals(rm.getSimpleRef()));
-                            if(!exists) refModels.add(rm);
-                        }
+                        addUniqueRefModels(refModels, moduleRefs);
 
                         // attach RPCs from this module to the mount nodes
                         attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
@@ -206,7 +197,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                 if(defRef != null) {
                     // ensure simple ref (strip prefix)
-                    String simple = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
+                    String simple = toSimpleDefinitionRef(defRef);
 
                     // If definition missing in swagger definitions, try to create it using data object builder
                     if(!swagger.getDefinitions().containsKey(simple) && resolvedNode != null && dataRepo instanceof DataObjectBuilder) {
@@ -277,7 +268,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     continue;
                 }
                 // get original model if present
-                String simpleRef = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
+                String simpleRef = toSimpleDefinitionRef(defRef);
                 Model original = swagger.getDefinitions().get(simpleRef);
 
                 ComposedModel cm = new ComposedModel();
@@ -287,12 +278,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 if(!refModels.isEmpty()) cm.parent(refModels.get(0));
 
                 if(original instanceof ModelImpl) {
-                    ModelImpl mi = (ModelImpl) original;
-                    ModelImpl copy = new ModelImpl();
-                    copy.setType(mi.getType());
-                    copy.setProperties(mi.getProperties());
-                    copy.setDescription(mi.getDescription());
-                    cm.child(copy);
+                    cm.child(copyModelImpl((ModelImpl) original));
                 } else if (original instanceof ComposedModel) {
                     // preserve original allOf entries where possible to avoid dropping existing components
                     ComposedModel origCm = (ComposedModel) original;
@@ -343,6 +329,42 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 log.info("Attached mount refs to definition {} for mount label {}", simpleRef, label);
             }
         }
+    }
+
+    private Map<String, String> buildCandidateDefinitions(Swagger swagger) {
+        Map<String, String> candidateDefs = new HashMap<>();
+        if(swagger.getDefinitions() == null) return candidateDefs;
+        for(String s : swagger.getDefinitions().keySet()) {
+            candidateDefs.put(s.toLowerCase(), s);
+        }
+        return candidateDefs;
+    }
+
+    private void addUniqueRefModels(List<RefModel> target, List<RefModel> source) {
+        for(RefModel candidate : source) {
+            boolean exists = target.stream().anyMatch(r -> r.getSimpleRef().equals(candidate.getSimpleRef()));
+            if(!exists) {
+                target.add(candidate);
+            }
+        }
+    }
+
+    private String toSimpleDefinitionRef(String defRef) {
+        return defRef != null && defRef.startsWith("#/definitions/")
+                ? defRef.substring("#/definitions/".length())
+                : defRef;
+    }
+
+    private RefModel toDefinitionRefModel(String defRef) {
+        return new RefModel("#/definitions/" + toSimpleDefinitionRef(defRef));
+    }
+
+    private ModelImpl copyModelImpl(ModelImpl source) {
+        ModelImpl copy = new ModelImpl();
+        copy.setType(source.getType());
+        copy.setProperties(source.getProperties());
+        copy.setDescription(source.getDescription());
+        return copy;
     }
 
     /**
@@ -605,7 +627,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
             try {
                 String defRef = dataRepo.getDefinitionRef(g);
                 if(defRef != null) {
-                    String simple = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
+                    String simple = toSimpleDefinitionRef(defRef);
                     // ensure model exists in swagger definitions; create if missing
                     if((swagger.getDefinitions() == null || !swagger.getDefinitions().containsKey(simple)) && dataRepo instanceof DataObjectBuilder) {
                         try {
@@ -619,7 +641,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                             try { createModelsForGrouping(g, builder); } catch (Exception ex2) { /* ignore */ }
                         } catch (Exception exx) { /* ignore */ }
                     }
-                    if(seen.add(simple)) refs.add(new RefModel("#/definitions/" + simple));
+                    if(seen.add(simple)) refs.add(toDefinitionRefModel(simple));
                 }
             } catch (Exception e) {
                 // try to create using builder if available
@@ -627,7 +649,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     try {
                         DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
                         try { addModelUnchecked(builder, g); } catch (Exception ex) { /* ignore */ }
-                        try { String defRef = dataRepo.getDefinitionRef(g); if(defRef != null) { String simple = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef; if(seen.add(simple)) refs.add(new RefModel("#/definitions/" + simple)); } } catch (Exception ex2) { /* ignore */ }
+                        try { String defRef = dataRepo.getDefinitionRef(g); if(defRef != null) { String simple = toSimpleDefinitionRef(defRef); if(seen.add(simple)) refs.add(toDefinitionRefModel(simple)); } } catch (Exception ex2) { /* ignore */ }
 
                         // ensure nested container/list models inside grouping are created as well
                         try { createModelsForGrouping(g, builder); } catch (Exception ex3) { /* ignore */ }
@@ -648,7 +670,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                             // try to create model
                             try { addModelUnchecked(builder, child); } catch (Exception ex) { /* ignore */ }
                             // after creating, attempt to resolve again (but we won't add to refs)
-                            try { String defRef2 = resolveDefinition((DataNodeContainer) child); if(defRef2 != null) { String simple = defRef2.startsWith("#/definitions/") ? defRef2.substring("#/definitions/".length()) : defRef2; /* ensure uniqueness in swagger but do not add to refs */ } } catch (Exception ex2) { /* ignore */ }
+                            try { String defRef2 = resolveDefinition((DataNodeContainer) child); if(defRef2 != null) { String simple = toSimpleDefinitionRef(defRef2); /* ensure uniqueness in swagger but do not add to refs */ } } catch (Exception ex2) { /* ignore */ }
 
                             // recursively create nested models for children so nested types exist in definitions
                             try { createModelsForContainer((DataNodeContainer) child, builder); } catch (Exception ex3) { /* ignore */ }
