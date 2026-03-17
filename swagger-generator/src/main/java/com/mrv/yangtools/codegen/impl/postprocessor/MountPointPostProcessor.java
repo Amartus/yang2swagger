@@ -61,7 +61,6 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
     // Scan provided container (module/container/list) for DataSchemaNode instances and try to find mount-point label on each
     private void collectMountPointsFromContainer(DataNodeContainer container, Map<String, List<DataNodeContainer>> nodesByLabel) {
-        // For debugging keep basic info
         log.debug("Scanning container for mount-points: {}", container);
 
         // DataNodeHelper.stream(container) yields schema nodes; check each for mount-point extension
@@ -143,7 +142,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                         // attach RPCs from this module to the mount nodes
                         attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
-                        continue; // mapping entry handled
+                        continue;
                     } else {
                         // module-only mapping but module not found -> throw
                         throw new IllegalArgumentException(trimmed + " does not exist, check Your configuration & spelling");
@@ -277,32 +276,6 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 String simpleRef = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
                 Model original = swagger.getDefinitions().get(simpleRef);
 
-                // remember whether the original already contained an empty inline 'object' entry
-                boolean hadEmptyObjectBefore = false;
-                if(original instanceof ComposedModel) {
-                    List<Model> origAllOf = ((ComposedModel) original).getAllOf();
-                    if(origAllOf != null) {
-                        for(Model o : origAllOf) {
-                            if(o instanceof ModelImpl) {
-                                ModelImpl mm = (ModelImpl) o;
-                                String t = mm.getType();
-                                java.util.Map<String, ?> props = mm.getProperties();
-                                if("object".equals(t) && (props == null || props.isEmpty())) {
-                                    hadEmptyObjectBefore = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else if(original instanceof ModelImpl) {
-                    ModelImpl mm = (ModelImpl) original;
-                    String t = mm.getType();
-                    java.util.Map<String, ?> props = mm.getProperties();
-                    if("object".equals(t) && (props == null || props.isEmpty())) {
-                        hadEmptyObjectBefore = true;
-                    }
-                }
-
                 ComposedModel cm = new ComposedModel();
                 cm.setInterfaces(refModels);
 
@@ -414,7 +387,6 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     }
                 } catch (Exception ex) {
                     // ignore
-
                 }
                 if(eff == null && !declaredAccessRestricted) {
                     try {
@@ -729,7 +701,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         return refs;
     }
 
-    // New helper: recursively create models for grouping's inner containers/lists
+    // recursively create models for grouping's inner containers/lists
     private void createModelsForGrouping(GroupingDefinition grouping, DataObjectBuilder builder) {
         if(grouping == null || builder == null) return;
         // GroupingDefinition may contain DataSchemaNode children inside its body
@@ -746,7 +718,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 });
     }
 
-    // New helper: recursively create models for container/list and its nested containers/lists
+    // recursively create models for container/list and its nested containers/lists
     private void createModelsForContainer(DataNodeContainer container, DataObjectBuilder builder) {
         if(container == null || builder == null) return;
         // for each child that is a container or list, ensure model exists and recurse
@@ -766,7 +738,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         }
     }
 
-    // New helper: attach RPCs from module as operations under each mount node
+    // attach RPCs from module as operations under each mount node
     private void attachModuleRpcsToMount(Module module, List<DataNodeContainer> mountNodes, Swagger swagger) {
         if(module == null || mountNodes == null || mountNodes.isEmpty()) return;
         log.debug("attachModuleRpcsToMount invoked for module {} with {} mount nodes", module.getName(), mountNodes.size());
@@ -775,7 +747,6 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
             return;
         }
         DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
-        String operationsPrefix = "/operations/";
 
         for(RpcDefinition rpc : module.getRpcs()) {
             try {

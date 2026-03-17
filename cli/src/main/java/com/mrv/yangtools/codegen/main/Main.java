@@ -92,7 +92,6 @@ public class Main {
     @Option(name = "-basepath", usage="")
     public String basePath = "localhost:1234";
 
-    // New option to accept mount-point mappings as JSON string
     @Option(name = "-mount-point-mappings", usage = "Mount point mappings as JSON string, e.g. '{\"list-entry-data\": [\"entry-type-1:content\", \"entry-type-2:content\"]}'", metaVar = "json")
     public String mountPointMappings = "";
 
@@ -243,7 +242,6 @@ public class Main {
         try {
             Map<String, List<String>> rm = mapper.readValue(raw, new TypeReference<Map<String, List<String>>>(){});
             log.debug("parseMountPointMappings parsed map size={}", rm == null ? 0 : rm.size());
-            // basic validation: non-null keys and non-empty list values with non-empty items
             if (rm == null) {
                 log.error("Parsed mount-point mappings is null for input: {}", raw);
                 throw new IllegalArgumentException("mount-point-mappings must be a JSON object mapping strings to list of strings");
