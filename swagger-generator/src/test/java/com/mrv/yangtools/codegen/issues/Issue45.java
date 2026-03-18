@@ -42,8 +42,6 @@ public class Issue45 extends AbstractItTest {
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.writeValue(writer, swagger);
 
-        createSwaggerFile(writer, "swagger.yml");
-
         validateMountPointMapping();
         validateActionMapping();
     }
@@ -57,8 +55,6 @@ public class Issue45 extends AbstractItTest {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.writeValue(writer, swagger);
-
-        createSwaggerFile(writer, "swagger2.yml");
 
         validateMountPointMapping();
         validateActionMapping();
@@ -78,8 +74,6 @@ public class Issue45 extends AbstractItTest {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.writeValue(writer, swagger);
-
-        createSwaggerFile(writer, "swagger3.yml");
     }
 
     private void validateActionMapping() {
@@ -92,6 +86,10 @@ public class Issue45 extends AbstractItTest {
         ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
         Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
         Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
+
+        String rpcPath = "/data/list-manager:list-entry={name}/specific-config/list-manager:entry-type-1-operation";
+        Assert.assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
+        Assert.assertNotNull("RPC operations should be a POST: " + rpcPath, swagger.getPaths().get(rpcPath).getPost());
     }
 
     private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {
@@ -116,21 +114,5 @@ public class Issue45 extends AbstractItTest {
     private EffectiveModelContext buildEffectiveModelContext(String dir, Predicate<Path> accept)
             throws ReactorException {
         return ContextHelper.getFromDir(Stream.of(FileSystems.getDefault().getPath(dir)), accept);
-    }
-
-    private void createSwaggerFile(StringWriter writer, String swaggerFileName) throws IOException {
-        // remove any existing swagger2.yml to avoid stale file from previous runs
-        try {
-            Path out = Paths.get(swaggerFileName);
-            Files.deleteIfExists(out);
-        } catch (Exception e) {
-            // ignore any error while deleting
-        }
-
-        String yaml = writer.toString();
-
-        try (PrintWriter out = new PrintWriter(swaggerFileName)) {
-            out.print(yaml);
-        }
     }
 }
