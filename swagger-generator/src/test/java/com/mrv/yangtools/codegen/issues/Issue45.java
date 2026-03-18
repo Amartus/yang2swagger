@@ -104,7 +104,8 @@ public class Issue45 extends AbstractItTest {
                         || module.getName().equals("entry-type-2"))
                 .collect(Collectors.toList());
 
-        SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig();
+        SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig()
+                .pathHandler(new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder().useModuleName());
         Map<String, List<String>> mapping = new HashMap<>();
         mapping.put("entry-type-specific-data", listEntryData);
         generator.yangmntMappings(mapping);

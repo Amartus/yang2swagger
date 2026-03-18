@@ -132,7 +132,6 @@ public class SwaggerGenerator {
         // set default path handler builder (avoid NPE if caller doesn't set one)
         try {
             AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
-            defaultBuilder.useModuleName();
             this.pathHandlerBuilder = defaultBuilder;
         } catch (Throwable t) {
             // fallback: leave null and allow caller to set pathHandler explicitly
@@ -333,7 +332,6 @@ public class SwaggerGenerator {
         if(pathHandlerBuilder == null) {
             try {
                 AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
-                defaultBuilder.useModuleName();
                 pathHandlerBuilder = defaultBuilder;
             } catch (Throwable t) {
                 throw new IllegalStateException("No PathHandlerBuilder configured and default builder could not be instantiated", t);
