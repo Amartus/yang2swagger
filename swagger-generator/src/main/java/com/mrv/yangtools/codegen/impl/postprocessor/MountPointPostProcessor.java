@@ -5,6 +5,11 @@ import io.swagger.models.ModelImpl;
 import io.swagger.models.ComposedModel;
 import io.swagger.models.RefModel;
 import io.swagger.models.Swagger;
+import io.swagger.models.Path;
+import io.swagger.models.Response;
+import io.swagger.models.Operation;
+import io.swagger.models.parameters.BodyParameter;
+import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.DataNodeHelper;
@@ -22,12 +27,21 @@ import com.mrv.yangtools.codegen.MountPointMappings;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.Module;
+import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
+import org.opendaylight.yangtools.yang.model.api.InputSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.OutputSchemaNode;
+import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
+import java.util.regex.Pattern;
 
 /**
  * Lightweight postprocessor that attaches mount definitions to target models.
  */
 public class MountPointPostProcessor implements java.util.function.Consumer<Swagger> {
     private static final Logger log = LoggerFactory.getLogger(MountPointPostProcessor.class);
+    private static final String[] EFFECTIVE_STATEMENT_METHODS = {"asEffectiveStatement", "getEffectiveStatement"};
+    private static final String[] ARG_METHODS = {"getArgument", "getArg", "getValue", "getArgumentValue", "getLabel", "getName"};
+    private static final Pattern MOUNT_POINT_PATTERN = Pattern.compile("mount[-_]point\\s+([a-zA-Z0-9_-]+)");
 
     private static volatile boolean declaredAccessRestricted = false;
 
@@ -53,7 +67,6 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
     // Scan provided container (module/container/list) for nodes and try to find mount-point label on each
     private void collectMountPointsFromContainer(DataNodeContainer container, Map<String, List<DataNodeContainer>> nodesByLabel) {
-        // For debugging keep basic info
         log.debug("Scanning container for mount-points: {}", container);
 
         // DataNodeHelper.stream(container) yields schema nodes (recursively); check each for mount-point extension
@@ -78,12 +91,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         if(swagger.getDefinitions() == null || swagger.getDefinitions().isEmpty()) return;
 
         // build a set of candidate refs based on provided module:grouping strings
-        Map<String, String> candidateDefs = new HashMap<>();
-        if(swagger.getDefinitions() != null) {
-            for(String s : swagger.getDefinitions().keySet()) {
-                candidateDefs.put(s.toLowerCase(), s);
-            }
-        }
+        Map<String, String> candidateDefs = buildCandidateDefinitions(swagger);
 
         // collect nodes by mount-point label
         Map<String, List<DataNodeContainer>> nodesByLabel = getMountPointFromModules();
@@ -102,8 +110,35 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
             // resolve mapped module:grouping entries to definition refs using context and dataRepo
             List<RefModel> refModels = new ArrayList<>();
             for(MountPointTarget target : targets) {
+                // module-only case: module is null, check if name resolves to a known module
+                if(target.getModule() == null) {
+                    Optional<Module> mod = findModuleByName(target.getName());
+                    if(mod.isPresent()) {
+                        // gather refs from the whole module
+                        List<RefModel> moduleRefs = resolveModuleMappings(mod.get().getName(), swagger);
+                        addUniqueRefModels(refModels, moduleRefs);
+                        // attach RPCs from this module to the mount nodes
+                        attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
+                        continue;
+                    } else {
+                        throw new IllegalArgumentException(target.getName() + " does not exist, check Your configuration & spelling");
+                    }
+                }
+
                 String modulePart = target.getModule() != null ? target.getModule() : "";
                 String namePart = target.getName();
+
+                // If mapping explicitly references a module (module:...), ensure RPCs from that module are attached to this mount
+                if(!modulePart.isEmpty()) {
+                    Optional<Module> moduleRef = findModuleByName(modulePart);
+                    if(moduleRef.isPresent()) {
+                        try {
+                            attachModuleRpcsToMount(moduleRef.get(), entry.getValue(), swagger);
+                        } catch (Exception e) {
+                            log.debug("Attaching RPCs for module {} failed: {}", modulePart, e.toString());
+                        }
+                    }
+                }
 
                 String defRef = null;
                 Object resolvedNode = null;
@@ -142,7 +177,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                 if(defRef != null) {
                     // ensure simple ref (strip prefix)
-                    String simple = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
+                    String simple = toSimpleDefinitionRef(defRef);
 
                     // If definition missing in swagger definitions, try to create it using data object builder
                     if(!swagger.getDefinitions().containsKey(simple) && resolvedNode != null && dataRepo instanceof DataObjectBuilder) {
@@ -173,6 +208,18 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                                     log.warn("Cannot create definition for mapping {}: {}", target, ex.toString());
                                 }
                             }
+
+                            // Additionally, ensure nested container/list models inside the resolved node are created
+                            try {
+                                if(resolvedNode instanceof GroupingDefinition) {
+                                    createModelsForGrouping((GroupingDefinition) resolvedNode, builder);
+                                } else if(resolvedNode instanceof DataNodeContainer) {
+                                    createModelsForContainer((DataNodeContainer) resolvedNode, builder);
+                                }
+                            } catch (Exception ex) {
+                                log.debug("Creating nested definitions for mapping {} failed: {}", target, ex.toString());
+                            }
+
                         } catch (Exception e) {
                             log.warn("Creating definition for mapping {} failed: {}", target, e.toString());
                         }
@@ -180,7 +227,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                     refModels.add(new RefModel("#/definitions/" + simple));
                 } else {
-                    log.warn("Cannot resolve mapping entry '{}' for mount label {}", target, label);
+                    throw new IllegalArgumentException(target + " does not exist, check Your configuration & spelling");
                 }
             }
 
@@ -200,34 +247,8 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     continue;
                 }
                 // get original model if present
-                String simpleRef = defRef.startsWith("#/definitions/") ? defRef.substring("#/definitions/".length()) : defRef;
+                String simpleRef = toSimpleDefinitionRef(defRef);
                 Model original = swagger.getDefinitions().get(simpleRef);
-
-                // remember whether the original already contained an empty inline 'object' entry
-                boolean hadEmptyObjectBefore = false;
-                if(original instanceof ComposedModel) {
-                    List<Model> origAllOf = ((ComposedModel) original).getAllOf();
-                    if(origAllOf != null) {
-                        for(Model o : origAllOf) {
-                            if(o instanceof ModelImpl) {
-                                ModelImpl mm = (ModelImpl) o;
-                                String t = mm.getType();
-                                java.util.Map<String, ?> props = mm.getProperties();
-                                if("object".equals(t) && (props == null || props.isEmpty())) {
-                                    hadEmptyObjectBefore = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else if(original instanceof ModelImpl) {
-                    ModelImpl mm = (ModelImpl) original;
-                    String t = mm.getType();
-                    java.util.Map<String, ?> props = mm.getProperties();
-                    if("object".equals(t) && (props == null || props.isEmpty())) {
-                        hadEmptyObjectBefore = true;
-                    }
-                }
 
                 ComposedModel cm = new ComposedModel();
                 cm.setInterfaces(refModels);
@@ -236,12 +257,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 if(!refModels.isEmpty()) cm.parent(refModels.get(0));
 
                 if(original instanceof ModelImpl) {
-                    ModelImpl mi = (ModelImpl) original;
-                    ModelImpl copy = new ModelImpl();
-                    copy.setType(mi.getType());
-                    copy.setProperties(mi.getProperties());
-                    copy.setDescription(mi.getDescription());
-                    cm.child(copy);
+                    cm.child(copyModelImpl((ModelImpl) original));
                 } else if (original instanceof ComposedModel) {
                     // preserve original allOf entries where possible to avoid dropping existing components
                     ComposedModel origCm = (ComposedModel) original;
@@ -294,168 +310,56 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         }
     }
 
+    private Map<String, String> buildCandidateDefinitions(Swagger swagger) {
+        Map<String, String> candidateDefs = new HashMap<>();
+        if(swagger.getDefinitions() == null) return candidateDefs;
+        for(String s : swagger.getDefinitions().keySet()) {
+            candidateDefs.put(s.toLowerCase(), s);
+        }
+        return candidateDefs;
+    }
+
+    private void addUniqueRefModels(List<RefModel> target, List<RefModel> source) {
+        for(RefModel candidate : source) {
+            boolean exists = target.stream().anyMatch(r -> r.getSimpleRef().equals(candidate.getSimpleRef()));
+            if(!exists) {
+                target.add(candidate);
+            }
+        }
+    }
+
+    private String toSimpleDefinitionRef(String defRef) {
+        return defRef != null && defRef.startsWith("#/definitions/")
+                ? defRef.substring("#/definitions/".length())
+                : defRef;
+    }
+
+    private RefModel toDefinitionRefModel(String defRef) {
+        return new RefModel("#/definitions/" + toSimpleDefinitionRef(defRef));
+    }
+
+    private ModelImpl copyModelImpl(ModelImpl source) {
+        ModelImpl copy = new ModelImpl();
+        copy.setType(source.getType());
+        copy.setProperties(source.getProperties());
+        copy.setDescription(source.getDescription());
+        return copy;
+    }
+
     /**
      * Try to discover mount-point extension argument for a node (DataSchemaNode or GroupingDefinition etc.) using reflection on effective statement
      */
     private String findMountPointLabel(Object node) {
         if(node == null) return null;
         try {
-            // try to call asEffectiveStatement() or getEffectiveStatement() reflectively (public or non-public)
-            Object eff = null;
-            // helper to try a named method (public) and then invoke it safely
-            java.util.function.BiFunction<Object, String, Object> tryInvokePublic = (obj, methodName) -> {
-                try {
-                    java.lang.reflect.Method m = obj.getClass().getMethod(methodName);
-                    try {
-                        return m.invoke(obj);
-                    } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException iae) {
-                        log.trace("Cannot invoke public method {} on {}: {}", methodName, obj.getClass(), iae.toString());
-                        return null;
-                    }
-                } catch (NoSuchMethodException ns) {
-                    return null;
-                }
-            };
-
-            eff = tryInvokePublic.apply(node, "asEffectiveStatement");
-            if(eff == null) eff = tryInvokePublic.apply(node, "getEffectiveStatement");
-
-            if(eff == null && !declaredAccessRestricted) {
-                // try declared (non-public) methods as a fallback; setAccessible may be blocked by Java modules
-                try {
-                    java.lang.reflect.Method dm = null;
-                    try {
-                        dm = node.getClass().getDeclaredMethod("asEffectiveStatement");
-                    } catch (NoSuchMethodException ns) {
-                        // ignore
-                    }
-                    if(dm != null) {
-                        try {
-                            dm.setAccessible(true);
-                            eff = dm.invoke(node);
-                        } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException iae) {
-                            log.trace("Declared access to asEffectiveStatement blocked for {}: {}", node.getClass(), iae.toString());
-                            declaredAccessRestricted = true;
-                        }
-                    }
-                } catch (Exception ex) {
-                    // ignore
-                }
-                if(eff == null && !declaredAccessRestricted) {
-                    try {
-                        java.lang.reflect.Method dm2 = null;
-                        try {
-                            dm2 = node.getClass().getDeclaredMethod("getEffectiveStatement");
-                        } catch (NoSuchMethodException ns2) {
-                            // ignore
-                        }
-                        if(dm2 != null) {
-                            try {
-                                dm2.setAccessible(true);
-                                eff = dm2.invoke(node);
-                            } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException iae) {
-                                log.trace("Declared access to getEffectiveStatement blocked for {}: {}", node.getClass(), iae.toString());
-                                declaredAccessRestricted = true;
-                            }
-                        }
-                    } catch (Exception ex2) {
-                        // ignore
-                    }
-                }
-            }
+            Object eff = resolveEffectiveStatement(node);
 
             if(eff == null) return null;
 
-            // collect potential collection-like holders (public methods, declared methods and declared fields)
             List<Collection<?>> candidateCols = new ArrayList<>();
-
-            // helper to add values from maps or collections
-            java.util.function.Consumer<Object> addPossibleCollection = (obj) -> {
-                if(obj == null) return;
-                if(obj instanceof Collection) {
-                    candidateCols.add((Collection<?>) obj);
-                } else if(obj instanceof Map) {
-                    Map<?,?> m = (Map<?,?>) obj;
-                    for(Object v : m.values()) {
-                        if(v instanceof Collection) candidateCols.add((Collection<?>) v);
-                        else candidateCols.add(Collections.singletonList(v));
-                    }
-                } else if(obj.getClass().isArray()) {
-                    Object[] arr = (Object[]) obj;
-                    candidateCols.add(Arrays.asList(arr));
-                } else {
-                    // single item -> wrap into collection
-                    candidateCols.add(Collections.singletonList(obj));
-                }
-            };
-
-            // public methods
-            for(java.lang.reflect.Method method : eff.getClass().getMethods()) {
-                try {
-                    Class<?> rt = method.getReturnType();
-                    if(java.util.Collection.class.isAssignableFrom(rt) || java.util.Map.class.isAssignableFrom(rt) || rt.isArray()) {
-                        method.setAccessible(true);
-                        Object res = null;
-                        try {
-                            res = method.invoke(eff);
-                        } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException iae) {
-                            // if access is blocked, mark restriction and skip declared access attempts later
-                            log.trace("Public method invocation blocked for {}#{}: {}", eff.getClass(), method.getName(), iae.toString());
-                            declaredAccessRestricted = true;
-                            continue;
-                        }
-                        addPossibleCollection.accept(res);
-                    }
-                } catch (Exception ex) {
-                    // ignore this method
-                }
-            }
-
-            // declared (possibly non-public) methods
-            if(!declaredAccessRestricted) {
-                for(java.lang.reflect.Method method : eff.getClass().getDeclaredMethods()) {
-                    try {
-                        Class<?> rt = method.getReturnType();
-                        if(java.util.Collection.class.isAssignableFrom(rt) || java.util.Map.class.isAssignableFrom(rt) || rt.isArray()) {
-                            method.setAccessible(true);
-                            Object res = null;
-                            try {
-                                res = method.invoke(eff);
-                            } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException iae) {
-                                log.trace("Declared method invocation blocked for {}#{}: {}", eff.getClass(), method.getName(), iae.toString());
-                                declaredAccessRestricted = true;
-                                break; // stop trying declared methods
-                            }
-                            addPossibleCollection.accept(res);
-                        }
-                    } catch (Exception ex) {
-                        // ignore
-                    }
-                }
-            }
-
-            // declared fields (some implementations keep sub-statements in private fields)
-            if(!declaredAccessRestricted) {
-                for(java.lang.reflect.Field f : eff.getClass().getDeclaredFields()) {
-                    try {
-                        Class<?> ft = f.getType();
-                        if(java.util.Collection.class.isAssignableFrom(ft) || java.util.Map.class.isAssignableFrom(ft) || ft.isArray()) {
-                            f.setAccessible(true);
-                            Object res = null;
-                            try {
-                                res = f.get(eff);
-                            } catch (IllegalAccessException iae) {
-                                log.trace("Declared field access blocked for {}#{}: {}", eff.getClass(), f.getName(), iae.toString());
-                                declaredAccessRestricted = true;
-                                break;
-                            }
-                            addPossibleCollection.accept(res);
-                        }
-                    } catch (Exception ex) {
-                        // ignore
-                    }
-                }
-            }
+            collectCollectionLikeMembersFromMethods(eff, candidateCols, false);
+            collectCollectionLikeMembersFromMethods(eff, candidateCols, true);
+            collectCollectionLikeMembersFromFields(eff, candidateCols);
 
             // iterate collected sub-statement collections and look for mount-point tokens
             for(Collection<?> col : candidateCols) {
@@ -465,33 +369,18 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     String text = item.toString().toLowerCase();
                     if(text.contains("mount-point") || text.contains("yangmnt:mount-point") || text.contains("yangmnt:mount_point")) {
                         // try to get argument via methods on item (try declared methods too)
-                        String arg = tryGetStringProperty(item, new String[]{"getArgument","getArg","getValue","getArgumentValue","getLabel","getName"});
+                        String arg = tryGetStringProperty(item, ARG_METHODS);
                         if(arg != null && !arg.isEmpty()) return arg;
 
                         // try declared methods as fallback for non-public item types
-                        if(!declaredAccessRestricted) {
-                            for(String nm : new String[]{"getArgument","getArg","getValue","getArgumentValue","getLabel","getName"}) {
-                                try {
-                                    java.lang.reflect.Method dm = item.getClass().getDeclaredMethod(nm);
-                                    dm.setAccessible(true);
-                                    Object v = dm.invoke(item);
-                                    if(v != null) return v.toString();
-                                } catch (IllegalAccessException iae) {
-                                    log.trace("Declared access blocked for item method {} of {}: {}", nm, item.getClass(), iae.toString());
-                                    declaredAccessRestricted = true;
-                                    break;
-                                } catch (Exception e) {
-                                    // ignore
-                                }
-                            }
-                        }
+                        String declaredArg = tryGetStringPropertyDeclared(item, ARG_METHODS);
+                        if(declaredArg != null && !declaredArg.isEmpty()) return declaredArg;
 
                         // fallback: try to parse token after 'mount-point' in toString
                         int idx = text.indexOf("mount-point");
                         if(idx >= 0) {
                             String after = text.substring(idx);
-                            // crude parse
-                            java.util.regex.Matcher mm = java.util.regex.Pattern.compile("mount[-_]point\\s+([a-zA-Z0-9_-]+)").matcher(after);
+                            java.util.regex.Matcher mm = MOUNT_POINT_PATTERN.matcher(after);
                             if(mm.find()) return mm.group(1);
                         }
                     }
@@ -506,6 +395,133 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         } catch (Exception e) {
             // ignore and return null
             log.debug("Error while inspecting node for mount-point: {}", e.toString());
+        }
+        return null;
+    }
+
+    private Object resolveEffectiveStatement(Object node) {
+        for(String methodName : EFFECTIVE_STATEMENT_METHODS) {
+            Object eff = invokePublicNoArg(node, methodName);
+            if(eff != null) return eff;
+        }
+        if(declaredAccessRestricted) return null;
+        for(String methodName : EFFECTIVE_STATEMENT_METHODS) {
+            Object eff = invokeDeclaredNoArg(node, methodName);
+            if(eff != null) return eff;
+            if(declaredAccessRestricted) break;
+        }
+        return null;
+    }
+
+    private Object invokePublicNoArg(Object target, String methodName) {
+        try {
+            java.lang.reflect.Method m = target.getClass().getMethod(methodName);
+            return m.invoke(target);
+        } catch (NoSuchMethodException e) {
+            return null;
+        } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException e) {
+            log.trace("Cannot invoke public method {} on {}: {}", methodName, target.getClass(), e.toString());
+            return null;
+        }
+    }
+
+    private Object invokeDeclaredNoArg(Object target, String methodName) {
+        try {
+            java.lang.reflect.Method method = target.getClass().getDeclaredMethod(methodName);
+            method.setAccessible(true);
+            return method.invoke(target);
+        } catch (NoSuchMethodException e) {
+            return null;
+        } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException e) {
+            log.trace("Declared access to {} blocked for {}: {}", methodName, target.getClass(), e.toString());
+            declaredAccessRestricted = true;
+            return null;
+        }
+    }
+
+    private void collectCollectionLikeMembersFromMethods(Object eff, List<Collection<?>> candidateCols, boolean declared) {
+        if(declared && declaredAccessRestricted) return;
+        java.lang.reflect.Method[] methods = declared ? eff.getClass().getDeclaredMethods() : eff.getClass().getMethods();
+        for(java.lang.reflect.Method method : methods) {
+            try {
+                Class<?> rt = method.getReturnType();
+                if(!(Collection.class.isAssignableFrom(rt) || Map.class.isAssignableFrom(rt) || rt.isArray())) {
+                    continue;
+                }
+                method.setAccessible(true);
+                Object res = method.invoke(eff);
+                addPossibleCollection(candidateCols, res);
+            } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
+                if(declared) {
+                    log.trace("Declared method invocation blocked for {}#{}: {}", eff.getClass(), method.getName(), e.toString());
+                    declaredAccessRestricted = true;
+                    break;
+                }
+                log.trace("Public method invocation blocked for {}#{}: {}", eff.getClass(), method.getName(), e.toString());
+                declaredAccessRestricted = true;
+            } catch (Exception e) {
+                // ignore this method
+            }
+        }
+    }
+
+    private void collectCollectionLikeMembersFromFields(Object eff, List<Collection<?>> candidateCols) {
+        if(declaredAccessRestricted) return;
+        for(java.lang.reflect.Field f : eff.getClass().getDeclaredFields()) {
+            try {
+                Class<?> ft = f.getType();
+                if(!(Collection.class.isAssignableFrom(ft) || Map.class.isAssignableFrom(ft) || ft.isArray())) {
+                    continue;
+                }
+                f.setAccessible(true);
+                Object res = f.get(eff);
+                addPossibleCollection(candidateCols, res);
+            } catch (IllegalAccessException e) {
+                log.trace("Declared field access blocked for {}#{}: {}", eff.getClass(), f.getName(), e.toString());
+                declaredAccessRestricted = true;
+                break;
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+    }
+
+    private void addPossibleCollection(List<Collection<?>> candidateCols, Object obj) {
+        if(obj == null) return;
+        if(obj instanceof Collection) {
+            candidateCols.add((Collection<?>) obj);
+        } else if(obj instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) obj;
+            for(Object v : map.values()) {
+                if(v instanceof Collection) {
+                    candidateCols.add((Collection<?>) v);
+                } else {
+                    candidateCols.add(Collections.singletonList(v));
+                }
+            }
+        } else if(obj.getClass().isArray()) {
+            Object[] arr = (Object[]) obj;
+            candidateCols.add(Arrays.asList(arr));
+        } else {
+            candidateCols.add(Collections.singletonList(obj));
+        }
+    }
+
+    private String tryGetStringPropertyDeclared(Object obj, String[] candidates) {
+        if(declaredAccessRestricted) return null;
+        for(String name : candidates) {
+            try {
+                java.lang.reflect.Method m = obj.getClass().getDeclaredMethod(name);
+                m.setAccessible(true);
+                Object v = m.invoke(obj);
+                if(v != null) return v.toString();
+            } catch (IllegalAccessException e) {
+                log.trace("Declared access blocked for item method {} of {}: {}", name, obj.getClass(), e.toString());
+                declaredAccessRestricted = true;
+                return null;
+            } catch (Exception e) {
+                // ignore
+            }
         }
         return null;
     }
@@ -565,5 +581,272 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     private <T extends org.opendaylight.yangtools.yang.model.api.SchemaNode & org.opendaylight.yangtools.yang.model.api.DataNodeContainer>
     void addModelUnchecked(DataObjectBuilder builder, Object o) {
         builder.addModel((T) o);
+    }
+
+    // New helper: find module by name in context
+    private Optional<Module> findModuleByName(String moduleName) {
+        if(moduleName == null || moduleName.isEmpty()) return Optional.empty();
+        // ensure the Optional type matches Module (ctx.getModules() may return ? extends Module)
+        return ctx.getModules().stream().map(m -> (Module) m).filter(m -> moduleName.equals(m.getName())).findFirst();
+    }
+
+    // New helper: resolve all groupings and top-level containers/lists from a module into RefModel list
+     private List<RefModel> resolveModuleMappings(String moduleName, Swagger swagger) {
+        List<RefModel> refs = new ArrayList<>();
+        Optional<Module> modOpt = findModuleByName(moduleName);
+        if(!modOpt.isPresent()) return refs;
+        Module mod = modOpt.get();
+
+        Set<String> seen = new HashSet<>();
+
+        // 1) groupings in context that belong to this module
+        for(GroupingDefinition g : ctx.getGroupings()) {
+            String gModule = moduleUtils.toModuleName(g);
+            if(!moduleName.equals(gModule)) continue;
+            try {
+                String defRef = dataRepo.getDefinitionRef(g);
+                if(defRef != null) {
+                    String simple = toSimpleDefinitionRef(defRef);
+                    // ensure model exists in swagger definitions; create if missing
+                    if((swagger.getDefinitions() == null || !swagger.getDefinitions().containsKey(simple)) && dataRepo instanceof DataObjectBuilder) {
+                        try {
+                            DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+                            try {
+                                String gname = null;
+                                try { gname = getNameUnchecked(g); } catch (Exception e) { /* ignore */ }
+                                if(gname != null) addModelUnchecked(builder, g, gname);
+                                else addModelUnchecked(builder, g);
+                            } catch (Exception ex) { /* ignore */ }
+                            try { createModelsForGrouping(g, builder); } catch (Exception ex2) { /* ignore */ }
+                        } catch (Exception exx) { /* ignore */ }
+                    }
+                    if(seen.add(simple)) refs.add(toDefinitionRefModel(simple));
+                }
+            } catch (Exception e) {
+                // try to create using builder if available
+                if(dataRepo instanceof DataObjectBuilder) {
+                    try {
+                        DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+                        try { addModelUnchecked(builder, g); } catch (Exception ex) { /* ignore */ }
+                        try { String defRef = dataRepo.getDefinitionRef(g); if(defRef != null) { String simple = toSimpleDefinitionRef(defRef); if(seen.add(simple)) refs.add(toDefinitionRefModel(simple)); } } catch (Exception ex2) { /* ignore */ }
+
+                        // ensure nested container/list models inside grouping are created as well
+                        try { createModelsForGrouping(g, builder); } catch (Exception ex3) { /* ignore */ }
+                    } catch (Exception ex) { /* ignore */ }
+                }
+            }
+        }
+
+        // 2) include top-level containers and lists from the module as well (to bring nested types)
+        if(dataRepo instanceof DataObjectBuilder) {
+            DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+            for(org.opendaylight.yangtools.yang.model.api.DataSchemaNode child : mod.getChildNodes()) {
+                if(child instanceof ContainerSchemaNode || child instanceof ListSchemaNode) {
+                    try {
+                        // Try to ensure model exists but DO NOT add its RefModel to the returned refs list.
+                        String defRef = resolveDefinition((DataNodeContainer) child);
+                        if(defRef == null) {
+                            // try to create model
+                            try { addModelUnchecked(builder, child); } catch (Exception ex) { /* ignore */ }
+                            // after creating, attempt to resolve again (but we won't add to refs)
+                            try { String defRef2 = resolveDefinition((DataNodeContainer) child); if(defRef2 != null) { String simple = toSimpleDefinitionRef(defRef2); /* ensure uniqueness in swagger but do not add to refs */ } } catch (Exception ex2) { /* ignore */ }
+
+                            // recursively create nested models for children so nested types exist in definitions
+                            try { createModelsForContainer((DataNodeContainer) child, builder); } catch (Exception ex3) { /* ignore */ }
+                        } else {
+                            // definition already present; still ensure nested definitions exist
+                            try { createModelsForContainer((DataNodeContainer) child, builder); } catch (Exception ex3) { /* ignore */ }
+                        }
+                    } catch (Exception e) {
+                        // ignore individual child
+                    }
+                }
+            }
+        }
+
+        // Note: For module-only mappings we intentionally include groupings and top-level containers/lists from the module
+        // to provide nested definitions required by mounted models.
+
+        return refs;
+    }
+
+    // recursively create models for grouping's inner containers/lists
+    private void createModelsForGrouping(GroupingDefinition grouping, DataObjectBuilder builder) {
+        if(grouping == null || builder == null) return;
+        // GroupingDefinition may contain DataSchemaNode children inside its body
+        DataNodeHelper.stream(grouping)
+                .filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
+                .map(n -> (DataNodeContainer) n)
+                .forEach(c -> {
+                    try {
+                        addModelUnchecked(builder, c);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    try { createModelsForContainer(c, builder); } catch (Exception e) { /* ignore */ }
+                });
+    }
+
+    // recursively create models for container/list and its nested containers/lists
+    private void createModelsForContainer(DataNodeContainer container, DataObjectBuilder builder) {
+        if(container == null || builder == null) return;
+        // for each child that is a container or list, ensure model exists and recurse
+        for(Object childObj : ((org.opendaylight.yangtools.yang.model.api.DataNodeContainer)container).getChildNodes()) {
+            if(!(childObj instanceof org.opendaylight.yangtools.yang.model.api.DataSchemaNode)) continue;
+            org.opendaylight.yangtools.yang.model.api.DataSchemaNode child = (org.opendaylight.yangtools.yang.model.api.DataSchemaNode) childObj;
+            if(child instanceof ContainerSchemaNode || child instanceof ListSchemaNode) {
+                DataNodeContainer dc = (DataNodeContainer) child;
+                try {
+                    addModelUnchecked(builder, dc);
+                } catch (Exception e) {
+                    // ignore
+                }
+                // recurse
+                try { createModelsForContainer(dc, builder); } catch (Exception e) { /* ignore */ }
+            }
+        }
+    }
+
+    // attach RPCs from module as operations under each mount node
+    private void attachModuleRpcsToMount(Module module, List<DataNodeContainer> mountNodes, Swagger swagger) {
+        if(module == null || mountNodes == null || mountNodes.isEmpty()) return;
+        log.debug("attachModuleRpcsToMount invoked for module {} with {} mount nodes", module.getName(), mountNodes.size());
+        if(!(dataRepo instanceof DataObjectBuilder)) {
+            log.info("No DataObjectBuilder available — skipping attaching RPC models for module {}", module.getName());
+            return;
+        }
+        DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
+
+        for(RpcDefinition rpc : module.getRpcs()) {
+            try {
+                log.debug("Processing RPC {} in module {}", rpc.getQName().getLocalName(), module.getName());
+                InputSchemaNode input = rpc.getInput();
+                OutputSchemaNode output = rpc.getOutput();
+                input = input.getChildNodes().isEmpty() ? null : input;
+                output = output.getChildNodes().isEmpty() ? null : output;
+
+                // create base operation (for global /operations paths) tagged with RPC module
+                Operation baseOp = new Operation();
+                baseOp.response(400, new Response().description("Internal error"));
+                baseOp.setParameters(new ArrayList<>());
+                baseOp.tag(module.getName());
+
+                if(input != null) {
+                    builder.addModel(input);
+                    ModelImpl inputModel = new ModelImpl().type(ModelImpl.OBJECT);
+                    inputModel.addProperty("input", new RefProperty(builder.getDefinitionRef(input)));
+                    baseOp.summary("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
+                    baseOp.description("operates on " + builder.getName(ContainerSchemaNodes.forRPC(rpc)));
+                    baseOp.parameter(new BodyParameter()
+                            .name(builder.getName(input) + ".body-param")
+                            .schema(inputModel)
+                            .description(input.getDescription().orElse(null))
+                    );
+                }
+
+                if(output != null) {
+                    ModelImpl model = new ModelImpl().type(ModelImpl.OBJECT);
+                    model.addProperty("output", new RefProperty(builder.getDefinitionRef(output)));
+                    builder.addModel(output);
+                    baseOp.response(200, new Response()
+                            .responseSchema(model)
+                            .description(output.getDescription().orElse("Correct response")));
+                }
+
+                baseOp.response(201, new Response().description("No response"));
+
+                // attach to each mount node as a path (operations root)
+                for(DataNodeContainer mount : mountNodes) {
+                    // Only create mounted RPC under data path; do not create operations-root entries here
+                    try {
+                        String dataPath = findDataPathForMount(mount, swagger);
+                        if(dataPath != null) {
+                            Operation mountedOp = copyOperation(baseOp);
+                            String mountModuleName = null;
+                            try {
+                                if(mount instanceof org.opendaylight.yangtools.yang.model.api.SchemaNode) {
+                                    mountModuleName = moduleUtils.toModuleName((org.opendaylight.yangtools.yang.model.api.SchemaNode) mount);
+                                } else if(mount instanceof Module) {
+                                    mountModuleName = ((Module) mount).getName();
+                                }
+                            } catch (Exception e) {
+                                mountModuleName = module.getName();
+                            }
+                            if(mountModuleName != null) mountedOp.tag(mountModuleName);
+
+                            String mountedRpcKey = dataPath + "/" + (mountModuleName != null ? mountModuleName : module.getName()) + ":" + rpc.getQName().getLocalName();
+                            if(swagger.getPaths() != null && swagger.getPaths().containsKey(mountedRpcKey)) {
+                                log.warn("Mounted RPC path {} already exists in swagger, skipping", mountedRpcKey);
+                            } else {
+                                if(swagger.getPaths() == null) swagger.setPaths(new java.util.LinkedHashMap<>());
+                                swagger.path(mountedRpcKey, new Path().post(mountedOp));
+                                log.info("Attached mounted RPC {} under data path {} for mount node {}", rpc.getQName().getLocalName(), mountedRpcKey, getNodeId(mount));
+
+                                // keep global operations/* entries (generated by the main path handlers);
+                                // this postprocessor only adds mounted data-path operations and must not remove globals
+                             }
+                         } else {
+                             log.debug("Could not find data path for mount node {}, skipping mounted RPC creation for {}", getNodeId(mount), rpc.getQName().getLocalName());
+                         }
+                     } catch (Exception e) {
+                         log.warn("Failed to attach mounted RPC {} for mount node {}: {}", rpc.getQName().getLocalName(), getNodeId(mount), e.toString());
+                     }
+                }
+
+            } catch (Exception e) {
+                log.warn("Failed to attach RPC {} from module {}: {}", rpc.getQName().getLocalName(), module.getName(), e.toString());
+            }
+        }
+    }
+
+    // New helper: try to discover the data path key in swagger for a given mount node
+    private String findDataPathForMount(DataNodeContainer mount, Swagger swagger) {
+        if(mount == null || swagger == null || swagger.getPaths() == null) return null;
+        String nodeId = getNodeId(mount);
+        if(nodeId == null) return null;
+
+        // candidate keys that start with /data/ and contain the node id as a segment
+        List<String> candidates = new ArrayList<>();
+        for(String key : swagger.getPaths().keySet()) {
+            if(!key.startsWith("/data/")) continue;
+            // split into segments, ignore leading empty
+            String[] segs = key.split("/");
+            for(String s : segs) {
+                if(s == null || s.isEmpty()) continue;
+                // compare with nodeId or with module:nodeId form
+                if(s.equals(nodeId) || s.endsWith(":" + nodeId) || s.startsWith(nodeId + "=") || s.contains(":" + nodeId + "=") || s.contains(":" + nodeId)) {
+                    candidates.add(key);
+                    break;
+                }
+            }
+        }
+
+        if(candidates.isEmpty()) return null;
+        // prefer the longest (most specific) path
+        candidates.sort(Comparator.comparingInt(String::length).reversed());
+        return candidates.get(0);
+    }
+
+    // New helper: shallow copy of an Operation (parameters, responses, summary, description) without tags
+    private Operation copyOperation(Operation src) {
+        Operation dst = new Operation();
+        try {
+            dst.setParameters(src.getParameters() == null ? null : new ArrayList<>(src.getParameters()));
+        } catch (Exception e) {
+            // ignore
+        }
+        try {
+            if(src.getResponses() != null) {
+                Map<String, Response> copy = new LinkedHashMap<>();
+                copy.putAll(src.getResponses());
+                dst.setResponses(copy);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        try { dst.setSummary(src.getSummary()); } catch (Exception e) {}
+        try { dst.setDescription(src.getDescription()); } catch (Exception e) {}
+        // do not copy tags - caller should set appropriate tag
+        return dst;
     }
 }

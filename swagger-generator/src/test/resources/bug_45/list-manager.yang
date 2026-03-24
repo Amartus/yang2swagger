@@ -40,7 +40,31 @@ module list-manager {
             type string;
         }
         container specific-config {
-             yangmnt:mount-point list-entry-data;
+            yangmnt:mount-point entry-type-specific-data;
+        }
+        action list-entry-action {
+            input {
+                leaf entry-action-input {
+                    type string;
+                }
+            }
+            output {
+                leaf entry-action-output {
+                    type string;
+                }
+            }
+        }
+    }
+    rpc list-manager-operation {
+        input {
+            leaf rpc-operation-input {
+                type string;
+            }
+        }
+        output {
+            leaf rpc-operation-output {
+                type string;
+            }
         }
     }
 }

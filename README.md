@@ -6,6 +6,7 @@ Having the definition you are able to build live documentation services, and gen
 Our tool supports:
 
  * rpc - which are translated into POST operations
+ * actions - which are translated into POST operations on instance-specific RESTCONF operation paths, analogously to rpc
  * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
  * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
  * leafrefs - which are represented as model attributes with typesUsageTreeBuilder of the referred leafs
@@ -80,14 +81,23 @@ module ...                             : List of YANG module names to generate
  -mount-point-mappings                 : Mount-point mappings as a JSON string.  
                                          Assigns mount-point labels (from YANG
                                          files) to lists of content types
-                                         that should be used when generating 
-                                         Swagger definitions. Expected format:
+                                         (can be passed as a specific type or
+                                         a whole module) that should be used 
+                                         when generating Swagger definitions. 
+                                         Expected format:
                                          '{"mount-label": ["module:grouping", ...]}'
+                                         or
+                                         '{"mount-label": ["module", ...]}'
                                          Example:
                                          '{"list-entry-data": [
                                          "entry-type-1:content",
                                          "entry-type-2:content"
                                          ]}'
+ -mount-point-mappings-json-file file  : JSON file containing mount-point
+                                         mappings in the same format as
+                                         -mount-point-mappings. Useful when the
+                                         mapping is too large to pass directly
+                                         on the command line.
 ```
 
 For example:

@@ -17,6 +17,7 @@ import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.postprocessor.MountPointPostProcessor;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
 import com.mrv.yangtools.codegen.impl.postprocessor.SortComplexModels;
@@ -128,10 +129,17 @@ public class SwaggerGenerator {
         //assign default strategy
         strategy(Strategy.optimizing);
 
-        //no exposed swagger API
-        target.info(new Info());
+        // set default path handler builder (avoid NPE if caller doesn't set one)
+        try {
+            AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+            this.pathHandlerBuilder = defaultBuilder;
+        } catch (Throwable t) {
+            // fallback: leave null and allow caller to set pathHandler explicitly
+            this.pathHandlerBuilder = null;
+        }
 
-        pathHandlerBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+        // no exposed swagger API
+        target.info(new Info());
         //default postprocessors
         postprocessor = new ReplaceEmptyWithParent();
     }
@@ -329,6 +337,14 @@ public class SwaggerGenerator {
 
         });
         //initialize plugable path handler
+        if(pathHandlerBuilder == null) {
+            try {
+                AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+                pathHandlerBuilder = defaultBuilder;
+            } catch (Throwable t) {
+                throw new IllegalStateException("No PathHandlerBuilder configured and default builder could not be instantiated", t);
+            }
+        }
         pathHandlerBuilder.configure(ctx, target, dataObjectsBuilder);
 
         modules.forEach(m -> new ModuleGenerator(m).generate());
@@ -399,6 +415,20 @@ public class SwaggerGenerator {
             pathCtx = pathCtx.drop();
         }
 
+        private void generateActions(ActionNodeContainer node) {
+            if(!toGenerate.contains(Elements.RPC)) return;
+
+            node.getActions().forEach(action -> {
+                pathCtx = new PathSegment(pathCtx)
+                        .withName(action.getQName().getLocalName())
+                        .withModule(moduleUtils.toModuleName(action));
+
+                handler.path(action, pathCtx);
+
+                pathCtx = pathCtx.drop();
+            });
+        }
+
         private void generate(DataSchemaNode node, final int depth) {
         	if(depth == 0) {
         		log.debug("Maximum depth level reached, skipping {} and it's childs", node.getPath());
@@ -420,6 +450,7 @@ public class SwaggerGenerator {
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
+                generateActions(cN);
                 cN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(cN);
 
@@ -435,6 +466,7 @@ public class SwaggerGenerator {
                         .withListNode(lN);
 
                 handler.path(lN, pathCtx);
+                generateActions(lN);
                 lN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(lN);
 

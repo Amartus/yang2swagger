@@ -19,6 +19,8 @@ import com.mrv.yangtools.codegen.impl.AnnotatingTypeConverter;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
 import com.mrv.yangtools.codegen.impl.OptimizingDataObjectBuilder;
 import com.mrv.yangtools.codegen.impl.UnpackingDataObjectsBuilder;
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.MountPointPostProcessor;
 import com.mrv.yangtools.codegen.impl.postprocessor.ReplaceEmptyWithParent;
 import io.swagger.models.Info;
 import io.swagger.models.Swagger;
@@ -65,6 +67,7 @@ public class IoCSwaggerGenerator {
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
     private PathHandlerBuilder pathHandlerBuilder;
+    private Map<String, List<String>> yangmntMappings = Collections.emptyMap();
 
     public IoCSwaggerGenerator defaultConfig() {
         //setting defaults
@@ -113,6 +116,15 @@ public class IoCSwaggerGenerator {
         this.moduleNames = modulesToGenerate.stream().map(ModuleLike::getName).collect(Collectors.toSet());
         //assign default strategy
         strategy(Strategy.optimizing);
+
+        try {
+            AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+            defaultBuilder.useModuleName();
+            this.pathHandlerBuilder = defaultBuilder;
+        } catch (Throwable t) {
+            // fallback: leave null and allow caller to set pathHandler explicitly
+            this.pathHandlerBuilder = null;
+        }
 
         //no exposed swagger API
         target.info(new Info());
@@ -255,7 +267,7 @@ public class IoCSwaggerGenerator {
     public IoCSwaggerGenerator maxDepth(int maxDepth) {
         this.maxDepth = maxDepth;
         return this;
-    }    
+    }
 
     /**
      * Run Swagger generation for configured modules. Write result to target. The file format
@@ -295,6 +307,15 @@ public class IoCSwaggerGenerator {
 
         });
         //initialize plugable path handler
+        if(pathHandlerBuilder == null) {
+            try {
+                AbstractPathHandlerBuilder defaultBuilder = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+                defaultBuilder.useModuleName();
+                pathHandlerBuilder = defaultBuilder;
+            } catch (Throwable t) {
+                throw new IllegalStateException("No PathHandlerBuilder configured and default builder could not be instantiated", t);
+            }
+        }
         pathHandlerBuilder.configure(ctx, target, dataObjectsBuilder);
 
         modules.forEach(m -> new ModuleGenerator(m).generate());
@@ -361,6 +382,20 @@ public class IoCSwaggerGenerator {
             pathCtx = pathCtx.drop();
         }
 
+        private void generateActions(ActionNodeContainer node) {
+            if(!toGenerate.contains(Elements.RPC)) return;
+
+            node.getActions().forEach(action -> {
+                pathCtx = new PathSegment(pathCtx)
+                        .withName(action.getQName().getLocalName())
+                        .withModule(moduleUtils.toModuleName(action));
+
+                handler.path(action, pathCtx);
+
+                pathCtx = pathCtx.drop();
+            });
+        }
+
         private void generate(DataSchemaNode node, final int depth) {
         	if(depth == 0) {
         		log.debug("Maxmium depth level reached, skipping {} and it's childs", node.getPath());
@@ -382,6 +417,7 @@ public class IoCSwaggerGenerator {
                         .asReadOnly(!cN.isConfiguration());
 
                 handler.path(cN, pathCtx);
+                generateActions(cN);
                 cN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(cN);
 
@@ -397,6 +433,7 @@ public class IoCSwaggerGenerator {
                         .withListNode(lN);
 
                 handler.path(lN, pathCtx);
+                generateActions(lN);
                 lN.getChildNodes().forEach(n -> generate(n, depth-1));
                 dataObjectsBuilder.addModel(lN);
 

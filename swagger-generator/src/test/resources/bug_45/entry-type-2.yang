@@ -2,6 +2,7 @@ module entry-type-2 {
     namespace "urn:demo:entry-type-2";
     prefix "et2";
     yang-version 1.1;
+    import list-manager {prefix lm;}
     revision "2022-03-12" {
         description "First cut";
     }
