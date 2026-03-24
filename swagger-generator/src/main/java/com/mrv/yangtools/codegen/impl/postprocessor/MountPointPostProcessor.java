@@ -32,18 +32,15 @@ import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 import org.opendaylight.yangtools.yang.model.api.InputSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.OutputSchemaNode;
 import org.opendaylight.yangtools.yang.data.util.ContainerSchemaNodes;
-import java.util.regex.Pattern;
 
 /**
  * Lightweight postprocessor that attaches mount definitions to target models.
  */
 public class MountPointPostProcessor implements java.util.function.Consumer<Swagger> {
     private static final Logger log = LoggerFactory.getLogger(MountPointPostProcessor.class);
-    private static final String[] EFFECTIVE_STATEMENT_METHODS = {"asEffectiveStatement", "getEffectiveStatement"};
-    private static final String[] ARG_METHODS = {"getArgument", "getArg", "getValue", "getArgumentValue", "getLabel", "getName"};
-    private static final Pattern MOUNT_POINT_PATTERN = Pattern.compile("mount[-_]point\\s+([a-zA-Z0-9_-]+)");
 
-    private static volatile boolean declaredAccessRestricted = false;
+    /** Encapsulates all reflection-based probing of ODL effective-statement internals. */
+    private final EffectiveStatementReflectionHelper reflectionHelper = new EffectiveStatementReflectionHelper();
 
     private final MountPointMappings mappings;
     private final EffectiveModelContext ctx;
@@ -142,7 +139,16 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
                 String defRef = null;
                 Object resolvedNode = null;
-                // 1) try groupings
+                // Three-tier fallback resolution order:
+                //   1) Exact match on grouping QName local name (and optional module).
+                //   2) Exact match on top-level container/list QName local name (and optional module).
+                //   3) Fuzzy substring match against all existing swagger definition keys.
+                //      WARNING: tier 3 uses a substring (contains) check, so a target named e.g.
+                //      "config" would also match "specific-config". This may silently resolve
+                //      to the wrong definition. If you see unexpected mount-point attachments,
+                //      check the WARN log emitted when this heuristic fires.
+
+                // 1) try groupings - exact QName match
                 for(GroupingDefinition g : ctx.getGroupings()) {
                     String gLocal = g.getQName().getLocalName();
                     String gModule = moduleUtils.toModuleName(g);
@@ -151,7 +157,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                         if(defRef != null) break;
                     }
                 }
-                // 2) try containers/lists
+                // 2) try containers/lists - exact QName match
                 if(defRef == null) {
                     Iterator<org.opendaylight.yangtools.yang.model.api.SchemaNode> it = DataNodeHelper.stream(ctx)
                             .filter(n -> n instanceof ContainerSchemaNode || n instanceof ListSchemaNode)
@@ -168,11 +174,17 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                         }
                     }
                 }
-                // 3) fallback to previous candidateDefs heuristic
+                // 3) fallback: fuzzy substring heuristic against swagger definitions (may match wrong definition - see comment above)
                 if(defRef == null && !candidateDefs.isEmpty()) {
                     String lower = namePart.toLowerCase();
                     Optional<String> match = candidateDefs.keySet().stream().filter(k -> k.contains(lower) && (modulePart.isEmpty() || k.contains(modulePart.toLowerCase()))).findFirst();
-                    if(match.isPresent()) defRef = "#/definitions/" + candidateDefs.get(match.get());
+                    if(match.isPresent()) {
+                        defRef = "#/definitions/" + candidateDefs.get(match.get());
+                        log.warn("Mount-point target '{}{}' resolved via fuzzy substring match to definition '{}'. "
+                                        + "This heuristic uses contains() and may have matched the wrong definition. "
+                                        + "Consider using an exact module:grouping mapping to avoid ambiguity.",
+                                modulePart.isEmpty() ? "" : modulePart + ":", namePart, candidateDefs.get(match.get()));
+                    }
                 }
 
                 if(defRef != null) {
@@ -347,196 +359,14 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     }
 
     /**
-     * Try to discover mount-point extension argument for a node (DataSchemaNode or GroupingDefinition etc.) using reflection on effective statement
+     * Try to discover mount-point extension argument for a node (DataSchemaNode or GroupingDefinition etc.)
+     * using reflection on effective statement.
+     * <p>
+     * Delegates to {@link EffectiveStatementReflectionHelper} which encapsulates all
+     * reflection-based probing so it can be unit-tested in isolation.
      */
     private String findMountPointLabel(Object node) {
-        if(node == null) return null;
-        try {
-            Object eff = resolveEffectiveStatement(node);
-
-            if(eff == null) return null;
-
-            List<Collection<?>> candidateCols = new ArrayList<>();
-            collectCollectionLikeMembersFromMethods(eff, candidateCols, false);
-            collectCollectionLikeMembersFromMethods(eff, candidateCols, true);
-            collectCollectionLikeMembersFromFields(eff, candidateCols);
-
-            // iterate collected sub-statement collections and look for mount-point tokens
-            for(Collection<?> col : candidateCols) {
-                if(col == null) continue;
-                for(Object item : col) {
-                    if(item == null) continue;
-                    String text = item.toString().toLowerCase();
-                    if(text.contains("mount-point") || text.contains("yangmnt:mount-point") || text.contains("yangmnt:mount_point")) {
-                        // try to get argument via methods on item (try declared methods too)
-                        String arg = tryGetStringProperty(item, ARG_METHODS);
-                        if(arg != null && !arg.isEmpty()) return arg;
-
-                        // try declared methods as fallback for non-public item types
-                        String declaredArg = tryGetStringPropertyDeclared(item, ARG_METHODS);
-                        if(declaredArg != null && !declaredArg.isEmpty()) return declaredArg;
-
-                        // fallback: try to parse token after 'mount-point' in toString
-                        int idx = text.indexOf("mount-point");
-                        if(idx >= 0) {
-                            String after = text.substring(idx);
-                            java.util.regex.Matcher mm = MOUNT_POINT_PATTERN.matcher(after);
-                            if(mm.find()) return mm.group(1);
-                        }
-                    }
-                }
-            }
-
-        } catch (java.lang.reflect.InaccessibleObjectException iae) {
-            // access blocked by JVM/module system: avoid noisy error logs and mark restriction
-            log.trace("Reflective access to effective statement blocked for node class {}: {}", node.getClass(), iae.toString());
-            declaredAccessRestricted = true;
-            return null;
-        } catch (Exception e) {
-            // ignore and return null
-            log.debug("Error while inspecting node for mount-point: {}", e.toString());
-        }
-        return null;
-    }
-
-    private Object resolveEffectiveStatement(Object node) {
-        for(String methodName : EFFECTIVE_STATEMENT_METHODS) {
-            Object eff = invokePublicNoArg(node, methodName);
-            if(eff != null) return eff;
-        }
-        if(declaredAccessRestricted) return null;
-        for(String methodName : EFFECTIVE_STATEMENT_METHODS) {
-            Object eff = invokeDeclaredNoArg(node, methodName);
-            if(eff != null) return eff;
-            if(declaredAccessRestricted) break;
-        }
-        return null;
-    }
-
-    private Object invokePublicNoArg(Object target, String methodName) {
-        try {
-            java.lang.reflect.Method m = target.getClass().getMethod(methodName);
-            return m.invoke(target);
-        } catch (NoSuchMethodException e) {
-            return null;
-        } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException e) {
-            log.trace("Cannot invoke public method {} on {}: {}", methodName, target.getClass(), e.toString());
-            return null;
-        }
-    }
-
-    private Object invokeDeclaredNoArg(Object target, String methodName) {
-        try {
-            java.lang.reflect.Method method = target.getClass().getDeclaredMethod(methodName);
-            method.setAccessible(true);
-            return method.invoke(target);
-        } catch (NoSuchMethodException e) {
-            return null;
-        } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException | RuntimeException e) {
-            log.trace("Declared access to {} blocked for {}: {}", methodName, target.getClass(), e.toString());
-            declaredAccessRestricted = true;
-            return null;
-        }
-    }
-
-    private void collectCollectionLikeMembersFromMethods(Object eff, List<Collection<?>> candidateCols, boolean declared) {
-        if(declared && declaredAccessRestricted) return;
-        java.lang.reflect.Method[] methods = declared ? eff.getClass().getDeclaredMethods() : eff.getClass().getMethods();
-        for(java.lang.reflect.Method method : methods) {
-            try {
-                Class<?> rt = method.getReturnType();
-                if(!(Collection.class.isAssignableFrom(rt) || Map.class.isAssignableFrom(rt) || rt.isArray())) {
-                    continue;
-                }
-                method.setAccessible(true);
-                Object res = method.invoke(eff);
-                addPossibleCollection(candidateCols, res);
-            } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
-                if(declared) {
-                    log.trace("Declared method invocation blocked for {}#{}: {}", eff.getClass(), method.getName(), e.toString());
-                    declaredAccessRestricted = true;
-                    break;
-                }
-                log.trace("Public method invocation blocked for {}#{}: {}", eff.getClass(), method.getName(), e.toString());
-                declaredAccessRestricted = true;
-            } catch (Exception e) {
-                // ignore this method
-            }
-        }
-    }
-
-    private void collectCollectionLikeMembersFromFields(Object eff, List<Collection<?>> candidateCols) {
-        if(declaredAccessRestricted) return;
-        for(java.lang.reflect.Field f : eff.getClass().getDeclaredFields()) {
-            try {
-                Class<?> ft = f.getType();
-                if(!(Collection.class.isAssignableFrom(ft) || Map.class.isAssignableFrom(ft) || ft.isArray())) {
-                    continue;
-                }
-                f.setAccessible(true);
-                Object res = f.get(eff);
-                addPossibleCollection(candidateCols, res);
-            } catch (IllegalAccessException e) {
-                log.trace("Declared field access blocked for {}#{}: {}", eff.getClass(), f.getName(), e.toString());
-                declaredAccessRestricted = true;
-                break;
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-    }
-
-    private void addPossibleCollection(List<Collection<?>> candidateCols, Object obj) {
-        if(obj == null) return;
-        if(obj instanceof Collection) {
-            candidateCols.add((Collection<?>) obj);
-        } else if(obj instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) obj;
-            for(Object v : map.values()) {
-                if(v instanceof Collection) {
-                    candidateCols.add((Collection<?>) v);
-                } else {
-                    candidateCols.add(Collections.singletonList(v));
-                }
-            }
-        } else if(obj.getClass().isArray()) {
-            Object[] arr = (Object[]) obj;
-            candidateCols.add(Arrays.asList(arr));
-        } else {
-            candidateCols.add(Collections.singletonList(obj));
-        }
-    }
-
-    private String tryGetStringPropertyDeclared(Object obj, String[] candidates) {
-        if(declaredAccessRestricted) return null;
-        for(String name : candidates) {
-            try {
-                java.lang.reflect.Method m = obj.getClass().getDeclaredMethod(name);
-                m.setAccessible(true);
-                Object v = m.invoke(obj);
-                if(v != null) return v.toString();
-            } catch (IllegalAccessException e) {
-                log.trace("Declared access blocked for item method {} of {}: {}", name, obj.getClass(), e.toString());
-                declaredAccessRestricted = true;
-                return null;
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-        return null;
-    }
-
-    private String tryGetStringProperty(Object obj, String[] candidates) {
-        for(String name : candidates) {
-            try {
-                java.lang.reflect.Method m = obj.getClass().getMethod(name);
-                Object v = m.invoke(obj);
-                if(v != null) return v.toString();
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-        return null;
+        return reflectionHelper.findMountPointLabel(node);
     }
 
     private String getNodeId(DataNodeContainer node) {
@@ -712,7 +542,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         if(module == null || mountNodes == null || mountNodes.isEmpty()) return;
         log.debug("attachModuleRpcsToMount invoked for module {} with {} mount nodes", module.getName(), mountNodes.size());
         if(!(dataRepo instanceof DataObjectBuilder)) {
-            log.info("No DataObjectBuilder available — skipping attaching RPC models for module {}", module.getName());
+            log.info("No DataObjectBuilder available - skipping attaching RPC models for module {}", module.getName());
             return;
         }
         DataObjectBuilder builder = (DataObjectBuilder) dataRepo;

@@ -59,6 +59,7 @@ public class IoCSwaggerGenerator {
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
     private Consumer<Swagger> postprocessor;
+    private Consumer<Swagger> mountPointPostProcessor;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
     private int maxDepth = Integer.MAX_VALUE;
@@ -67,7 +68,6 @@ public class IoCSwaggerGenerator {
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
     private PathHandlerBuilder pathHandlerBuilder;
-    private Map<String, List<String>> yangmntMappings = Collections.emptyMap();
 
     public IoCSwaggerGenerator defaultConfig() {
         //setting defaults
@@ -270,6 +270,21 @@ public class IoCSwaggerGenerator {
     }
 
     /**
+     * Provide mappings for mount-point extension: label -> targets.
+     * <p>
+     * Safe to call more than once — replaces any previously registered
+     * {@link MountPointPostProcessor} instead of appending a second one.
+     */
+    public IoCSwaggerGenerator yangmntMappings(MountPointMappings mappings) {
+        if(mappings != null && !mappings.isEmpty()) {
+            this.mountPointPostProcessor = new MountPointPostProcessor(mappings, ctx, moduleUtils, dataObjectsBuilder);
+        } else {
+            this.mountPointPostProcessor = null;
+        }
+        return this;
+    }
+
+    /**
      * Run Swagger generation for configured modules. Write result to target. The file format
      * depends on configured {@link IoCSwaggerGenerator.Format}
      * @param target writer
@@ -334,7 +349,8 @@ public class IoCSwaggerGenerator {
 
     /**
      * Replace empty definitions with their parents.
-     * Sort models (ref models first)
+     * Sort models (ref models first).
+     * Run mount-point post-processor if configured.
      * @param target to work on
      */
     protected void postProcessSwagger(Swagger target) {
@@ -343,6 +359,9 @@ public class IoCSwaggerGenerator {
             return;
         }
         postprocessor.accept(target);
+        if(mountPointPostProcessor != null) {
+            mountPointPostProcessor.accept(target);
+        }
     }
 
     private class ModuleGenerator {

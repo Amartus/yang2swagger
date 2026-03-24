@@ -127,6 +127,10 @@ public class Main {
         if (output != null && !output.trim().isEmpty()) {
             out = new FileOutputStream(output);
         }
+
+        if (isOptionSet(mountPointMappingsJson) && isOptionSet(mountPointMappings)) {
+            throw new IllegalArgumentException("mount-point-mappings & mount-point-mappings-json cannot be set at the same time");
+        }
     }
 
     void generate() throws IOException, ReactorException {
@@ -193,9 +197,6 @@ public class Main {
     }
 
     private void setYangmntMappings(SwaggerGenerator generator) {
-        if (isOptionSet(mountPointMappingsJson) && isOptionSet(mountPointMappings)) {
-            throw new IllegalArgumentException("mount-point-mappings & mount-point-mappings-json cannot be set at the same time");
-        }
 
         if (isOptionSet(mountPointMappingsJson)) {
             MountPointMappings mapping = parseMountPointMappingJson();

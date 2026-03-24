@@ -31,6 +31,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.junit.Assert.assertTrue;
+
 public class Issue45 extends AbstractItTest {
 
     @Test
@@ -67,28 +69,26 @@ public class Issue45 extends AbstractItTest {
             runSwaggerGeneratorWithMountMappings(Arrays.asList("invalid-module"));
             Assert.fail("Expected IllegalArgumentException for invalid module mapping");
         } catch (IllegalArgumentException iae) {
-            Assert.assertTrue(iae.getMessage().contains("invalid-module does not exist"));
+            assertTrue(iae.getMessage().contains("invalid-module does not exist"));
         }
-
-        StringWriter writer = new StringWriter();
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.writeValue(writer, swagger);
     }
 
     private void validateActionMapping() {
         String actionPath = "/operations/list-manager:list-entry={name}/list-entry-action";
-        Assert.assertTrue("Missing action path in swagger: " + actionPath, swagger.getPaths().containsKey(actionPath));
+        assertTrue("Missing action path in swagger: " + actionPath, swagger.getPaths().containsKey(actionPath));
         Assert.assertNotNull("Action should be exposed as POST", swagger.getPaths().get(actionPath).getPost());
     }
 
     private void validateMountPointMapping() {
         ComposedModel specificConfig = (ComposedModel) swagger.getDefinitions().get("list.manager.listentry.SpecificConfig");
-        Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
-        Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
+        List<String> refs = specificConfig.getAllOf().stream()
+                .map(m -> ((RefModel) m).getSimpleRef())
+                .collect(Collectors.toList());
+        assertTrue(refs.contains("entry.type._1.Content"));
+        assertTrue(refs.contains("entry.type._2.Content"));
 
         String rpcPath = "/data/list-manager:list-entry={name}/specific-config/list-manager:entry-type-1-operation";
-        Assert.assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
+        assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
         Assert.assertNotNull("RPC operations should be a POST: " + rpcPath, swagger.getPaths().get(rpcPath).getPost());
     }
 

@@ -60,6 +60,7 @@ public class SwaggerGenerator {
     private final Set<String> moduleNames;
     private final ModuleUtils moduleUtils;
     private Consumer<Swagger> postprocessor;
+    private Consumer<Swagger> mountPointPostProcessor;
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
     private int maxDepth = Integer.MAX_VALUE;
@@ -275,13 +276,17 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Provide mappings for mount-point extension: label -> targets
+     * Provide mappings for mount-point extension: label -> targets.
+     * <p>
+     * Safe to call more than once — replaces any previously registered
+     * {@link MountPointPostProcessor} instead of appending a second one.
      */
     public SwaggerGenerator yangmntMappings(MountPointMappings mappings) {
         this.yangmntMappings = mappings;
         if(yangmntMappings != null && !yangmntMappings.isEmpty()) {
-            // run a lightweight post processor to update composed models for mount-points
-            this.appendPostProcessor(new MountPointPostProcessor(yangmntMappings, ctx, moduleUtils, dataObjectsBuilder));
+            this.mountPointPostProcessor = new MountPointPostProcessor(yangmntMappings, ctx, moduleUtils, dataObjectsBuilder);
+        } else {
+            this.mountPointPostProcessor = null;
         }
         return this;
     }
@@ -367,7 +372,8 @@ public class SwaggerGenerator {
 
     /**
      * Replace empty definitions with their parents.
-     * Sort models (ref models first)
+     * Sort models (ref models first).
+     * Run mount-point post-processor if configured.
      * @param target to work on
      */
     protected void postProcessSwagger(Swagger target) {
@@ -376,6 +382,9 @@ public class SwaggerGenerator {
             return;
         }
         postprocessor.accept(target);
+        if(mountPointPostProcessor != null) {
+            mountPointPostProcessor.accept(target);
+        }
     }
 
     private class ModuleGenerator {
