@@ -17,6 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.mrv.yangtools.codegen.DataObjectRepo;
 import com.mrv.yangtools.codegen.DataObjectBuilder;
+import com.mrv.yangtools.codegen.MountPointTarget;
+import com.mrv.yangtools.codegen.MountPointMappings;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
@@ -29,13 +31,13 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
     private static volatile boolean declaredAccessRestricted = false;
 
-    private final Map<String, List<String>> mappings;
+    private final MountPointMappings mappings;
     private final EffectiveModelContext ctx;
     private final ModuleUtils moduleUtils;
     private final DataObjectRepo dataRepo;
 
-    public MountPointPostProcessor(Map<String, List<String>> mappings, EffectiveModelContext ctx, ModuleUtils moduleUtils, DataObjectRepo dataRepo) {
-        this.mappings = mappings == null ? Collections.emptyMap() : mappings;
+    public MountPointPostProcessor(MountPointMappings mappings, EffectiveModelContext ctx, ModuleUtils moduleUtils, DataObjectRepo dataRepo) {
+        this.mappings = mappings == null ? new MountPointMappings(Collections.emptyMap()) : mappings;
         this.ctx = ctx;
         this.moduleUtils = moduleUtils;
         this.dataRepo = dataRepo;
@@ -112,15 +114,14 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         // for each found mount label, look up CLI mapping and attach definitions to corresponding swagger models
         for(Map.Entry<String, List<DataNodeContainer>> entry : nodesByLabel.entrySet()) {
             String label = entry.getKey();
-            List<String> mapped = mappings.get(label);
-            if(mapped == null || mapped.isEmpty()) continue;
+            List<MountPointTarget> targets = mappings.getTargets(label);
+            if(targets.isEmpty()) continue;
 
             // resolve mapped module:grouping entries to definition refs using context and dataRepo
             List<RefModel> refModels = new ArrayList<>();
-            for(String map : mapped) {
-                String[] parts = map.split(":",2);
-                String modulePart = parts.length > 0 ? parts[0].trim() : "";
-                String namePart = parts.length > 1 ? parts[1].trim() : parts[0].trim();
+            for(MountPointTarget target : targets) {
+                String modulePart = target.getModule() != null ? target.getModule() : "";
+                String namePart = target.getName();
 
                 String defRef = null;
                 Object resolvedNode = null;
@@ -178,26 +179,26 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                                     try {
                                         addModelUnchecked(builder, resolvedNode);
                                     } catch (Exception ex) {
-                                        log.warn("Cannot create definition for mapping {}: {}", map, ex.toString());
+                                        log.warn("Cannot create definition for mapping {}: {}", target, ex.toString());
                                     }
                                 } catch (Exception ex) {
-                                    log.warn("Cannot create definition for mapping {}: {}", map, ex.toString());
+                                    log.warn("Cannot create definition for mapping {}: {}", target, ex.toString());
                                 }
                             } else {
                                 try {
                                     addModelUnchecked(builder, resolvedNode);
                                 } catch (Exception ex) {
-                                    log.warn("Cannot create definition for mapping {}: {}", map, ex.toString());
+                                    log.warn("Cannot create definition for mapping {}: {}", target, ex.toString());
                                 }
                             }
                         } catch (Exception e) {
-                            log.warn("Creating definition for mapping {} failed: {}", map, e.toString());
+                            log.warn("Creating definition for mapping {} failed: {}", target, e.toString());
                         }
                     }
 
                     refModels.add(new RefModel("#/definitions/" + simple));
                 } else {
-                    log.warn("Cannot resolve mapping entry '{}' for mount label {}", map, label);
+                    log.warn("Cannot resolve mapping entry '{}' for mount label {}", target, label);
                 }
             }
 

@@ -9,8 +9,9 @@
 
 package com.mrv.yangtools.codegen.main;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mrv.yangtools.codegen.MountPointMappings;
+import com.mrv.yangtools.codegen.MountPointTarget;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
@@ -34,10 +35,7 @@ import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -170,7 +168,7 @@ public class Main {
         // parse and set mount-point mappings if provided
         if (mountPointMappings != null && !mountPointMappings.trim().isEmpty()) {
             log.debug("Raw mount-point-mappings arg: {}", mountPointMappings);
-            Map<String, List<String>> mapping = parseMountPointMappings(mountPointMappings);
+            MountPointMappings mapping = parseMountPointMappings(mountPointMappings);
             log.debug("Parsed mount-point-mappings: {}", mapping);
             if (mapping != null && !mapping.isEmpty()) {
                 generator.yangmntMappings(mapping);
@@ -199,35 +197,10 @@ public class Main {
         generator.generate(new OutputStreamWriter(out));
     }
 
-    private Map<String, List<String>> parseMountPointMappings(String raw) {
+    private MountPointMappings parseMountPointMappings(String raw) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            Map<String, List<String>> rm = mapper.readValue(raw, new TypeReference<Map<String, List<String>>>(){});
-            log.debug("parseMountPointMappings parsed map size={}", rm == null ? 0 : rm.size());
-            // basic validation: non-null keys and non-empty list values with non-empty items
-            if (rm == null) {
-                log.error("Parsed mount-point mappings is null for input: {}", raw);
-                throw new IllegalArgumentException("mount-point-mappings must be a JSON object mapping strings to list of strings");
-            }
-            for (Map.Entry<String, List<String>> e : rm.entrySet()) {
-                if (e.getKey() == null || e.getKey().trim().isEmpty()) {
-                    log.error("Invalid mount-point-mappings: contains empty key. Input: {}", raw);
-                    throw new IllegalArgumentException("mount-point-mappings contains empty key");
-                }
-                if (e.getValue() == null || e.getValue().isEmpty()) {
-                    log.error("Invalid mount-point-mappings: value list empty for key {}. Input: {}", e.getKey(), raw);
-                    throw new IllegalArgumentException("mount-point-mappings contains empty list for key: " + e.getKey());
-                }
-                for (String v : e.getValue()) {
-                    if (v == null || v.trim().isEmpty()) {
-                        log.error("Invalid mount-point-mappings: contains empty mapping item for key {}. Input: {}", e.getKey(), raw);
-                        throw new IllegalArgumentException("mount-point-mappings contains empty mapping for key: " + e.getKey());
-                    }
-                }
-            }
-            return rm;
-        } catch (IllegalArgumentException iae) {
-            throw iae;
+            return mapper.readValue(raw, MountPointMappings.class);
         } catch (Exception e) {
             log.error("Invalid mount-point-mappings format: {}", raw, e);
             throw new IllegalArgumentException("Invalid mount-point-mappings format", e);

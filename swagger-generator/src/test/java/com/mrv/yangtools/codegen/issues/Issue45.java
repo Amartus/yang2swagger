@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.AbstractItTest;
+import com.mrv.yangtools.codegen.MountPointMappings;
+import com.mrv.yangtools.codegen.MountPointTarget;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.ComposedModel;
@@ -64,9 +66,12 @@ public class Issue45 extends AbstractItTest {
                 .collect(Collectors.toList());
 
         SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig();
-        Map<String, List<String>> mapping = new HashMap<>();
-        mapping.put("list-entry-data", Arrays.asList("entry-type-1:content", "entry-type-2:content"));
-        generator.yangmntMappings(mapping);
+        Map<String, List<MountPointTarget>> mappingMap = new HashMap<>();
+        mappingMap.put("list-entry-data", Arrays.asList(
+                MountPointTarget.parse("entry-type-1:content"),
+                MountPointTarget.parse("entry-type-2:content")
+        ));
+        generator.yangmntMappings(new MountPointMappings(mappingMap));
         swagger = generator.generate();
     }
 

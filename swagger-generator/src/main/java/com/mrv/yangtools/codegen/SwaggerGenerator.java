@@ -67,7 +67,7 @@ public class SwaggerGenerator {
     private Set<Elements> toGenerate;
     private final AnnotatingTypeConverter converter;
     private PathHandlerBuilder pathHandlerBuilder;
-    private Map<String, List<String>> yangmntMappings = Collections.emptyMap();
+    private MountPointMappings yangmntMappings;
 
     public SwaggerGenerator defaultConfig() {
         //setting defaults
@@ -267,15 +267,23 @@ public class SwaggerGenerator {
     }
 
     /**
-     * Provide mappings for mount-point extension: label -> list of module:grouping strings
+     * Provide mappings for mount-point extension: label -> targets
      */
-    public SwaggerGenerator yangmntMappings(Map<String, List<String>> mappings) {
-        this.yangmntMappings = mappings == null ? Collections.emptyMap() : mappings;
+    public SwaggerGenerator yangmntMappings(MountPointMappings mappings) {
+        this.yangmntMappings = mappings;
         if(yangmntMappings != null && !yangmntMappings.isEmpty()) {
             // run a lightweight post processor to update composed models for mount-points
             this.appendPostProcessor(new MountPointPostProcessor(yangmntMappings, ctx, moduleUtils, (com.mrv.yangtools.codegen.DataObjectRepo) dataObjectsBuilder));
         }
         return this;
+    }
+
+    /**
+     * Provide mappings for mount-point extension: label -> targets (deprecated, use MountPointMappings)
+     */
+    @Deprecated
+    public SwaggerGenerator yangmntMappings(Map<String, List<MountPointTarget>> mappings) {
+        return yangmntMappings(new MountPointMappings(mappings));
     }
 
     /**
