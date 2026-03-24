@@ -273,7 +273,7 @@ public class SwaggerGenerator {
         this.yangmntMappings = mappings;
         if(yangmntMappings != null && !yangmntMappings.isEmpty()) {
             // run a lightweight post processor to update composed models for mount-points
-            this.appendPostProcessor(new MountPointPostProcessor(yangmntMappings, ctx, moduleUtils, (com.mrv.yangtools.codegen.DataObjectRepo) dataObjectsBuilder));
+            this.appendPostProcessor(new MountPointPostProcessor(yangmntMappings, ctx, moduleUtils, dataObjectsBuilder));
         }
         return this;
     }

@@ -44,49 +44,31 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     }
 
     // Collect mount-point labels across all modules and return mapping label -> list of DataNodeContainer nodes
-    private Map<String, List<DataNodeContainer>> getMointPointFromModules() {
+    private Map<String, List<DataNodeContainer>> getMountPointFromModules() {
         Map<String, List<DataNodeContainer>> nodesByLabel = new HashMap<>();
         ctx.getModules()
                 .forEach(module -> collectMountPointsFromContainer(module, nodesByLabel));
         return nodesByLabel;
     }
 
-    // Scan provided container (module/container/list) for DataSchemaNode instances and try to find mount-point label on each
+    // Scan provided container (module/container/list) for nodes and try to find mount-point label on each
     private void collectMountPointsFromContainer(DataNodeContainer container, Map<String, List<DataNodeContainer>> nodesByLabel) {
         // For debugging keep basic info
         log.debug("Scanning container for mount-points: {}", container);
 
-        // DataNodeHelper.stream(container) yields schema nodes; check each for mount-point extension
+        // DataNodeHelper.stream(container) yields schema nodes (recursively); check each for mount-point extension
         DataNodeHelper.stream(container)
-                .filter(n -> n instanceof DataSchemaNode)
-                .map(n -> (DataSchemaNode) n)
                 .forEach(node -> {
                     String label = findMountPointLabel(node);
                     if (label != null && !label.isEmpty()) {
                         log.info("Found mount-point label '{}' in node {}", label, node);
-                        // ensure we store the container node (only Container/List are DataNodeContainer)
+                        // ensure we store the container node (only Container/List/Module/Grouping are DataNodeContainer)
                         if (node instanceof DataNodeContainer) {
                             nodesByLabel.computeIfAbsent(label, k -> new ArrayList<>()).add((DataNodeContainer) node);
                         } else {
-                            // in some models the mount-point may appear on grouping or other statement; try to attach parent container
-                            // find parent container by walking up via module scan (best-effort)
-                            // fallback: add the module root as the container
-                            // note: Module also implements DataNodeContainer, so add module if no better parent
+                            // if not a container, associate with the parent container passed to this method
                             nodesByLabel.computeIfAbsent(label, k -> new ArrayList<>()).add(container);
                         }
-                    }
-                });
-
-        // Additionally, check groupings inside the container (groupings are not DataSchemaNode) using DataNodeHelper
-        DataNodeHelper.stream(container)
-                .filter(n -> n instanceof GroupingDefinition)
-                .map(n -> (GroupingDefinition) n)
-                .forEach(g -> {
-                    String label = findMountPointLabel(g);
-                    if (label != null && !label.isEmpty()) {
-                        log.info("Found mount-point label '{}' in grouping {}", label, g);
-                        // groupings are not DataNodeContainer, associate to the module-level container
-                        nodesByLabel.computeIfAbsent(label, k -> new ArrayList<>()).add(container);
                     }
                 });
     }
@@ -104,7 +86,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         }
 
         // collect nodes by mount-point label
-        Map<String, List<DataNodeContainer>> nodesByLabel = getMointPointFromModules();
+        Map<String, List<DataNodeContainer>> nodesByLabel = getMountPointFromModules();
 
         if(nodesByLabel.isEmpty()) {
             log.info("No mount-point extensions found in model");

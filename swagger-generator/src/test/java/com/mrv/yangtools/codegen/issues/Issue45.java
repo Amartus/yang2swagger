@@ -47,11 +47,10 @@ public class Issue45 extends AbstractItTest {
         Assert.assertEquals("entry.type._1.Content", ((RefModel) specificConfig.getAllOf().get(0)).getSimpleRef());
         Assert.assertEquals("entry.type._2.Content", ((RefModel) specificConfig.getAllOf().get(1)).getSimpleRef());
 
-        String yaml = writer.toString();
-
-        try (PrintWriter out = new PrintWriter("swagger.yml")) {
-            out.print(yaml);
-        }
+        // String yaml = writer.toString();
+        // try (PrintWriter out = new PrintWriter("swagger.yml")) {
+        //    out.print(yaml);
+        // }
     }
 
     private void runSwaggerGeneratorWithMountMappings() throws ReactorException {

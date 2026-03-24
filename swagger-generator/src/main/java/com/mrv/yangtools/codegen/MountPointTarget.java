@@ -12,6 +12,7 @@ package com.mrv.yangtools.codegen;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -38,8 +39,8 @@ public class MountPointTarget {
     public static MountPointTarget fromJson(Object value) {
         if (value instanceof String) {
             return parse((String) value);
-        } else if (value instanceof java.util.Map) {
-            java.util.Map<?, ?> map = (java.util.Map<?, ?>) value;
+        } else if (value instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) value;
             Object moduleObj = map.get("module");
             Object nameObj = map.get("name");
             if (nameObj == null) {

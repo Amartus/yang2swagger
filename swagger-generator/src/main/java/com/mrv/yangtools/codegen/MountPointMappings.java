@@ -12,6 +12,7 @@ package com.mrv.yangtools.codegen;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,7 +33,7 @@ public class MountPointMappings {
             String key = entry.getKey();
             Object value = entry.getValue();
             if (value instanceof List) {
-                List<MountPointTarget> targets = new java.util.ArrayList<>();
+                List<MountPointTarget> targets = new ArrayList<>();
                 for (Object item : (List<?>) value) {
                     targets.add(MountPointTarget.fromJson(item));
                 }
@@ -50,7 +51,7 @@ public class MountPointMappings {
         } else {
             Map<String, List<MountPointTarget>> copy = new LinkedHashMap<>();
             for (Map.Entry<String, List<MountPointTarget>> entry : mappings.entrySet()) {
-                copy.put(entry.getKey(), Collections.unmodifiableList(new java.util.ArrayList<>(entry.getValue())));
+                copy.put(entry.getKey(), Collections.unmodifiableList(new ArrayList<>(entry.getValue())));
             }
             this.mappings = Collections.unmodifiableMap(copy);
         }
