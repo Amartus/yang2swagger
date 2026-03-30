@@ -89,7 +89,7 @@ public class Main {
     @Option(name = "-basepath", usage="")
     public String basePath = "localhost:1234";
 
-    @Option(name = "-mount-point-mappings", usage = "Mount point mappings as JSON string, e.g. '{\"list-entry-data\": [\"entry-type-1:content\", \"entry-type-2:content\"]}'", metaVar = "json")
+    @Option(name = "-mount-point-mappings", usage = "Mount point mappings as JSON string, e.g. '{\"mount-point-name\": [\"mounted-module-name\", \"mounted-module-name\"]}'", metaVar = "json")
     public String mountPointMappings = "";
 
     @Option(name = "-mount-point-mappings-json-file", usage = "JSON file containing mount point mappings, same format as -mount-point-mappings", metaVar = "file")

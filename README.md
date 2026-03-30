@@ -89,9 +89,9 @@ module ...                             : List of YANG module names to generate
                                          or
                                          '{"mount-label": ["module", ...]}'
                                          Example:
-                                         '{"list-entry-data": [
-                                         "entry-type-1:content",
-                                         "entry-type-2:content"
+                                         '{"mount-point-name": [
+                                         "mounted-module-name:top-level-container",
+                                         "mounted-module-name:top-level-container"
                                          ]}'
  -mount-point-mappings-json-file file  : JSON file containing mount-point
                                          mappings in the same format as
