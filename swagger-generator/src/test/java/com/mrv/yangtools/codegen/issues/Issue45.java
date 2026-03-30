@@ -9,7 +9,13 @@ import com.mrv.yangtools.codegen.MountPointTarget;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.ComposedModel;
+import io.swagger.models.Model;
+import io.swagger.models.ModelImpl;
 import io.swagger.models.RefModel;
+import io.swagger.models.parameters.BodyParameter;
+import io.swagger.models.parameters.Parameter;
+import io.swagger.models.properties.Property;
+import io.swagger.models.properties.RefProperty;
 import org.junit.Test;
 import org.junit.Assert;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
@@ -90,6 +96,34 @@ public class Issue45 extends AbstractItTest {
         String rpcPath = "/data/list-manager:list-entry={name}/specific-config/entry-type-1:entry-type-1-operation";
         assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
         Assert.assertNotNull("RPC operations should be a POST: " + rpcPath, swagger.getPaths().get(rpcPath).getPost());
+
+        List<Parameter> parameters = swagger.getPaths().get(rpcPath).getPost().getParameters();
+        Assert.assertNotNull("Mounted RPC should define POST parameters: " + rpcPath, parameters);
+
+        BodyParameter bodyParameter = parameters.stream()
+                .filter(p -> p instanceof BodyParameter && "body".equals(p.getIn()))
+                .map(p -> (BodyParameter) p)
+                .findFirst()
+                .orElse(null);
+
+        Assert.assertNotNull("Mounted RPC should define body payload parameter: " + rpcPath, bodyParameter);
+        Assert.assertEquals("body", bodyParameter.getIn());
+        Assert.assertEquals("entry.type._1.entrytype1operation.Input.body-param", bodyParameter.getName());
+        Assert.assertFalse("Body payload parameter should be optional", Boolean.TRUE.equals(bodyParameter.getRequired()));
+
+        Model bodySchema = bodyParameter.getSchema();
+        Assert.assertNotNull("Body parameter should expose schema", bodySchema);
+        Assert.assertTrue("Body schema should be an object model", bodySchema instanceof ModelImpl);
+        Assert.assertEquals("object", ((ModelImpl) bodySchema).getType());
+        Assert.assertNotNull("Body schema should expose properties", bodySchema.getProperties());
+
+        Property inputProperty = bodySchema.getProperties().get("input");
+        Assert.assertNotNull("Body schema should expose 'input' property", inputProperty);
+        Assert.assertTrue("Body schema input property should be a ref", inputProperty instanceof RefProperty);
+
+        RefProperty inputRef = (RefProperty) inputProperty;
+        Assert.assertEquals("#/definitions/entry.type._1.entrytype1operation.Input", inputRef.get$ref());
+        Assert.assertEquals("#/definitions/entry.type._1.entrytype1operation.Input", inputRef.getOriginalRef());
     }
 
     private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {
