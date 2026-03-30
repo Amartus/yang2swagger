@@ -604,7 +604,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                             }
                             if(mountModuleName != null) mountedOp.tag(mountModuleName);
 
-                            String mountedRpcKey = dataPath + "/" + (mountModuleName != null ? mountModuleName : module.getName()) + ":" + rpc.getQName().getLocalName();
+                            String mountedRpcKey = dataPath + "/" + module.getName() + ":" + rpc.getQName().getLocalName();
                             if(swagger.getPaths() != null && swagger.getPaths().containsKey(mountedRpcKey)) {
                                 log.warn("Mounted RPC path {} already exists in swagger, skipping", mountedRpcKey);
                             } else {

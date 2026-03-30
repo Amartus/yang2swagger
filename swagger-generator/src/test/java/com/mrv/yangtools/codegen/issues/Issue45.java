@@ -87,7 +87,7 @@ public class Issue45 extends AbstractItTest {
         assertTrue(refs.contains("entry.type._1.Content"));
         assertTrue(refs.contains("entry.type._2.Content"));
 
-        String rpcPath = "/data/list-manager:list-entry={name}/specific-config/list-manager:entry-type-1-operation";
+        String rpcPath = "/data/list-manager:list-entry={name}/specific-config/entry-type-1:entry-type-1-operation";
         assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
         Assert.assertNotNull("RPC operations should be a POST: " + rpcPath, swagger.getPaths().get(rpcPath).getPost());
     }
