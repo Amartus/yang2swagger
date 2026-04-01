@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.mrv.yangtools.codegen.DataObjectRepo;
 import com.mrv.yangtools.codegen.DataObjectBuilder;
+import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.MountPointTarget;
 import com.mrv.yangtools.codegen.MountPointMappings;
 import org.opendaylight.yangtools.yang.model.api.GroupingDefinition;
@@ -46,6 +47,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     private final EffectiveModelContext ctx;
     private final ModuleUtils moduleUtils;
     private final DataObjectRepo dataRepo;
+    private final Map<String, Swagger> moduleSwaggerCache = new HashMap<>();
 
     public MountPointPostProcessor(MountPointMappings mappings, EffectiveModelContext ctx, ModuleUtils moduleUtils, DataObjectRepo dataRepo) {
         this.mappings = mappings == null ? new MountPointMappings(Collections.emptyMap()) : mappings;
@@ -116,6 +118,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                         addUniqueRefModels(refModels, moduleRefs);
                         // attach RPCs from this module to the mount nodes
                         attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
+                        attachModuleDataPathsToMount(mod.get(), entry.getValue(), swagger);
                         continue;
                     } else {
                         throw new IllegalArgumentException(target.getName() + " does not exist, check Your configuration & spelling");
@@ -131,6 +134,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     if(moduleRef.isPresent()) {
                         try {
                             attachModuleRpcsToMount(moduleRef.get(), entry.getValue(), swagger);
+                            attachModuleDataPathsToMount(moduleRef.get(), entry.getValue(), swagger);
                         } catch (Exception e) {
                             log.debug("Attaching RPCs for module {} failed: {}", modulePart, e.toString());
                         }
@@ -629,6 +633,80 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         }
     }
 
+    // Generate mounted data API for module under each mount data path.
+    private void attachModuleDataPathsToMount(Module module, List<DataNodeContainer> mountNodes, Swagger swagger) {
+        if(module == null || mountNodes == null || mountNodes.isEmpty() || swagger == null) return;
+
+        Map<String, Path> sourceDataPaths = resolveModuleDataPaths(module, swagger);
+        if(sourceDataPaths.isEmpty()) {
+            log.debug("No source data paths found for module {}, skipping mounted data path generation", module.getName());
+            return;
+        }
+
+        for(DataNodeContainer mount : mountNodes) {
+            String mountDataPath = findDataPathForMount(mount, swagger);
+            if(mountDataPath == null) {
+                log.debug("Could not find data path for mount node {}, skipping mounted data paths for module {}", getNodeId(mount), module.getName());
+                continue;
+            }
+
+            for(Map.Entry<String, Path> source : sourceDataPaths.entrySet()) {
+                String mountedPath = mountDataPath + source.getKey().substring("/data".length());
+                if(swagger.getPaths() != null && swagger.getPaths().containsKey(mountedPath)) continue;
+
+                if(swagger.getPaths() == null) swagger.setPaths(new LinkedHashMap<>());
+                swagger.path(mountedPath, copyPathWithModuleTag(source.getValue(), module.getName()));
+                log.info("Attached mounted data path {} for module {} under mount node {}", mountedPath, module.getName(), getNodeId(mount));
+            }
+        }
+    }
+
+    private Map<String, Path> resolveModuleDataPaths(Module module, Swagger swagger) {
+        Map<String, Path> sourceDataPaths = new LinkedHashMap<>();
+        String modulePrefix = "/data/" + module.getName() + ":";
+
+        if(swagger.getPaths() != null) {
+            for(Map.Entry<String, Path> entry : swagger.getPaths().entrySet()) {
+                String pathKey = entry.getKey();
+                if(pathKey != null && pathKey.startsWith(modulePrefix) && entry.getValue() != null) {
+                    sourceDataPaths.put(pathKey, entry.getValue());
+                }
+            }
+        }
+
+        if(!sourceDataPaths.isEmpty()) return sourceDataPaths;
+
+        // Module was not part of modulesToGenerate - generate its data API in isolation and reuse it as source.
+        Swagger moduleSwagger = moduleSwaggerCache.computeIfAbsent(module.getName(), ignored -> generateModuleDataSwagger(module));
+        if(moduleSwagger == null || moduleSwagger.getPaths() == null) return sourceDataPaths;
+
+        for(Map.Entry<String, Path> entry : moduleSwagger.getPaths().entrySet()) {
+            String pathKey = entry.getKey();
+            if(pathKey != null && pathKey.startsWith(modulePrefix) && entry.getValue() != null) {
+                sourceDataPaths.put(pathKey, entry.getValue());
+            }
+        }
+
+        if(moduleSwagger.getDefinitions() != null) {
+            if(swagger.getDefinitions() == null) swagger.setDefinitions(new LinkedHashMap<>());
+            moduleSwagger.getDefinitions().forEach((name, model) -> swagger.getDefinitions().putIfAbsent(name, model));
+        }
+
+        return sourceDataPaths;
+    }
+
+    private Swagger generateModuleDataSwagger(Module module) {
+        try {
+            SwaggerGenerator generator = new SwaggerGenerator(ctx, Collections.singletonList(module)).defaultConfig()
+                    .elements(SwaggerGenerator.Elements.DATA)
+                    .pathHandler(new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder().useModuleName());
+            return generator.generate();
+        } catch (Exception e) {
+            log.warn("Failed to generate standalone data API for module {}: {}", module.getName(), e.toString());
+            return null;
+        }
+    }
+
     // New helper: try to discover the data path key in swagger for a given mount node
     private String findDataPathForMount(DataNodeContainer mount, Swagger swagger) {
         if(mount == null || swagger == null || swagger.getPaths() == null) return null;
@@ -637,24 +715,60 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
 
         // candidate keys that start with /data/ and contain the node id as a segment
         List<String> candidates = new ArrayList<>();
+        List<String> terminalCandidates = new ArrayList<>();
         for(String key : swagger.getPaths().keySet()) {
             if(!key.startsWith("/data/")) continue;
             // split into segments, ignore leading empty
             String[] segs = key.split("/");
-            for(String s : segs) {
+            for(int i = 0; i < segs.length; i++) {
+                String s = segs[i];
                 if(s == null || s.isEmpty()) continue;
                 // compare with nodeId or with module:nodeId form
                 if(s.equals(nodeId) || s.endsWith(":" + nodeId) || s.startsWith(nodeId + "=") || s.contains(":" + nodeId + "=") || s.contains(":" + nodeId)) {
                     candidates.add(key);
+                    if(i == segs.length - 1) {
+                        terminalCandidates.add(key);
+                    }
                     break;
                 }
             }
         }
 
         if(candidates.isEmpty()) return null;
+        if(!terminalCandidates.isEmpty()) {
+            terminalCandidates.sort(Comparator.comparingInt(String::length).reversed());
+            return terminalCandidates.get(0);
+        }
         // prefer the longest (most specific) path
         candidates.sort(Comparator.comparingInt(String::length).reversed());
         return candidates.get(0);
+    }
+
+    private Path copyPathWithModuleTag(Path src, String moduleName) {
+        Path dst = new Path();
+        if(src == null) return dst;
+
+        if(src.getGet() != null) dst.setGet(copyOperationWithTag(src.getGet(), moduleName));
+        if(src.getPut() != null) dst.setPut(copyOperationWithTag(src.getPut(), moduleName));
+        if(src.getPost() != null) dst.setPost(copyOperationWithTag(src.getPost(), moduleName));
+        if(src.getDelete() != null) dst.setDelete(copyOperationWithTag(src.getDelete(), moduleName));
+        if(src.getPatch() != null) dst.setPatch(copyOperationWithTag(src.getPatch(), moduleName));
+        if(src.getHead() != null) dst.setHead(copyOperationWithTag(src.getHead(), moduleName));
+        if(src.getOptions() != null) dst.setOptions(copyOperationWithTag(src.getOptions(), moduleName));
+
+        try {
+            if(src.getParameters() != null) dst.setParameters(new ArrayList<>(src.getParameters()));
+        } catch (Exception e) {
+            // ignore
+        }
+
+        return dst;
+    }
+
+    private Operation copyOperationWithTag(Operation src, String moduleName) {
+        Operation dst = copyOperation(src);
+        dst.setTags(new ArrayList<>(Collections.singletonList(moduleName)));
+        return dst;
     }
 
     // New helper: shallow copy of an Operation (parameters, responses, summary, description) without tags
@@ -676,6 +790,13 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         }
         try { dst.setSummary(src.getSummary()); } catch (Exception e) {}
         try { dst.setDescription(src.getDescription()); } catch (Exception e) {}
+        try { dst.setOperationId(src.getOperationId()); } catch (Exception e) {}
+        try { dst.setConsumes(src.getConsumes() == null ? null : new ArrayList<>(src.getConsumes())); } catch (Exception e) {}
+        try { dst.setProduces(src.getProduces() == null ? null : new ArrayList<>(src.getProduces())); } catch (Exception e) {}
+        try { dst.setSchemes(src.getSchemes() == null ? null : new ArrayList<>(src.getSchemes())); } catch (Exception e) {}
+        try { dst.setDeprecated(src.isDeprecated()); } catch (Exception e) {}
+        try { dst.setSecurity(src.getSecurity() == null ? null : new ArrayList<>(src.getSecurity())); } catch (Exception e) {}
+        try { dst.setExternalDocs(src.getExternalDocs()); } catch (Exception e) {}
         // do not copy tags - caller should set appropriate tag
         return dst;
     }

@@ -16,8 +16,8 @@ import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
-import org.junit.Test;
 import org.junit.Assert;
+import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
@@ -97,6 +97,7 @@ public class Issue45 extends AbstractItTest {
         assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
         Assert.assertNotNull("RPC operations should be a POST: " + rpcPath, swagger.getPaths().get(rpcPath).getPost());
 
+        assertTrue("Mounted operation should have entry-type-1 tag assigned", swagger.getPaths().get(rpcPath).getPost().getTags().contains("entry-type-1"));
         List<Parameter> parameters = swagger.getPaths().get(rpcPath).getPost().getParameters();
         Assert.assertNotNull("Mounted RPC should define POST parameters: " + rpcPath, parameters);
 
@@ -124,6 +125,17 @@ public class Issue45 extends AbstractItTest {
         RefProperty inputRef = (RefProperty) inputProperty;
         Assert.assertEquals("#/definitions/entry.type._1.entrytype1operation.Input", inputRef.get$ref());
         Assert.assertEquals("#/definitions/entry.type._1.entrytype1operation.Input", inputRef.getOriginalRef());
+
+        String mountedType2Path = "/data/list-manager:list-entry={name}/specific-config/entry-type-2:type-2";
+        assertTrue("Missing mounted data path for entry-type-2: " + mountedType2Path, swagger.getPaths().containsKey(mountedType2Path));
+        Assert.assertNotNull("Mounted entry-type-2 should expose GET", swagger.getPaths().get(mountedType2Path).getGet());
+        Assert.assertNotNull("Mounted entry-type-2 should expose POST", swagger.getPaths().get(mountedType2Path).getPost());
+        Assert.assertNotNull("Mounted entry-type-2 should expose PUT", swagger.getPaths().get(mountedType2Path).getPut());
+        Assert.assertNotNull("Mounted entry-type-2 should expose DELETE", swagger.getPaths().get(mountedType2Path).getDelete());
+        assertTrue("Mounted entry-type-2 should keep module tag", swagger.getPaths().get(mountedType2Path).getGet().getTags().contains("entry-type-2"));
+
+        String globalType2Path = "/data/entry-type-2:type-2";
+        Assert.assertFalse("entry-type-2 should not be generated globally when excluded from modulesToGenerate", swagger.getPaths().containsKey(globalType2Path));
     }
 
     private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {
@@ -134,8 +146,8 @@ public class Issue45 extends AbstractItTest {
 
         Collection<? extends Module> modulesToGenerate = context.getModules().stream()
                 .filter(module -> module.getName().equals("list-manager")
-                        || module.getName().equals("entry-type-1")
-                        || module.getName().equals("entry-type-2"))
+                        || module.getName().equals("entry-type-1"))
+                        //|| module.getName().equals("entry-type-2"))
                 .collect(Collectors.toList());
 
         SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig()
