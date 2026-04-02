@@ -1,7 +1,5 @@
 package com.mrv.yangtools.codegen.issues;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mrv.yangtools.codegen.AbstractItTest;
 import com.mrv.yangtools.codegen.MountPointMappings;
 import com.mrv.yangtools.codegen.MountPointTarget;
@@ -17,7 +15,6 @@ import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
-import io.swagger.util.Yaml;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
@@ -25,7 +22,6 @@ import org.opendaylight.yangtools.yang.model.api.Module;
 import org.opendaylight.yangtools.yang.parser.spi.meta.ReactorException;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
@@ -82,8 +78,8 @@ public class Issue45 extends AbstractItTest {
         List<String> refs = specificConfig.getAllOf().stream()
                 .map(m -> ((RefModel) m).getSimpleRef())
                 .collect(Collectors.toList());
-        assertTrue(refs.contains("entry.type._1.Content"));
-        assertTrue(refs.contains("entry.type._2.Content"));
+        assertTrue(refs.contains("entry.type._1.content.Type1Wrapper"));
+        assertTrue(refs.contains("entry.type._2.content.Type2Wrapper"));
 
         String rpcPath = "/data/list-manager:list-entry={name}/specific-config/entry-type-1:entry-type-1-operation";
         assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));

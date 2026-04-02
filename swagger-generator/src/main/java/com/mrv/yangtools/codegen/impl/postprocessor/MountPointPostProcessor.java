@@ -11,6 +11,7 @@ import io.swagger.models.Operation;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.PathParameter;
+import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
@@ -115,12 +116,13 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 if(target.getModule() == null) {
                     Optional<Module> mod = findModuleByName(target.getName());
                     if(mod.isPresent()) {
-                        // gather refs from the whole module
-                        List<RefModel> moduleRefs = resolveModuleMappings(mod.get().getName(), swagger);
-                        addUniqueRefModels(refModels, moduleRefs);
-                        // attach RPCs from this module to the mount nodes
+                        // Attach data paths first so that the standalone swagger (with Wrapper types)
+                        // is generated and merged into the main swagger before we resolve grouping refs.
                         attachModuleRpcsToMount(mod.get(), entry.getValue(), swagger);
                         attachModuleDataPathsToMount(mod.get(), entry.getValue(), swagger);
+                        // gather refs from the whole module (Wrapper types now exist in swagger)
+                        List<RefModel> moduleRefs = resolveModuleMappings(mod.get().getName(), swagger);
+                        addUniqueRefModels(refModels, moduleRefs);
                         continue;
                     } else {
                         throw new IllegalArgumentException(target.getName() + " does not exist, check Your configuration & spelling");
@@ -243,7 +245,12 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                         }
                     }
 
-                    refModels.add(new RefModel("#/definitions/" + simple));
+                    List<String> wrappers = findWrapperDefsForGrouping(swagger, simple, modulePart);
+                    if (!wrappers.isEmpty()) {
+                        for (String w : wrappers) refModels.add(new RefModel("#/definitions/" + w));
+                    } else {
+                        refModels.add(new RefModel("#/definitions/" + simple));
+                    }
                 } else {
                     throw new IllegalArgumentException(target + " does not exist, check Your configuration & spelling");
                 }
@@ -456,7 +463,14 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                             try { createModelsForGrouping(g, builder); } catch (Exception ex2) { /* ignore */ }
                         } catch (Exception exx) { /* ignore */ }
                     }
-                    if(seen.add(simple)) refs.add(toDefinitionRefModel(simple));
+                    if(seen.add(simple)) {
+                        List<String> wrappers = findWrapperDefsForGrouping(swagger, simple, moduleName);
+                        if (!wrappers.isEmpty()) {
+                            for (String w : wrappers) refs.add(toDefinitionRefModel(w));
+                        } else {
+                            refs.add(toDefinitionRefModel(simple));
+                        }
+                    }
                 }
             } catch (Exception e) {
                 // try to create using builder if available
@@ -464,7 +478,7 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                     try {
                         DataObjectBuilder builder = (DataObjectBuilder) dataRepo;
                         try { addModelUnchecked(builder, g); } catch (Exception ex) { /* ignore */ }
-                        try { String defRef = dataRepo.getDefinitionRef(g); if(defRef != null) { String simple = toSimpleDefinitionRef(defRef); if(seen.add(simple)) refs.add(toDefinitionRefModel(simple)); } } catch (Exception ex2) { /* ignore */ }
+                        try { String defRef = dataRepo.getDefinitionRef(g); if(defRef != null) { String simple = toSimpleDefinitionRef(defRef); if(seen.add(simple)) { List<String> wrappers = findWrapperDefsForGrouping(swagger, simple, moduleName); if (!wrappers.isEmpty()) { for (String w : wrappers) refs.add(toDefinitionRefModel(w)); } else { refs.add(toDefinitionRefModel(simple)); } } } } catch (Exception ex2) { /* ignore */ }
 
                         // ensure nested container/list models inside grouping are created as well
                         try { createModelsForGrouping(g, builder); } catch (Exception ex3) { /* ignore */ }
@@ -713,6 +727,9 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
             SwaggerGenerator generator = new SwaggerGenerator(ctx, Collections.singletonList(module)).defaultConfig()
                     .elements(SwaggerGenerator.Elements.DATA)
                     .pathHandler(new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder().useModuleName());
+            // Ensure *Wrapper definitions are generated for this module's containers/lists,
+            // matching what Rfc4080PayloadWrapper produces for normally-generated modules.
+            generator.appendPostProcessor(new Rfc4080PayloadWrapper());
             return generator.generate();
         } catch (Exception e) {
             log.warn("Failed to generate standalone data API for module {}: {}", module.getName(), e.toString());
@@ -872,6 +889,40 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         if (path.getDelete() != null) ops.add(path.getDelete());
         if (path.getPatch() != null) ops.add(path.getPatch());
         return ops;
+    }
+
+    /**
+     * For a grouping definition (e.g. {@code entry.type._2.Content}) finds or creates
+     * {@code *Wrapper} definitions for each container property ({@link RefProperty}),
+     * prefixing the property key with {@code moduleName} for RESTCONF namespace qualification.
+     * Returns the list of wrapper definition names, or an empty list when none can be resolved.
+     */
+    private List<String> findWrapperDefsForGrouping(Swagger swagger, String defName, String moduleName) {
+        List<String> wrappers = new ArrayList<>();
+        if (swagger.getDefinitions() == null) return wrappers;
+        Model def = swagger.getDefinitions().get(defName);
+        if (def == null || def.getProperties() == null) return wrappers;
+
+        for (Map.Entry<String, Property> propEntry : def.getProperties().entrySet()) {
+            String propKey = propEntry.getKey();
+            Property prop = propEntry.getValue();
+            if (!(prop instanceof RefProperty)) continue;
+
+            RefProperty refProp = (RefProperty) prop;
+            String refDefName = refProp.getSimpleRef();
+            if (refDefName == null || !swagger.getDefinitions().containsKey(refDefName)) continue;
+
+            String wrapperName = refDefName + "Wrapper";
+            if (!swagger.getDefinitions().containsKey(wrapperName)) {
+                String nsKey = propKey.contains(":") ? propKey : moduleName + ":" + propKey;
+                ModelImpl wrapper = new ModelImpl();
+                wrapper.addProperty(nsKey, new RefProperty("#/definitions/" + refDefName));
+                swagger.getDefinitions().put(wrapperName, wrapper);
+                log.debug("Created Wrapper definition {} with key {} for module {}", wrapperName, nsKey, moduleName);
+            }
+            wrappers.add(wrapperName);
+        }
+        return wrappers;
     }
 
     /** Prepend {@code params} to every operation on {@code path}, skipping any already declared. */
