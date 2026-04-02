@@ -384,6 +384,10 @@ public class SwaggerGenerator {
         postprocessor.accept(target);
         if(mountPointPostProcessor != null) {
             mountPointPostProcessor.accept(target);
+            // Re-run removal of unused definitions after mount-point processing,
+            // because mount-point expansion may replace raw grouping refs with *Wrapper
+            // refs, leaving the original grouping definitions orphaned.
+            new com.mrv.yangtools.codegen.impl.postprocessor.RemoveUnusedDefinitions().accept(target);
         }
     }
 

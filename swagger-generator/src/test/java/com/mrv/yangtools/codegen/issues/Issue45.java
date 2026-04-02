@@ -80,6 +80,10 @@ public class Issue45 extends AbstractItTest {
                 .collect(Collectors.toList());
         assertTrue(refs.contains("entry.type._1.content.Type1Wrapper"));
         assertTrue(refs.contains("entry.type._2.content.Type2Wrapper"));
+        Assert.assertFalse("entry.type._1.Content should be removed as unused after mount-point processing",
+                swagger.getDefinitions().containsKey("entry.type._1.Content"));
+        Assert.assertFalse("entry.type._2.Content should be removed as unused after mount-point processing",
+                swagger.getDefinitions().containsKey("entry.type._2.Content"));
 
         String rpcPath = "/data/list-manager:list-entry={name}/specific-config/entry-type-1:entry-type-1-operation";
         assertTrue("Missing RPC mountpoint path: " + rpcPath, swagger.getPaths().containsKey(rpcPath));
