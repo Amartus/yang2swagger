@@ -9,6 +9,8 @@ import io.swagger.models.Path;
 import io.swagger.models.Response;
 import io.swagger.models.Operation;
 import io.swagger.models.parameters.BodyParameter;
+import io.swagger.models.parameters.Parameter;
+import io.swagger.models.parameters.PathParameter;
 import io.swagger.models.properties.RefProperty;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
 import com.mrv.yangtools.codegen.impl.ModuleUtils;
@@ -596,6 +598,12 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                         String dataPath = findDataPathForMount(mount, swagger);
                         if(dataPath != null) {
                             Operation mountedOp = copyOperation(baseOp);
+                            List<Parameter> inheritedParams = extractPathParameters(dataPath, swagger);
+                            if (!inheritedParams.isEmpty()) {
+                                List<Parameter> merged = new ArrayList<>(inheritedParams);
+                                if (mountedOp.getParameters() != null) merged.addAll(mountedOp.getParameters());
+                                mountedOp.setParameters(merged);
+                            }
                             String mountModuleName = null;
                             try {
                                 if(mount instanceof org.opendaylight.yangtools.yang.model.api.SchemaNode) {
@@ -655,7 +663,12 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 if(swagger.getPaths() != null && swagger.getPaths().containsKey(mountedPath)) continue;
 
                 if(swagger.getPaths() == null) swagger.setPaths(new LinkedHashMap<>());
-                swagger.path(mountedPath, copyPathWithModuleTag(source.getValue(), module.getName()));
+                Path copiedPath = copyPathWithModuleTag(source.getValue(), module.getName());
+                List<Parameter> inheritedParams = extractPathParameters(mountDataPath, swagger);
+                if (!inheritedParams.isEmpty()) {
+                    injectPathParameters(copiedPath, inheritedParams);
+                }
+                swagger.path(mountedPath, copiedPath);
                 log.info("Attached mounted data path {} for module {} under mount node {}", mountedPath, module.getName(), getNodeId(mount));
             }
         }
@@ -799,5 +812,84 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         try { dst.setExternalDocs(src.getExternalDocs()); } catch (Exception e) {}
         // do not copy tags - caller should set appropriate tag
         return dst;
+    }
+
+    /**
+     * Extract path parameters (e.g. {@code {name}}) declared on {@code path} by looking them up
+     * in the existing swagger operation definitions.  Falls back to a synthetic string parameter
+     * when a declaration cannot be found.
+     */
+    private List<Parameter> extractPathParameters(String path, Swagger swagger) {
+        if (path == null || path.isEmpty() || swagger == null || swagger.getPaths() == null) {
+            return Collections.emptyList();
+        }
+        List<String> paramNames = new ArrayList<>();
+        int start = path.indexOf('{');
+        while (start >= 0) {
+            int end = path.indexOf('}', start);
+            if (end < 0) break;
+            paramNames.add(path.substring(start + 1, end));
+            start = path.indexOf('{', end);
+        }
+        if (paramNames.isEmpty()) return Collections.emptyList();
+
+        List<Parameter> result = new ArrayList<>();
+        Set<String> resolved = new HashSet<>();
+
+        for (String paramName : paramNames) {
+            boolean found = false;
+            for (Map.Entry<String, Path> entry : swagger.getPaths().entrySet()) {
+                if (!entry.getKey().contains("{" + paramName + "}")) continue;
+                for (Operation op : collectOperations(entry.getValue())) {
+                    if (op == null || op.getParameters() == null) continue;
+                    for (Parameter p : op.getParameters()) {
+                        if ("path".equals(p.getIn()) && paramName.equals(p.getName()) && resolved.add(paramName)) {
+                            result.add(p);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) break;
+                }
+                if (found) break;
+            }
+            if (!found && resolved.add(paramName)) {
+                PathParameter pp = new PathParameter();
+                pp.setName(paramName);
+                pp.setRequired(true);
+                pp.setType("string");
+                result.add(pp);
+            }
+        }
+        return result;
+    }
+
+    private List<Operation> collectOperations(Path path) {
+        List<Operation> ops = new ArrayList<>();
+        if (path.getGet() != null) ops.add(path.getGet());
+        if (path.getPut() != null) ops.add(path.getPut());
+        if (path.getPost() != null) ops.add(path.getPost());
+        if (path.getDelete() != null) ops.add(path.getDelete());
+        if (path.getPatch() != null) ops.add(path.getPatch());
+        return ops;
+    }
+
+    /** Prepend {@code params} to every operation on {@code path}, skipping any already declared. */
+    private void injectPathParameters(Path path, List<Parameter> params) {
+        if (params.isEmpty()) return;
+        for (Operation op : collectOperations(path)) {
+            if (op == null) continue;
+            List<Parameter> existing = op.getParameters() == null ? new ArrayList<>() : new ArrayList<>(op.getParameters());
+            Set<String> existingPathParamNames = new HashSet<>();
+            for (Parameter p : existing) {
+                if ("path".equals(p.getIn())) existingPathParamNames.add(p.getName());
+            }
+            List<Parameter> merged = new ArrayList<>();
+            for (Parameter p : params) {
+                if (!existingPathParamNames.contains(p.getName())) merged.add(p);
+            }
+            merged.addAll(existing);
+            op.setParameters(merged);
+        }
     }
 }

@@ -2,11 +2,12 @@ package com.mrv.yangtools.codegen.issues;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mrv.yangtools.codegen.AbstractItTest;
 import com.mrv.yangtools.codegen.MountPointMappings;
 import com.mrv.yangtools.codegen.MountPointTarget;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
+import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
+import com.mrv.yangtools.codegen.impl.postprocessor.Rfc4080PayloadWrapper;
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;
@@ -16,6 +17,7 @@ import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
+import io.swagger.util.Yaml;
 import org.junit.Assert;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
@@ -45,11 +47,6 @@ public class Issue45 extends AbstractItTest {
     public void testSpecificTypeMounting() throws IOException, ReactorException {
         runSwaggerGeneratorWithMountMappings(Arrays.asList("entry-type-1:content", "entry-type-2:content"));
 
-        StringWriter writer = new StringWriter();
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.writeValue(writer, swagger);
-
         validateMountPointMapping();
         validateActionMapping();
     }
@@ -58,11 +55,6 @@ public class Issue45 extends AbstractItTest {
     public void testModuleMounting() throws IOException, ReactorException {
 
         runSwaggerGeneratorWithMountMappings(Arrays.asList("entry-type-1", "entry-type-2"));
-
-        StringWriter writer = new StringWriter();
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.writeValue(writer, swagger);
 
         validateMountPointMapping();
         validateActionMapping();
@@ -147,15 +139,18 @@ public class Issue45 extends AbstractItTest {
         Collection<? extends Module> modulesToGenerate = context.getModules().stream()
                 .filter(module -> module.getName().equals("list-manager")
                         || module.getName().equals("entry-type-1"))
-                        //|| module.getName().equals("entry-type-2"))
                 .collect(Collectors.toList());
 
+        AbstractPathHandlerBuilder pathHandler = new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder();
+        pathHandler.useModuleName();
+
         SwaggerGenerator generator = new SwaggerGenerator(context, modulesToGenerate).defaultConfig()
-                .pathHandler(new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder().useModuleName());
+                .pathHandler(pathHandler);
         Map<String, List<MountPointTarget>> mappingMap = new HashMap<>();
         mappingMap.put("entry-type-specific-data", listEntryData.stream()
                 .map(MountPointTarget::parse)
                 .collect(Collectors.toList()));
+        generator.appendPostProcessor(new Rfc4080PayloadWrapper());
         generator.yangmntMappings(new MountPointMappings(mappingMap));
         swagger = generator.generate();
     }
