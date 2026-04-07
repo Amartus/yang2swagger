@@ -9,6 +9,8 @@
 
 package com.mrv.yangtools.codegen.main;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mrv.yangtools.codegen.MountPointMappings;
 import com.mrv.yangtools.codegen.SwaggerGenerator;
 import com.mrv.yangtools.codegen.impl.path.AbstractPathHandlerBuilder;
 import com.mrv.yangtools.codegen.impl.path.odl.ODLPathHandlerBuilder;
@@ -29,12 +31,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -87,6 +89,12 @@ public class Main {
     @Option(name = "-basepath", usage="")
     public String basePath = "localhost:1234";
 
+    @Option(name = "-mount-point-mappings", usage = "Mount point mappings as JSON string, e.g. '{\"mount-point-name\": [\"mounted-module-name\", \"mounted-module-name\"]}'", metaVar = "json")
+    public String mountPointMappings = "";
+
+    @Option(name = "-mount-point-mappings-json-file", usage = "JSON file containing mount point mappings, same format as -mount-point-mappings", metaVar = "file")
+    public String mountPointMappingsJson = "";
+
     public enum ElementType {
         DATA, RPC, DATA_AND_RPC
     }
@@ -118,6 +126,10 @@ public class Main {
     void init() throws FileNotFoundException {
         if (output != null && !output.trim().isEmpty()) {
             out = new FileOutputStream(output);
+        }
+
+        if (isOptionSet(mountPointMappingsJson) && isOptionSet(mountPointMappings)) {
+            throw new IllegalArgumentException("mount-point-mappings & mount-point-mappings-json cannot be set at the same time");
         }
     }
 
@@ -160,7 +172,7 @@ public class Main {
                 .pathHandler(pathHandler)
                 .elements(map(elementType));
 
-
+        setYangmntMappings(generator);
 
         if(AuthenticationMechanism.BASIC.equals(authenticationMechanism)) {
             generator.appendPostProcessor(new AddSecurityDefinitions().withSecurityDefinition("api_sec", new BasicAuthDefinition()));
@@ -182,6 +194,58 @@ public class Main {
         generator.appendPostProcessor(new RemoveUnusedDefinitions());
 
         generator.generate(new OutputStreamWriter(out));
+    }
+
+    private void setYangmntMappings(SwaggerGenerator generator) {
+
+        if (isOptionSet(mountPointMappingsJson)) {
+            MountPointMappings mapping = parseMountPointMappingJson();
+            log.debug("Parsed mount-point-mappings from file '{}': {}", mountPointMappingsJson, mapping);
+            if (!mapping.isEmpty()) {
+                generator.yangmntMappings(mapping);
+            }
+            return;
+        }
+
+        if (isOptionSet(mountPointMappings)) {
+            log.debug("Raw mount-point-mappings arg: {}", mountPointMappings);
+            MountPointMappings mapping = parseMountPointMappings(mountPointMappings);
+            log.debug("Parsed mount-point-mappings: {}", mapping);
+            if (mapping != null && !mapping.isEmpty()) {
+                generator.yangmntMappings(mapping);
+            }
+        }
+    }
+
+    private MountPointMappings parseMountPointMappingJson() {
+        if (!isOptionSet(mountPointMappingsJson)) {
+            throw new IllegalArgumentException("mount-point-mappings-json-file is empty");
+        }
+
+        Path jsonPath = FileSystems.getDefault().getPath(mountPointMappingsJson);
+        try {
+            String raw = new String(Files.readAllBytes(jsonPath), StandardCharsets.UTF_8);
+            return parseMountPointMappings(raw);
+        } catch (IOException e) {
+            log.error("Cannot read mount-point mappings from file: {}", mountPointMappingsJson, e);
+            throw new IllegalArgumentException("Cannot read mount-point mappings JSON file: " + mountPointMappingsJson, e);
+        }
+    }
+
+    private MountPointMappings parseMountPointMappings(String raw) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.readValue(raw, MountPointMappings.class);
+        } catch (IllegalArgumentException iae) {
+            throw iae;
+        } catch (Exception e) {
+            log.error("Invalid mount-point-mappings format: {}", raw, e);
+            throw new IllegalArgumentException("Invalid mount-point-mappings format", e);
+        }
+    }
+
+    private boolean isOptionSet(String optionName) {
+        return optionName != null && !optionName.trim().isEmpty();
     }
 
     private void validate(String basePath) {

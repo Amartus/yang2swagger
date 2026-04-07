@@ -13,6 +13,7 @@ package com.mrv.yangtools.codegen;
 
 import org.opendaylight.yangtools.yang.model.api.ContainerSchemaNode;
 import org.opendaylight.yangtools.yang.model.api.ListSchemaNode;
+import org.opendaylight.yangtools.yang.model.api.ActionDefinition;
 import org.opendaylight.yangtools.yang.model.api.RpcDefinition;
 
 /**
@@ -22,4 +23,5 @@ public interface PathHandler {
     void path(ContainerSchemaNode node, PathSegment path);
     void path(ListSchemaNode node, PathSegment path);
     void path(RpcDefinition rpc, PathSegment path);
+    void path(ActionDefinition action, PathSegment path);
 }

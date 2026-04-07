@@ -1,0 +1,23 @@
+module entry-type-2 {
+    namespace "urn:demo:entry-type-2";
+    prefix "et2";
+    yang-version 1.1;
+    import list-manager {prefix lm;}
+    revision "2022-03-12" {
+        description "First cut";
+    }
+    grouping content {
+        container type-2 {
+            leaf a {
+                type string;
+            }
+            leaf b {
+                type string;
+            }
+            leaf c {
+                type string;
+            }
+        }
+    }
+    uses content;
+}

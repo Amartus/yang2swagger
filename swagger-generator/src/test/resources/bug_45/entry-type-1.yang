@@ -1,0 +1,37 @@
+module entry-type-1 {
+    namespace "urn:demo:entry-type-1";
+    prefix "et1";
+    yang-version 1.1;
+    import list-manager {prefix lm;}
+    revision "2022-03-12" {
+        description "First cut";
+    }
+    grouping content {
+        container type-1 {
+            leaf x {
+                type string;
+            }
+            leaf y {
+                type string;
+            }
+            leaf z {
+                type string;
+            }
+        }
+    }
+
+    rpc entry-type-1-operation { // Should get translated as restconf operation (inside the mount point)
+        input {
+            leaf entry-type-1-operation-input {
+                type string;
+            }
+        }
+        output {
+            leaf entry-type-1-operation-output {
+                type string;
+            }
+        }
+    }
+
+    uses content;
+}

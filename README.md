@@ -6,12 +6,14 @@ Having the definition you are able to build live documentation services, and gen
 Our tool supports:
 
  * rpc - which are translated into POST operations
+ * actions - which are translated into POST operations on instance-specific RESTCONF operation paths, analogously to rpc
  * containers and lists - which are represented in RESTCONF data space URI and Swagger modules.
  * leafs and leaf lists - that are translated into Swagger models' attributes. Generator handles enums as well.
  * leafrefs - which are represented as model attributes with typesUsageTreeBuilder of the referred leafs
  * groupings - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * augmentations - which, depending on strategy, are either unpacked into models that use these groupings or optimized model inheritance structures
  * YANG modules documentation - which is added to generated swagger API specification
+ * mount-point - for which types can be provided during swagger generation
 
 
 In this project we use YANG parser from [OpenDaylight](https://www.opendaylight.org/) (ODL) yang-tools project. The generated Swagger specification is available as Java object or serialized either to YAML or JSON file.
@@ -76,6 +78,26 @@ module ...                             : List of YANG module names to generate
                                          defaults to current directory.
                                          Multiple dirs might be separated by
                                          system path separator (default: )
+ -mount-point-mappings                 : Mount-point mappings as a JSON string.  
+                                         Assigns mount-point labels (from YANG
+                                         files) to lists of content types
+                                         (can be passed as a specific type or
+                                         a whole module) that should be used 
+                                         when generating Swagger definitions. 
+                                         Expected format:
+                                         '{"mount-label": ["module:grouping", ...]}'
+                                         or
+                                         '{"mount-label": ["module", ...]}'
+                                         Example:
+                                         '{"mount-point-name": [
+                                         "mounted-module-name:top-level-container",
+                                         "mounted-module-name:top-level-container"
+                                         ]}'
+ -mount-point-mappings-json-file file  : JSON file containing mount-point
+                                         mappings in the same format as
+                                         -mount-point-mappings. Useful when the
+                                         mapping is too large to pass directly
+                                         on the command line.
 ```
 
 For example:
