@@ -28,6 +28,18 @@ public interface DataObjectRepo {
      */
     <T extends SchemaNode & DataNodeContainer> String getDefinitionRef(T node);
     /**
+     * Get definition id to be used as a request body for write operations (POST/PUT/PATCH).
+     * <p>
+     * When the <em>split config/state</em> mode is disabled, or the node's subtree contains no
+     * {@code config false} (state) nodes, this returns the very same reference as
+     * {@link #getDefinitionRef(SchemaNode)}. Otherwise it returns a reference to a separate
+     * {@code <name>Config} definition that omits the state-only nodes, so that write request
+     * bodies never carry data the server would reject.
+     * @param node node
+     * @return id
+     */
+    <T extends SchemaNode & DataNodeContainer> String getWriteDefinitionRef(T node);
+    /**
      * Get name for data node. Prerequisite is to have node's module traversed {@link AbstractDataObjectBuilder#processModule(Module)}.
      * @param node node
      * @return name

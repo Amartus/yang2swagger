@@ -13,7 +13,10 @@ package com.mrv.yangtools.codegen;
 
 import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.Model;
+import io.swagger.models.Operation;
 import io.swagger.models.Path;
+import io.swagger.models.RefModel;
+import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.properties.RefProperty;
 import org.junit.Test;
 import org.opendaylight.yangtools.yang.model.api.EffectiveModelContext;
@@ -80,6 +83,55 @@ public class SwaggerGeneratorTestIt extends AbstractItTest {
         // for read only operations only one get operation
         swagger.getPaths().entrySet().stream().filter(e -> e.getKey().contains("c2")).map(Map.Entry::getValue)
                 .forEach(onlyGetOperationExists);
+    }
+
+    @org.junit.Test
+    public void testSplitConfigStateGeneratesSeparateWriteModel() {
+        //when
+        swaggerFor("read-only.yang", g -> g.splitConfigState(true));
+
+        //then - both the read model and a pruned *Config write model exist
+        Set<String> defs = swagger.getDefinitions().keySet();
+        assertThat(defs, hasItem("read.only.Mixed"));
+        assertThat(defs, hasItem("read.only.MixedConfig"));
+
+        // the write model keeps config-true leaves and drops state nodes
+        Model writeModel = swagger.getDefinitions().get("read.only.MixedConfig");
+        assertThat(writeModel.getProperties().keySet(), hasItem("cfg"));
+        assertThat(writeModel.getProperties().keySet(), not(hasItem("state")));
+        assertThat(writeModel.getProperties().keySet(), not(hasItem("statistics")));
+
+        // the read model is untouched - it still carries the state nodes
+        Model readModel = swagger.getDefinitions().get("read.only.Mixed");
+        assertThat(readModel.getProperties().keySet(), hasItems("cfg", "state", "statistics"));
+
+        Path mixed = swagger.getPaths().get("/data/mixed");
+        // write operations point at the *Config model
+        assertEquals("read.only.MixedConfig", writeBodyRef(mixed.getPut()));
+        assertEquals("read.only.MixedConfig", writeBodyRef(mixed.getPost()));
+        // GET response keeps the full model
+        assertEquals("read.only.Mixed",
+                ((RefProperty) mixed.getGet().getResponses().get("200").getSchema()).getSimpleRef());
+    }
+
+    @org.junit.Test
+    public void testSplitConfigStateDisabledByDefault() {
+        //when - same module, default config (split disabled)
+        swaggerFor("read-only.yang");
+
+        //then - no *Config write models are produced and writes reuse the read model
+        assertThat(swagger.getDefinitions().keySet(), not(hasItem("read.only.MixedConfig")));
+        Path mixed = swagger.getPaths().get("/data/mixed");
+        assertEquals("read.only.Mixed", writeBodyRef(mixed.getPut()));
+    }
+
+    private static String writeBodyRef(Operation operation) {
+        return operation.getParameters().stream()
+                .filter(p -> p instanceof BodyParameter)
+                .map(p -> ((BodyParameter) p).getSchema())
+                .filter(m -> m instanceof RefModel)
+                .map(m -> ((RefModel) m).getSimpleRef())
+                .findFirst().orElse(null);
     }
 
     @org.junit.Test

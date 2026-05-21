@@ -64,6 +64,7 @@ public class SwaggerGenerator {
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
     private int maxDepth = Integer.MAX_VALUE;
+    private boolean splitConfigState = false;
 
 
     private Set<Elements> toGenerate;
@@ -185,6 +186,23 @@ public class SwaggerGenerator {
                 break;
             default:
                 this.dataObjectsBuilder = new UnpackingDataObjectsBuilder(ctx, target, converter);
+        }
+        this.dataObjectsBuilder.setSplitConfigState(splitConfigState);
+        return this;
+    }
+
+    /**
+     * Enable generation of separate {@code <name>Config} request-body definitions for write
+     * operations (POST/PUT/PATCH). Such definitions omit {@code config false} (state) nodes so
+     * that write payloads only carry data the server accepts. Disabled by default to keep the
+     * generated output backwards compatible.
+     * @param enabled whether to split config and state models
+     * @return this
+     */
+    public SwaggerGenerator splitConfigState(boolean enabled) {
+        this.splitConfigState = enabled;
+        if(dataObjectsBuilder != null) {
+            dataObjectsBuilder.setSplitConfigState(enabled);
         }
         return this;
     }

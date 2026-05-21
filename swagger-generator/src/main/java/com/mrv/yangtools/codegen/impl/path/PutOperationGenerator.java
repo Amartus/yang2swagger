@@ -31,7 +31,7 @@ public class PutOperationGenerator extends OperationGenerator {
     @Override
     public Operation execute(DataSchemaNode node) {
         final Operation put = defaultOperation();
-        final RefModel definition = new RefModel(getDefinitionRef(node));
+        final RefModel definition = new RefModel(getWriteDefinitionRef(node));
         put.summary("creates or updates " + getName(node));
         String description = node.getDescription().orElse("creates or updates " + getName(node));
         put.description(description);

@@ -275,6 +275,10 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 String simpleRef = toSimpleDefinitionRef(defRef);
                 Model original = swagger.getDefinitions().get(simpleRef);
 
+                // TODO (issue #74 follow-up): when -split-config-state is enabled and the mounted
+                // subtree carries `config false` data, the grouping ref is attached only to the
+                // READ definition here. A parallel attachment onto the matching `<name>Config`
+                // write definition is needed so mounted write operations stay state-free.
                 ComposedModel cm = new ComposedModel();
                 cm.setInterfaces(refModels);
 

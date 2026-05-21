@@ -29,7 +29,8 @@ public class PatchOperationGenerator extends OperationGenerator {
     @Override
     public Operation execute(DataSchemaNode node) {
         final Operation patch = defaultOperation();
-        final RefModel definition = new RefModel(getDefinitionRef(node));
+        // request body excludes state nodes; the 200 response below keeps the full model
+        final RefModel definition = new RefModel(getWriteDefinitionRef(node));
         patch.summary("patches " + getName(node));
         String description = node.getDescription().orElse("patches " + getName(node));
         patch.description(description);

@@ -54,4 +54,12 @@ public interface DataObjectBuilder extends DataObjectRepo {
      */
     String addModel(EnumTypeDefinition enumType);
 
+    /**
+     * Enable/disable generation of separate {@code <name>Config} request-body definitions for
+     * write operations. When disabled (the default) {@link #getWriteDefinitionRef(SchemaNode)}
+     * behaves exactly like {@link #getDefinitionRef(SchemaNode)}.
+     * @param enabled whether to split config and state into separate models
+     */
+    void setSplitConfigState(boolean enabled);
+
 }

@@ -45,4 +45,22 @@ module read-only {
     }
   }
 
+  // config-true container with mixed children - exercises split config/state (issue #74)
+  container mixed {
+    description "container holding both config and state data";
+    leaf cfg {
+      type string;
+    }
+    leaf state {
+      type string;
+      config false;
+    }
+    container statistics {
+      config false;
+      leaf counter {
+        type int32;
+      }
+    }
+  }
+
 }

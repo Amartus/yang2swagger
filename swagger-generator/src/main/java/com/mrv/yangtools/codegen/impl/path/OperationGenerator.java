@@ -49,6 +49,17 @@ public abstract class OperationGenerator<T extends SchemaNode & DataNodeContaine
         return repo.getDefinitionRef(node);
     }
 
+    /**
+     * Definition reference to be used as the request body of write operations. Equals
+     * {@link #getDefinitionRef(SchemaNode)} unless the split config/state mode produced a
+     * dedicated {@code <name>Config} model for the node.
+     * @param node YANG node
+     * @return definition reference
+     */
+    protected String getWriteDefinitionRef(T node) {
+        return repo.getWriteDefinitionRef(node);
+    }
+
     protected String getName(T node) {
         return repo.getName(node);
     }

@@ -63,6 +63,7 @@ public class IoCSwaggerGenerator {
     private DataObjectBuilder dataObjectsBuilder;
     private ObjectMapper mapper;
     private int maxDepth = Integer.MAX_VALUE;
+    private boolean splitConfigState = false;
 
 
     private Set<Elements> toGenerate;
@@ -173,6 +174,22 @@ public class IoCSwaggerGenerator {
                 break;
             default:
                 this.dataObjectsBuilder = new UnpackingDataObjectsBuilder(ctx, target, converter);
+        }
+        this.dataObjectsBuilder.setSplitConfigState(splitConfigState);
+        return this;
+    }
+
+    /**
+     * Enable generation of separate {@code <name>Config} request-body definitions for write
+     * operations (POST/PUT/PATCH), omitting {@code config false} (state) nodes. Disabled by
+     * default to keep the generated output backwards compatible.
+     * @param enabled whether to split config and state models
+     * @return this
+     */
+    public IoCSwaggerGenerator splitConfigState(boolean enabled) {
+        this.splitConfigState = enabled;
+        if(dataObjectsBuilder != null) {
+            dataObjectsBuilder.setSplitConfigState(enabled);
         }
         return this;
     }

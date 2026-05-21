@@ -43,6 +43,9 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     private static final Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
 
 
+    /** Suffix appended to a model name to derive its write-only ({@code config true}) counterpart. */
+    protected static final String WRITE_MODEL_SUFFIX = "Config";
+
     protected final Swagger swagger;
     protected final TypeConverter converter;
     protected final EffectiveModelContext ctx;
@@ -50,6 +53,17 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     protected final Map<SchemaNode, String> names;
     private final HashMap<QName, String> generatedEnums;
     private final HashMap<DataNodeContainer, String> orgNames;
+
+    /** {@code true} when separate {@code <name>Config} write models should be generated. */
+    private boolean splitConfigState = false;
+    /** {@code true} while {@link #buildWriteModel(SchemaNode)} is in progress - drives child inlining in {@link #prop(DataSchemaNode)}. */
+    private boolean buildingWriteModel = false;
+    /** Names of write models already registered in the swagger definitions (guards against re-building / cycles). */
+    private final Set<String> writeModels = new HashSet<>();
+    /** Caches whether a subtree contains any {@code config false} node. */
+    private final Map<DataNodeContainer, Boolean> stateNodeCache = new HashMap<>();
+    /** Accepts only {@code config true} nodes - used to filter children out of write models. */
+    protected final Predicate<DataSchemaNode> isConfig = DataSchemaNode::isConfiguration;
 
     protected final static Function<DataNodeContainer, Collection<? extends AugmentationSchemaNode>> augmentations = node -> {
         if(node instanceof AugmentationTarget) {
@@ -88,6 +102,79 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     @Override
     public <T extends SchemaNode & DataNodeContainer> String getDefinitionRef(T node) {
         return DEF_PREFIX + getName(node);
+    }
+
+    @Override
+    public void setSplitConfigState(boolean enabled) {
+        this.splitConfigState = enabled;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * When split mode is on and {@code node}'s subtree carries {@code config false} data, a
+     * dedicated {@code <name>Config} model (state nodes pruned at every level) is registered
+     * lazily and its reference returned. Otherwise the regular read reference is returned.
+     */
+    @Override
+    public <T extends SchemaNode & DataNodeContainer> String getWriteDefinitionRef(T node) {
+        if(!splitConfigState || !hasStateNodes(node)) {
+            return getDefinitionRef(node);
+        }
+        String writeName = getName(node) + WRITE_MODEL_SUFFIX;
+        if(writeModels.add(writeName)) {
+            log.debug("building write model {}", writeName);
+            swagger.addDefinition(writeName, buildWriteModel(node));
+        }
+        return DEF_PREFIX + writeName;
+    }
+
+    /**
+     * Build a model holding only the {@code config true} part of a node's subtree. Config-false
+     * children are dropped; config-true children that still contain state descendants are inlined
+     * (recursively pruned) so the resulting request body never references state data.
+     * @param node node to build the write model for
+     * @return write model
+     */
+    protected <T extends SchemaNode & DataNodeContainer> Model buildWriteModel(T node) {
+        ModelImpl model = new ModelImpl();
+        model.description(desc(node));
+        model.setType("object");
+        boolean previous = buildingWriteModel;
+        buildingWriteModel = true;
+        try {
+            model.setProperties(structure(node, isConfig, isConfig));
+        } finally {
+            buildingWriteModel = previous;
+        }
+        return model;
+    }
+
+    /**
+     * Tells whether a subtree contains at least one {@code config false} (state) node.
+     * @param node subtree root
+     * @return {@code true} if any descendant is state data
+     */
+    protected boolean hasStateNodes(DataNodeContainer node) {
+        Boolean cached = stateNodeCache.get(node);
+        if(cached != null) return cached;
+        boolean result = containsStateNode(node);
+        stateNodeCache.put(node, result);
+        return result;
+    }
+
+    private boolean containsStateNode(DataNodeContainer node) {
+        for(DataSchemaNode child : node.getChildNodes()) {
+            if(!child.isConfiguration()) return true;
+            if(child instanceof ChoiceSchemaNode) {
+                for(CaseSchemaNode aCase : ((ChoiceSchemaNode) child).getCases()) {
+                    if(containsStateNode(aCase)) return true;
+                }
+            } else if(child instanceof DataNodeContainer) {
+                if(containsStateNode((DataNodeContainer) child)) return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -256,9 +343,9 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
             LeafSchemaNode lN = (LeafSchemaNode) node;
             prop = getPropertyByType(lN);
         } else if (node instanceof ContainerLike) {
-            prop = refOrStructure((ContainerLike) node);
+            prop = writeAwareRefOrStructure((ContainerLike) node);
         } else if (node instanceof ListSchemaNode) {
-            prop = new ArrayProperty().items(refOrStructure((ListSchemaNode) node));
+            prop = new ArrayProperty().items(writeAwareRefOrStructure((ListSchemaNode) node));
         } else if (node instanceof ChoiceEffectiveStatement) {
             log.warn("direct choice not supported yey for {}", node.getQName());
             prop = new ObjectProperty();
@@ -271,11 +358,27 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
 
         if (prop != null) {
             prop.setDescription(desc(node));
+            if (splitConfigState && !node.isConfiguration()) {
+                // OpenAPI 2.0 hint for clients that honour it; the *Config write model is the primary fix
+                prop.setReadOnly(true);
+            }
         } else {
             log.warn("{} type not supported for {}", node.getClass().getName(), node.getQName());
         }
 
         return new Pair(propertyName, prop);
+    }
+
+    /**
+     * Resolve a container/list child property. While building a write model, a config-true child
+     * that still holds state descendants is inlined with its state nodes pruned; otherwise the
+     * regular {@link #refOrStructure(DataSchemaNode)} reference is used.
+     */
+    private <T extends DataSchemaNode & DataNodeContainer> Property writeAwareRefOrStructure(T node) {
+        if (buildingWriteModel && hasStateNodes(node)) {
+            return new ObjectProperty(structure(node, isConfig, isConfig));
+        }
+        return refOrStructure(node);
     }
 
     public String getPropertyName(DataSchemaNode node) {
