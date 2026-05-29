@@ -137,6 +137,12 @@ definitions:
   operations keep referencing the original model.
 * As a secondary safeguard, `config false` leaves are also emitted with the
   OpenAPI `readOnly: true` hint.
+* Schema `mount-point` expansion honours the flag: mounted write operations
+  reference the state-free `<name>Config` content, and the mount node gets a
+  parallel `<name>Config` composed definition attaching only the config part of
+  the mounted models. Modules pulled in solely to satisfy a mount-point mapping
+  are generated with the flag propagated, so their mounted writes stay
+  state-free too.
 
 The flag is **off by default**, so existing output and downstream code
 generation pipelines are unaffected unless the flag is set.
@@ -148,8 +154,6 @@ Current limitations:
   verbose than their read counterparts.
 * `config false` leaves placed directly inside a `choice`/`case` are not yet
   pruned from the `<name>Config` model.
-* Schema `mount-point` expansion does not yet emit parallel `<name>Config`
-  composed definitions for mounted content (tracked as an issue #74 follow-up).
 
 #### Running the CLI in a Docker image ####
 

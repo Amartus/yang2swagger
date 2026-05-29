@@ -43,9 +43,6 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     private static final Logger log = LoggerFactory.getLogger(AbstractDataObjectBuilder.class);
 
 
-    /** Suffix appended to a model name to derive its write-only ({@code config true}) counterpart. */
-    protected static final String WRITE_MODEL_SUFFIX = "Config";
-
     protected final Swagger swagger;
     protected final TypeConverter converter;
     protected final EffectiveModelContext ctx;
@@ -107,6 +104,11 @@ public abstract class AbstractDataObjectBuilder implements DataObjectBuilder {
     @Override
     public void setSplitConfigState(boolean enabled) {
         this.splitConfigState = enabled;
+    }
+
+    @Override
+    public boolean isSplitConfigState() {
+        return splitConfigState;
     }
 
     /**

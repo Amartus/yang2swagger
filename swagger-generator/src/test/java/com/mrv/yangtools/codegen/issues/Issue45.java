@@ -10,6 +10,7 @@ import com.mrv.yangtools.common.ContextHelper;
 import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;
 import io.swagger.models.ModelImpl;
+import io.swagger.models.Operation;
 import io.swagger.models.RefModel;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
@@ -130,7 +131,65 @@ public class Issue45 extends AbstractItTest {
         Assert.assertFalse("entry-type-2 should not be generated globally when excluded from modulesToGenerate", swagger.getPaths().containsKey(globalType2Path));
     }
 
+    /**
+     * issue #74: with split config/state enabled the mounted write operations and the parallel
+     * {@code <name>Config} composed definition must omit {@code config false} (state) data.
+     * {@code entry-type-2}'s {@code type-2} container carries a {@code last-updated} state leaf.
+     */
+    @Test
+    public void testMountedWriteModelsOmitStateWhenSplitConfigState() throws IOException, ReactorException {
+        runSwaggerGeneratorWithMountMappings(Arrays.asList("entry-type-1", "entry-type-2"),
+                g -> g.splitConfigState(true));
+
+        // the isolated entry-type-2 generation produced a pruned write model for type-2
+        Model writeType2 = swagger.getDefinitions().get("entry.type._2.content.Type2Config");
+        Assert.assertNotNull("Expected a split write model for the mounted type-2 container", writeType2);
+        assertTrue("Write model keeps config leaves", writeType2.getProperties().keySet().containsAll(Arrays.asList("a", "b", "c")));
+        Assert.assertFalse("Write model must drop the config-false leaf",
+                writeType2.getProperties().containsKey("last-updated"));
+
+        // the read model still carries the state leaf
+        Model readType2 = swagger.getDefinitions().get("entry.type._2.content.Type2");
+        assertTrue("Read model keeps the state leaf", readType2.getProperties().containsKey("last-updated"));
+
+        // mounted write operations reference the state-free wrapper, GET keeps the full one
+        String mountedType2Path = "/data/list-manager:list-entry={name}/specific-config/entry-type-2:type-2";
+        io.swagger.models.Path mounted = swagger.getPaths().get(mountedType2Path);
+        Assert.assertNotNull("Missing mounted data path for entry-type-2: " + mountedType2Path, mounted);
+        Assert.assertEquals("entry.type._2.content.Type2ConfigWrapper", writeBodyRef(mounted.getPut()));
+        Assert.assertEquals("entry.type._2.content.Type2ConfigWrapper", writeBodyRef(mounted.getPost()));
+
+        // the parallel composed write definition for the mount node references state-free content
+        ComposedModel writeComposed = (ComposedModel) swagger.getDefinitions()
+                .get("list.manager.listentry.SpecificConfigConfig");
+        Assert.assertNotNull("Expected a parallel write definition for the mount node", writeComposed);
+        List<String> writeRefs = writeComposed.getAllOf().stream()
+                .filter(m -> m instanceof RefModel)
+                .map(m -> ((RefModel) m).getSimpleRef())
+                .collect(Collectors.toList());
+        assertTrue("Mount write definition should attach the state-free type-2 wrapper",
+                writeRefs.contains("entry.type._2.content.Type2ConfigWrapper"));
+        Assert.assertFalse("Mount write definition must not attach the state-bearing read wrapper",
+                writeRefs.contains("entry.type._2.content.Type2Wrapper"));
+    }
+
+    private static String writeBodyRef(Operation operation) {
+        if(operation == null || operation.getParameters() == null) return null;
+        return operation.getParameters().stream()
+                .filter(p -> p instanceof BodyParameter)
+                .map(p -> ((BodyParameter) p).getSchema())
+                .filter(m -> m instanceof RefModel)
+                .map(m -> ((RefModel) m).getSimpleRef())
+                .findFirst().orElse(null);
+    }
+
     private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData) throws ReactorException {
+        runSwaggerGeneratorWithMountMappings(listEntryData, g -> {});
+    }
+
+    private void runSwaggerGeneratorWithMountMappings(List<String> listEntryData,
+                                                      java.util.function.Consumer<SwaggerGenerator> configurator)
+            throws ReactorException {
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:*.yang");
         final EffectiveModelContext context = buildEffectiveModelContext(
                 Paths.get("src","test","resources","bug_45").toString(),
@@ -151,6 +210,7 @@ public class Issue45 extends AbstractItTest {
                 .map(MountPointTarget::parse)
                 .collect(Collectors.toList()));
         generator.appendPostProcessor(new Rfc4080PayloadWrapper());
+        configurator.accept(generator);
         generator.yangmntMappings(new MountPointMappings(mappingMap));
         swagger = generator.generate();
     }

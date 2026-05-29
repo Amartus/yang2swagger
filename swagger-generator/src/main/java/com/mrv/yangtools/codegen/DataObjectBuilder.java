@@ -24,6 +24,8 @@ import org.opendaylight.yangtools.yang.model.api.type.EnumTypeDefinition;
  */
 public interface DataObjectBuilder extends DataObjectRepo {
     String DEF_PREFIX = "#/definitions/";
+    /** Suffix appended to a model name to derive its write-only ({@code config true}) counterpart. */
+    String WRITE_MODEL_SUFFIX = "Config";
     /**
      * Build model for a given node
      * @param node for which model is to be build
@@ -61,5 +63,11 @@ public interface DataObjectBuilder extends DataObjectRepo {
      * @param enabled whether to split config and state into separate models
      */
     void setSplitConfigState(boolean enabled);
+
+    /**
+     * Tells whether the split config/state mode is currently enabled.
+     * @return {@code true} when separate {@code <name>Config} write models are generated
+     */
+    boolean isSplitConfigState();
 
 }

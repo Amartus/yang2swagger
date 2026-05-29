@@ -17,6 +17,10 @@ module entry-type-2 {
             leaf c {
                 type string;
             }
+            leaf last-updated {
+                config false;
+                type string;
+            }
         }
     }
     uses content;
