@@ -92,6 +92,9 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
     public void accept(Swagger swagger) {
         if(swagger.getDefinitions() == null || swagger.getDefinitions().isEmpty()) return;
 
+        // when split config/state is enabled the mounted write definitions are kept state-free
+        final boolean splitConfigState = isSplitConfigState();
+
         // build a set of candidate refs based on provided module:grouping strings
         Map<String, String> candidateDefs = buildCandidateDefinitions(swagger);
 
@@ -275,62 +278,26 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
                 String simpleRef = toSimpleDefinitionRef(defRef);
                 Model original = swagger.getDefinitions().get(simpleRef);
 
-                ComposedModel cm = new ComposedModel();
-                cm.setInterfaces(refModels);
-
-                // set parent interface if available
-                if(!refModels.isEmpty()) cm.parent(refModels.get(0));
-
-                if(original instanceof ModelImpl) {
-                    cm.child(copyModelImpl((ModelImpl) original));
-                } else if (original instanceof ComposedModel) {
-                    // preserve original allOf entries where possible to avoid dropping existing components
-                    ComposedModel origCm = (ComposedModel) original;
-                    List<Model> origAll = origCm.getAllOf();
-                    if(origAll != null && !origAll.isEmpty()) {
-                        List<Model> targetAll = cm.getAllOf();
-                        if(targetAll == null) {
-                            targetAll = new ArrayList<>();
-                            cm.setAllOf(targetAll);
-                        }
-                        // copy items and avoid exact duplicates (by string representation)
-                        Set<String> seen = new HashSet<>();
-                        for(Model o : targetAll) if(o != null) seen.add(o.toString());
-                        for(Model o : origAll) {
-                            if(o == null) continue;
-                            if(!seen.contains(o.toString())) {
-                                targetAll.add(o);
-                                seen.add(o.toString());
-                            }
-                        }
-                    }
-                } else {
-                    cm.parent(new RefModel(defRef));
-                }
-
-                // Prune inline empty 'object' entries from allOf to avoid redundant object entries in composed models
-                try {
-                    List<Model> allOf = cm.getAllOf();
-                    if(allOf != null) {
-                        allOf.removeIf(m -> {
-                            if(m == null) return true;
-                            if(m instanceof ModelImpl) {
-                                ModelImpl mm = (ModelImpl) m;
-                                String t = mm.getType();
-                                java.util.Map<String, ?> props = mm.getProperties();
-                                boolean isEmptyObject = "object".equals(t) && (props == null || props.isEmpty());
-                                return isEmptyObject;
-                            }
-                            return false;
-                        });
-                    }
-                } catch (Exception e) {
-                    log.debug("Error while pruning composed model allOf entries: {}", e.toString());
-                }
-
                 // put back using simple name key
+                ComposedModel cm = buildComposedModel(refModels, original, defRef);
                 swagger.getDefinitions().put(simpleRef, cm);
                 log.info("Attached mount refs to definition {} for mount label {}", simpleRef, label);
+
+                // issue #74: when split config/state is enabled and the mounted content carries
+                // `config false` data, attach the state-free `<name>Config` variants onto a parallel
+                // write definition and redirect write request bodies (POST/PUT/PATCH) to it.
+                if(splitConfigState) {
+                    List<RefModel> writeRefs = toWriteInterfaces(swagger, refModels);
+                    if(!sameRefs(refModels, writeRefs)) {
+                        String writeKey = simpleRef + DataObjectBuilder.WRITE_MODEL_SUFFIX;
+                        Model writeOriginal = swagger.getDefinitions().get(writeKey);
+                        ComposedModel writeCm = buildComposedModel(writeRefs,
+                                writeOriginal != null ? writeOriginal : original, defRef);
+                        swagger.getDefinitions().put(writeKey, writeCm);
+                        redirectWriteBodies(swagger, simpleRef, writeKey);
+                        log.info("Attached mount write refs to definition {} for mount label {}", writeKey, label);
+                    }
+                }
             }
         }
     }
@@ -369,6 +336,180 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         copy.setProperties(source.getProperties());
         copy.setDescription(source.getDescription());
         return copy;
+    }
+
+    /** Whether the generation runs with the split config/state mode enabled. */
+    private boolean isSplitConfigState() {
+        return dataRepo instanceof DataObjectBuilder && ((DataObjectBuilder) dataRepo).isSplitConfigState();
+    }
+
+    /**
+     * Build a {@link ComposedModel} that attaches {@code interfaces} (mounted content refs) onto
+     * {@code original}. Shared by the read definition and, when split config/state is enabled, by
+     * the parallel {@code <name>Config} write definition.
+     */
+    private ComposedModel buildComposedModel(List<RefModel> interfaces, Model original, String defRef) {
+        ComposedModel cm = new ComposedModel();
+        cm.setInterfaces(new ArrayList<>(interfaces));
+
+        // set parent interface if available
+        if(!interfaces.isEmpty()) cm.parent(interfaces.get(0));
+
+        if(original instanceof ModelImpl) {
+            cm.child(copyModelImpl((ModelImpl) original));
+        } else if (original instanceof ComposedModel) {
+            // preserve original allOf entries where possible to avoid dropping existing components
+            ComposedModel origCm = (ComposedModel) original;
+            List<Model> origAll = origCm.getAllOf();
+            if(origAll != null && !origAll.isEmpty()) {
+                List<Model> targetAll = cm.getAllOf();
+                if(targetAll == null) {
+                    targetAll = new ArrayList<>();
+                    cm.setAllOf(targetAll);
+                }
+                // copy items and avoid exact duplicates (by string representation)
+                Set<String> seen = new HashSet<>();
+                for(Model o : targetAll) if(o != null) seen.add(o.toString());
+                for(Model o : origAll) {
+                    if(o == null) continue;
+                    if(!seen.contains(o.toString())) {
+                        targetAll.add(o);
+                        seen.add(o.toString());
+                    }
+                }
+            }
+        } else {
+            cm.parent(new RefModel(defRef));
+        }
+
+        // Prune inline empty 'object' entries from allOf to avoid redundant object entries in composed models
+        try {
+            List<Model> allOf = cm.getAllOf();
+            if(allOf != null) {
+                allOf.removeIf(m -> {
+                    if(m == null) return true;
+                    if(m instanceof ModelImpl) {
+                        ModelImpl mm = (ModelImpl) m;
+                        String t = mm.getType();
+                        java.util.Map<String, ?> props = mm.getProperties();
+                        return "object".equals(t) && (props == null || props.isEmpty());
+                    }
+                    return false;
+                });
+            }
+        } catch (Exception e) {
+            log.debug("Error while pruning composed model allOf entries: {}", e.toString());
+        }
+
+        return cm;
+    }
+
+    /**
+     * Map every read interface ref to the ref that should be used in a write definition: a
+     * {@code <name>Config} model where one exists, a freshly built {@code <name>ConfigWrapper}
+     * for {@code *Wrapper} refs wrapping state-bearing content, or the unchanged read ref when
+     * the mounted content carries no {@code config false} data.
+     */
+    private List<RefModel> toWriteInterfaces(Swagger swagger, List<RefModel> readRefs) {
+        List<RefModel> writeRefs = new ArrayList<>();
+        for(RefModel readRef : readRefs) {
+            writeRefs.add(toWriteRefModel(swagger, readRef));
+        }
+        return writeRefs;
+    }
+
+    private RefModel toWriteRefModel(Swagger swagger, RefModel readRef) {
+        String simple = readRef == null ? null : readRef.getSimpleRef();
+        if(simple == null || swagger.getDefinitions() == null) return readRef;
+
+        String configName = simple + DataObjectBuilder.WRITE_MODEL_SUFFIX;
+        if(swagger.getDefinitions().containsKey(configName)) {
+            return new RefModel("#/definitions/" + configName);
+        }
+        if(simple.endsWith("Wrapper")) {
+            String configWrapper = buildConfigWrapper(swagger, simple);
+            if(configWrapper != null) return new RefModel("#/definitions/" + configWrapper);
+        }
+        return readRef;
+    }
+
+    /**
+     * Derive a {@code *ConfigWrapper} from a {@code *Wrapper} definition by retargeting every
+     * wrapped container ref to its {@code <name>Config} counterpart. Returns the new definition
+     * name, or {@code null} when no wrapped ref has a state-free counterpart (read == write).
+     */
+    private String buildConfigWrapper(Swagger swagger, String wrapperName) {
+        Model wrapper = swagger.getDefinitions().get(wrapperName);
+        if(wrapper == null || wrapper.getProperties() == null) return null;
+
+        ModelImpl configWrapper = new ModelImpl();
+        boolean changed = false;
+        for(Map.Entry<String, Property> entry : wrapper.getProperties().entrySet()) {
+            Property prop = entry.getValue();
+            if(prop instanceof RefProperty) {
+                String ref = ((RefProperty) prop).getSimpleRef();
+                String configRef = ref == null ? null : ref + DataObjectBuilder.WRITE_MODEL_SUFFIX;
+                if(configRef != null && swagger.getDefinitions().containsKey(configRef)) {
+                    configWrapper.addProperty(entry.getKey(), new RefProperty("#/definitions/" + configRef));
+                    changed = true;
+                    continue;
+                }
+            }
+            configWrapper.addProperty(entry.getKey(), prop);
+        }
+        if(!changed) return null;
+
+        String base = wrapperName.substring(0, wrapperName.length() - "Wrapper".length());
+        String configWrapperName = base + DataObjectBuilder.WRITE_MODEL_SUFFIX + "Wrapper";
+        swagger.getDefinitions().putIfAbsent(configWrapperName, configWrapper);
+        log.debug("Created write wrapper definition {} from {}", configWrapperName, wrapperName);
+        return configWrapperName;
+    }
+
+    /** Whether the two ref lists carry the same simple references in the same order. */
+    private boolean sameRefs(List<RefModel> a, List<RefModel> b) {
+        if(a.size() != b.size()) return false;
+        for(int i = 0; i < a.size(); i++) {
+            String sa = a.get(i) == null ? null : a.get(i).getSimpleRef();
+            String sb = b.get(i) == null ? null : b.get(i).getSimpleRef();
+            if(!Objects.equals(sa, sb)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Repoint every write operation body that targets the mount node from its read definition to
+     * {@code writeName}. Empty mount containers are typically payload-wrapped before this
+     * postprocessor runs, so the {@code <name>Wrapper} indirection is redirected as well.
+     */
+    private void redirectWriteBodies(Swagger swagger, String readName, String writeName) {
+        if(swagger.getPaths() == null) return;
+
+        String readWrapper = readName + "Wrapper";
+        String writeWrapper = null;
+        if(swagger.getDefinitions() != null && swagger.getDefinitions().containsKey(readWrapper)) {
+            writeWrapper = buildConfigWrapper(swagger, readWrapper);
+        }
+
+        for(Path path : swagger.getPaths().values()) {
+            if(path == null) continue;
+            for(Operation op : new Operation[]{ path.getPost(), path.getPut(), path.getPatch() }) {
+                redirectOperationBody(op, readName, writeName);
+                if(writeWrapper != null) redirectOperationBody(op, readWrapper, writeWrapper);
+            }
+        }
+    }
+
+    private void redirectOperationBody(Operation op, String readName, String writeName) {
+        if(op == null || op.getParameters() == null) return;
+        for(Parameter p : op.getParameters()) {
+            if(!(p instanceof BodyParameter)) continue;
+            Model schema = ((BodyParameter) p).getSchema();
+            if(schema instanceof RefModel && readName.equals(((RefModel) schema).getSimpleRef())) {
+                ((BodyParameter) p).setSchema(new RefModel("#/definitions/" + writeName));
+                log.debug("Redirected write body {} -> {}", readName, writeName);
+            }
+        }
     }
 
     /**
@@ -726,6 +867,8 @@ public class MountPointPostProcessor implements java.util.function.Consumer<Swag
         try {
             SwaggerGenerator generator = new SwaggerGenerator(ctx, Collections.singletonList(module)).defaultConfig()
                     .elements(SwaggerGenerator.Elements.DATA)
+                    // propagate split config/state so isolated-module write operations stay state-free
+                    .splitConfigState(isSplitConfigState())
                     .pathHandler(new com.mrv.yangtools.codegen.impl.path.rfc8040.PathHandlerBuilder().useModuleName());
             // Ensure *Wrapper definitions are generated for this module's containers/lists,
             // matching what Rfc4080PayloadWrapper produces for normally-generated modules.

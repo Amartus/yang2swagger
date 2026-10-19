@@ -77,6 +77,9 @@ public class Main {
     @Option(name = "-fullCrud", usage="If the flag is set to false path are generated for GET operations only. Default true")
     public boolean fullCrud = true;
 
+    @Option(name = "-split-config-state", usage="Generate separate '<name>Config' request-body definitions for write operations (POST/PUT/PATCH) that omit 'config false' state nodes. Default false")
+    public boolean splitConfigState = false;
+
     @Option(name="-elements", usage="Define YANG elements to focus on. Defaul DATA + RPC")
     public ElementType elementType = ElementType.DATA_AND_RPC;
 
@@ -170,6 +173,7 @@ public class Main {
                 .format(outputFormat).consumes(contentType).produces(contentType)
                 .host(basePath)
                 .pathHandler(pathHandler)
+                .splitConfigState(splitConfigState)
                 .elements(map(elementType));
 
         setYangmntMappings(generator);

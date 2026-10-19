@@ -70,6 +70,11 @@ module ...                             : List of YANG module names to generate
                                          simplified inheritence model which can
                                          be used with standard code generators.
                                          Default false (default: false)
+ -split-config-state                   : Generate separate '<name>Config'
+                                         request-body definitions for write
+                                         operations (POST/PUT/PATCH) that omit
+                                         'config false' state nodes. Default
+                                         false (default: false)
  -use-namespaces                       : Use namespaces in resource URI
                                          (default: false)
  -use-odl-path-format                  : Select to use bierman-02 RESTCONF path
@@ -107,6 +112,48 @@ java -jar swagger-generator-cli-<<version>>-executable.jar \
  -output swagger.yaml \
  mef-services
 ```
+
+#### Separating config and state in write request bodies ####
+
+By default a Swagger model definition is reused for every HTTP operation on a
+given resource. That means the request body of write operations (`POST`, `PUT`,
+`PATCH`) also contains YANG `config false` (state-only) nodes, which a
+RESTCONF-compliant server rejects because state data is not writable
+([issue #74](https://github.com/Amartus/yang2swagger/issues/74)).
+
+The `-split-config-state` flag (programmatic equivalent:
+`SwaggerGenerator.splitConfigState(true)`) opts into separate request-body
+definitions:
+
+* For every model whose YANG subtree contains at least one `config false`
+  descendant, an additional `<name>Config` definition is generated with the
+  state nodes pruned out (recursively, at every nesting level).
+* Write operations (`POST`, `PUT`, `PATCH`) reference the `<name>Config`
+  definition for their request body. The `PATCH` `200` response keeps the full
+  model, since the patched resource still reports state.
+* `GET` operations and `DELETE` are unchanged — read responses keep the full
+  model containing both config and state.
+* Models with no `config false` nodes get no extra definition; their write
+  operations keep referencing the original model.
+* As a secondary safeguard, `config false` leaves are also emitted with the
+  OpenAPI `readOnly: true` hint.
+* Schema `mount-point` expansion honours the flag: mounted write operations
+  reference the state-free `<name>Config` content, and the mount node gets a
+  parallel `<name>Config` composed definition attaching only the config part of
+  the mounted models. Modules pulled in solely to satisfy a mount-point mapping
+  are generated with the flag propagated, so their mounted writes stay
+  state-free too.
+
+The flag is **off by default**, so existing output and downstream code
+generation pipelines are unaffected unless the flag is set.
+
+Current limitations:
+
+* Write models are emitted as flat, fully inlined definitions — they do not
+  reuse shared `grouping` definitions, so deeply nested write bodies are more
+  verbose than their read counterparts.
+* `config false` leaves placed directly inside a `choice`/`case` are not yet
+  pruned from the `<name>Config` model.
 
 #### Running the CLI in a Docker image ####
 
